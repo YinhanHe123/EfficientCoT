@@ -1,5 +1,5 @@
 # EfficientCoT
-
+```
 contemplation-reasoning/
 ├── main.py                    # Entry point for training and evaluation
 ├── config/
@@ -31,7 +31,7 @@ contemplation-reasoning/
     ├── __init__.py
     ├── hidden_states.py       # Utilities for handling hidden states
     └── logging.py             # Logging utilities
-
+```
 
 
 # Step 1: Train the sentence transformer
