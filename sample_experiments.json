@@ -1,0 +1,42 @@
+[
+    {
+      "name": "baseline",
+      "parameters": {
+        "learning_rate": 1e-5,
+        "alpha": 0.5,
+        "start_layer_idx": 16,
+        "end_layer_idx": 20
+      },
+      "repeats": 3
+    },
+    {
+      "name": "higher_lr",
+      "parameters": {
+        "learning_rate": 5e-5,
+        "alpha": 0.5,
+        "start_layer_idx": 16,
+        "end_layer_idx": 20
+      },
+      "repeats": 3
+    },
+    {
+      "name": "deeper_layers",
+      "parameters": {
+        "learning_rate": 1e-5,
+        "alpha": 0.5,
+        "start_layer_idx": 20,
+        "end_layer_idx": 24
+      },
+      "repeats": 3
+    },
+    {
+      "name": "reason_weighted",
+      "parameters": {
+        "learning_rate": 1e-5,
+        "alpha": 0.7,
+        "start_layer_idx": 16,
+        "end_layer_idx": 20
+      },
+      "repeats": 3
+    }
+  ]
