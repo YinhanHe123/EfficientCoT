@@ -1,5 +1,6 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
+from tqdm import tqdm
 
 class ReasoningPairsGenerator:
     def __init__(self, model_name):
@@ -29,7 +30,7 @@ class ReasoningPairsGenerator:
 
         return reasoning
 
-    def generate_condensed_reasoning(self, original_reasoning, max_length=512):
+    def generate_condensed_reasoning(self, original_reasoning, max_length=1024):
         """Generate condensed version of the original reasoning"""
         prompt = f"Original reasoning: {original_reasoning}\n\nCondense the above reasoning into a concise but complete form:"
 
@@ -54,7 +55,7 @@ class ReasoningPairsGenerator:
         """Generate a pair of original and condensed reasoning for a query"""
         original_reasoning = self.generate_reasoning(query)
         condensed_reasoning = self.generate_condensed_reasoning(original_reasoning)
-
+      
         return {
             "query": query,
             "original_reasoning": original_reasoning,
@@ -65,8 +66,8 @@ class ReasoningPairsGenerator:
         """Create a dataset of reasoning pairs from a list of queries"""
         dataset = []
 
-        for query in queries:
-            pair = self.create_reasoning_pair(query)
+        for i in tqdm(range(len(queries))):
+            pair = self.create_reasoning_pair(queries[i])
             dataset.append(pair)
 
         return dataset

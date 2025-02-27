@@ -4,21 +4,9 @@ from torch.utils.data import Dataset, DataLoader
 def load_gsm8k_dataset(data_path=None):
     """Load and prepare the GSM8K dataset"""
     # Load from HuggingFace datasets or from local path
-    if data_path:
-        try:
-            train_dataset = load_dataset('json', data_files=f'{data_path}/train.json')['train']
-            eval_dataset = load_dataset('json', data_files=f'{data_path}/test.json')['train']
-        except:
-            # Fall back to loading from HuggingFace
-            print(f"Could not load from {data_path}, falling back to HuggingFace")
-            gsm8k = load_dataset('gsm8k', 'main')
-            train_dataset = gsm8k['train']
-            eval_dataset = gsm8k['test']
-    else:
-        gsm8k = load_dataset('gsm8k', 'main')
-        train_dataset = gsm8k['train']
-        eval_dataset = gsm8k['test']
-
+    gsm8k = load_dataset(data_path, 'main')
+    train_dataset = gsm8k['train'].select(range(4)) # [:4]  is for testing
+    eval_dataset = gsm8k['test'].select([0])  # [0] is for testing
     # Create custom PyTorch datasets
     train_data = GSM8KDataset(train_dataset)
     eval_data = GSM8KDataset(eval_dataset)

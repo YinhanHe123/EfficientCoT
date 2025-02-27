@@ -1,12 +1,15 @@
 import torch
 import torch.nn as nn
 from transformers import AutoModel, AutoTokenizer
+import os
 
 class ContemplationGenerator(nn.Module):
-    def __init__(self, student_model_name, teacher_model_name, teacher_hidden_dim):
+    def __init__(self, student_model_name, teacher_model_name, teacher_hidden_dim, device):
         super().__init__()
+        self.device = device
         self.student_model = AutoModel.from_pretrained(student_model_name)
         self.tokenizer = AutoTokenizer.from_pretrained(teacher_model_name)
+        self.tokenizer.pad_token = self.tokenizer.eos_token  # Set pad token to end of sequence token
 
         # Add a projection layer to match teacher's hidden dimension
         self.student_hidden_dim = self.student_model.config.hidden_size
@@ -62,7 +65,8 @@ class ContemplationGenerator(nn.Module):
         model = cls(
             config_dict["student_model_name"],
             config_dict["teacher_model_name"],
-            config_dict["teacher_hidden_dim"]
+            config_dict["teacher_hidden_dim"],
+            config_dict["device"]
         )
 
         # Load the state dict
@@ -76,8 +80,12 @@ class ContemplationGenerator(nn.Module):
             "student_model_name": self.student_model.config._name_or_path,
             "teacher_model_name": self.tokenizer.name_or_path,
             "teacher_hidden_dim": self.teacher_hidden_dim,
-            "student_hidden_dim": self.student_hidden_dim
+            "student_hidden_dim": self.student_hidden_dim,
+            "device": self.device
         }
+        # create path if not exist
+        if not os.path.exists(path):
+            os.makedirs(path)
         torch.save(config_dict, f"{path}/config.pt")
 
         # Save model weights

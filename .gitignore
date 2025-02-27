@@ -1,0 +1,42 @@
+# Ignore logs directory
+logs/
+
+# Ignore checkpoint files
+*.pt
+
+# Ignore JSON files
+*.json
+
+# Ignore saved models
+saved_models/
+checkpoints/
+results/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+venv/
+env/
+.env/
+.venv/
+
+# IDE related files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

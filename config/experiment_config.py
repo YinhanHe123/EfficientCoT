@@ -1,3 +1,6 @@
+import os
+import torch
+
 class ExperimentConfig:
     def __init__(self, config_name="default"):
         self.config_name = config_name
@@ -18,11 +21,18 @@ class ExperimentConfig:
         self.save_interval = 1  # Save model every N epochs
         self.max_seq_length = 512
         self.embedding_dim = 768  # Dimension for embeddings
-        self.max_reasoning_pairs = 1000  # Maximum reasoning pairs to generate
+        # self.max_reasoning_pairs = 1000  # Maximum reasoning pairs to generate
+        self.max_reasoning_pairs = 5 # for testing
+        self.max_contemp_tokens = 15
 
         # Model-specific parameters
         self.start_layer_idx = 16  # Start layer for sentence transformer
         self.end_layer_idx = 20  # End layer for sentence transformer
 
+        directory = str(os.path.abspath(os.path.join(__file__ ,"../..")))
+        self.reasoning_pairs_path = os.path.join(directory, "gen_datasets")
+
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+
         # Load config-specific settings
-        self._load_specific_config()
+        # self._load_specific_config()

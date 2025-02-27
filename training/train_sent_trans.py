@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from tqdm import tqdm
 from models.sentence_transformer import CustomizedSentenceTransformer
+from transformers import AutoModel, AutoTokenizer
 from data.reasoning_pairs import ReasoningPairsGenerator
 from utils.logging import Logger
 import utils.utils as utils
@@ -25,7 +26,15 @@ def train_sentence_transformer(
         dataset: Dataset containing reasoning pairs
         config: Training configuration
     """
-    device = utils.get_device()
+    device = config.device
+
+    # Initialize the full base model for getting hidden states
+    base_model = AutoModel.from_pretrained(base_model_name)
+    base_model = base_model.to(device)
+    base_model.eval()  # Keep it in eval mode as we only use it for features
+
+    tokenizer = AutoTokenizer.from_pretrained(base_model_name)
+    tokenizer.pad_token = tokenizer.eos_token
 
     # Initialize sentence transformer
     sentence_transformer = CustomizedSentenceTransformer(
@@ -54,7 +63,7 @@ def train_sentence_transformer(
     logger.log_hyperparams(config.__dict__)
 
     # Split dataset into train and validation
-    train_size = int(0.9 * len(dataset))
+    train_size = int(0.8 * len(dataset))
     val_size = len(dataset) - train_size
     train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_size, val_size])
 
@@ -87,7 +96,7 @@ def train_sentence_transformer(
             condensed_reasoning = batch["condensed_reasoning"]
 
             # Tokenize both reasonings
-            original_inputs = sentence_transformer.tokenizer(
+            original_inputs = tokenizer(
                 original_reasoning,
                 return_tensors="pt",
                 padding=True,
@@ -95,7 +104,7 @@ def train_sentence_transformer(
                 max_length=config.max_seq_length
             ).to(device)
 
-            condensed_inputs = sentence_transformer.tokenizer(
+            condensed_inputs = tokenizer(
                 condensed_reasoning,
                 return_tensors="pt",
                 padding=True,
@@ -103,14 +112,30 @@ def train_sentence_transformer(
                 max_length=config.max_seq_length
             ).to(device)
 
-            # Generate embeddings
+            # Get hidden states from base model
+            with torch.no_grad():
+                original_outputs = base_model(
+                    **original_inputs,
+                    output_hidden_states=True
+                )
+
+                condensed_outputs = base_model(
+                    **condensed_inputs,
+                    output_hidden_states=True
+                )
+
+                # Get the hidden states from the start_layer_idx
+                original_hidden_states = original_outputs.hidden_states[start_layer_idx]
+                condensed_hidden_states = condensed_outputs.hidden_states[start_layer_idx]
+
+            # Generate embeddings using the sentence transformer
             original_embeddings = sentence_transformer(
-                original_inputs.input_ids,
+                original_hidden_states,
                 attention_mask=original_inputs.attention_mask
             )
 
             condensed_embeddings = sentence_transformer(
-                condensed_inputs.input_ids,
+                condensed_hidden_states,
                 attention_mask=condensed_inputs.attention_mask
             )
 
@@ -140,7 +165,7 @@ def train_sentence_transformer(
                 condensed_reasoning = batch["condensed_reasoning"]
 
                 # Tokenize both reasonings
-                original_inputs = sentence_transformer.tokenizer(
+                original_inputs = tokenizer(
                     original_reasoning,
                     return_tensors="pt",
                     padding=True,
@@ -148,7 +173,7 @@ def train_sentence_transformer(
                     max_length=config.max_seq_length
                 ).to(device)
 
-                condensed_inputs = sentence_transformer.tokenizer(
+                condensed_inputs = tokenizer(
                     condensed_reasoning,
                     return_tensors="pt",
                     padding=True,
@@ -156,14 +181,29 @@ def train_sentence_transformer(
                     max_length=config.max_seq_length
                 ).to(device)
 
+                # Get hidden states from base model
+                original_outputs = base_model(
+                    **original_inputs,
+                    output_hidden_states=True
+                )
+
+                condensed_outputs = base_model(
+                    **condensed_inputs,
+                    output_hidden_states=True
+                )
+
+                # Get the hidden states from the start_layer_idx
+                original_hidden_states = original_outputs.hidden_states[start_layer_idx]
+                condensed_hidden_states = condensed_outputs.hidden_states[start_layer_idx]
+
                 # Generate embeddings
                 original_embeddings = sentence_transformer(
-                    original_inputs.input_ids,
+                    original_hidden_states,
                     attention_mask=original_inputs.attention_mask
                 )
 
                 condensed_embeddings = sentence_transformer(
-                    condensed_inputs.input_ids,
+                    condensed_hidden_states,
                     attention_mask=condensed_inputs.attention_mask
                 )
 
@@ -190,16 +230,7 @@ def train_sentence_transformer(
             best_val_loss = avg_val_loss
             model_path = f"{config.model_save_path}/sentence_transformer"
             utils.create_directory(model_path)
-            torch.save(sentence_transformer.state_dict(), f"{model_path}/model.pt")
-
-            # Save config
-            config_dict = {
-                "base_model_name": base_model_name,
-                "start_layer_idx": start_layer_idx,
-                "end_layer_idx": end_layer_idx,
-                "embedding_dim": config.embedding_dim
-            }
-            utils.save_json(config_dict, f"{model_path}/config.json")
+            sentence_transformer.save_pretrained(model_path)
 
             print(f"Saved best model with validation loss: {best_val_loss:.4f}")
 

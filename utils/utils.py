@@ -31,9 +31,11 @@ def load_json(filepath):
     with open(filepath, 'r', encoding='utf-8') as f:
         return json.load(f)
 
-def create_directory(dir_path):
+def create_directory(file_path):
     """Create directory if it doesn't exist"""
-    Path(dir_path).mkdir(parents=True, exist_ok=True)
+    dir_path = os.path.dirname(file_path)
+    os.makedirs(dir_path) if not os.path.exists(dir_path) else None
+    return
 
 def format_time(seconds):
     """Format time in seconds to hours:minutes:seconds"""

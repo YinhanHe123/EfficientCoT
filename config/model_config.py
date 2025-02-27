@@ -1,5 +1,5 @@
 class ModelConfig:
-    def __init__(self, config_name="default"):
+    def __init__(self, config_name="small"):
         self.config_name = config_name
 
         # Model names
@@ -11,7 +11,7 @@ class ModelConfig:
         self.sentence_transformer_path = "./saved_models/sentence_transformer"
 
         # Data paths
-        self.data_path = "./data/gsm8k"
+        self.data_path = "openai/gsm8k"
 
         # Model dimensions
         self.teacher_hidden_dim = 4096  # Hidden dimension of the teacher model

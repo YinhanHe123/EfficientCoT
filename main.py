@@ -12,6 +12,7 @@ from inference.inference import run_inference
 from evaluation.metrics import evaluate_model
 from evaluation.baselines import run_baseline
 import utils.utils as utils
+from huggingface_hub import login
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Contemplation Tokens with Reasoning Ability")
@@ -20,18 +21,19 @@ def parse_args():
                                  "evaluate", "baseline", "run_experiments"],
                         default="train_sentence_transformer",
                         help="Operation mode")
-    parser.add_argument("--config", type=str, default="default",
+    parser.add_argument("--config", type=str, default="small",
                         help="Configuration name")
     parser.add_argument("--baseline", type=str,
                         choices=["ccot", "pause", "implicit_cot"],
                         help="Baseline to run if mode is baseline")
     parser.add_argument("--experiment_file", type=str, default="experiments.json",
                         help="JSON file containing experiment configurations")
+    parser.add_argument("--device", type=int, default=0)
     parser.add_argument("--seed", type=int, default=42,
                         help="Random seed for reproducibility")
     return parser.parse_args()
 
-def run_experiment_sequence(experiment_file, base_seed):
+def run_experiment_sequence(device, experiment_file, base_seed):
     """
     Run a sequence of experiments defined in a JSON file
 
@@ -76,8 +78,12 @@ def run_experiment_sequence(experiment_file, base_seed):
             print(f"\nRepeat {repeat+1}/{repeat_count} with seed {current_seed}")
 
             # Create experiment-specific config
-            model_config = ModelConfig("default")
+            model_config = ModelConfig("small")
             experiment_config = ExperimentConfig("default")
+            experiment_config.device = device
+
+            reasoning_pairs_path = os.path.join(experiment_config.reasoning_pairs_path,
+                                                f"{model_config.teacher_model_name}/reasoning_pairs_{current_seed}.json")
 
             # Override with experiment parameters
             for key, value in exp_params.items():
@@ -91,11 +97,17 @@ def run_experiment_sequence(experiment_file, base_seed):
 
             # Train sentence transformer
             queries = [item["query"] for item in train_dataset][:experiment_config.max_reasoning_pairs]
-            pairs_dataset = prepare_reasoning_pairs_dataset(
-                model_config.teacher_model_name,
-                queries,
-                max_pairs=experiment_config.max_reasoning_pairs
-            )
+            if os.path.exists(reasoning_pairs_path):
+                pairs_dataset = utils.load_json(reasoning_pairs_path)
+            else:
+                pairs_dataset = prepare_reasoning_pairs_dataset(
+                    model_config.teacher_model_name,
+                    queries,
+                    max_pairs=experiment_config.max_reasoning_pairs
+                )
+                # save to gen_datasets folder
+                utils.create_directory(reasoning_pairs_path)
+                utils.save_json(pairs_dataset, reasoning_pairs_path)
 
             # Unique output directory for this experiment
             exp_sent_trans_dir = f"{experiment_config.model_save_path}/sent_trans_{exp.get('name', '')}_repeat{repeat}"
@@ -125,7 +137,8 @@ def run_experiment_sequence(experiment_file, base_seed):
             contemp_generator = ContemplationGenerator(
                 model_config.student_model_name,
                 model_config.teacher_model_name,
-                model_config.teacher_hidden_dim  # Pass the teacher's hidden dimension
+                model_config.teacher_hidden_dim,  # Pass the teacher's hidden dimension
+                device=device
             )
 
             # Train the contemplation generator
@@ -229,17 +242,21 @@ def run_experiment_sequence(experiment_file, base_seed):
         print(" | ".join(row))
 
 def main():
+    login(token='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')
     args = parse_args()
 
     # Set random seed
     utils.set_seed(args.seed)
 
     if args.mode == "run_experiments":
-        run_experiment_sequence(args.experiment_file, args.seed)
+        run_experiment_sequence(args.device, args.experiment_file, args.seed)
     else:
         # Original logic for individual modes
         model_config = ModelConfig(args.config)
         experiment_config = ExperimentConfig(args.config)
+        experiment_config.device = args.device
+        reasoning_pairs_path = os.path.join(experiment_config.reasoning_pairs_path,
+                                                f"{model_config.teacher_model_name}/reasoning_pairs_{args.seed}.json")
 
         # Load dataset
         train_dataset, eval_dataset = load_gsm8k_dataset(model_config.data_path)
@@ -250,11 +267,19 @@ def main():
 
             # Prepare reasoning pairs dataset
             from training.train_sent_trans import prepare_reasoning_pairs_dataset
-            pairs_dataset = prepare_reasoning_pairs_dataset(
-                model_config.teacher_model_name,
-                queries,
-                max_pairs=experiment_config.max_reasoning_pairs
-            )
+            if os.path.exists(reasoning_pairs_path):
+                pairs_dataset = utils.load_json(reasoning_pairs_path)
+            else:
+                pairs_dataset = prepare_reasoning_pairs_dataset(
+                    model_config.teacher_model_name,
+                    queries,
+                    max_pairs=experiment_config.max_reasoning_pairs
+                )
+                # create directory
+                utils.create_directory(reasoning_pairs_path)
+                # save to gen_datasets folder
+                utils.save_json(pairs_dataset, reasoning_pairs_path)
+
 
             # Train sentence transformer
             from training.train_sent_trans import train_sentence_transformer
@@ -277,7 +302,8 @@ def main():
             contemp_generator = ContemplationGenerator(
                 model_config.student_model_name,
                 model_config.teacher_model_name,
-                model_config.hidden_dim
+                model_config.teacher_hidden_dim,
+                device=args.device
             )
 
             # Train the contemplation generator
@@ -286,6 +312,7 @@ def main():
                 sentence_transformer,
                 train_dataset,
                 eval_dataset,
+                model_config,
                 experiment_config
             )
 

@@ -1,49 +1,129 @@
 import torch
 import torch.nn as nn
-from transformers import AutoModel, AutoTokenizer
+from transformers import AutoModel, AutoTokenizer, AutoConfig
+import copy
+import os
+import json
 
 class CustomizedSentenceTransformer(nn.Module):
     def __init__(self, base_model_name, start_layer_idx, end_layer_idx, embedding_dim=768):
         super().__init__()
-        self.base_model = AutoModel.from_pretrained(base_model_name)
-        self.tokenizer = AutoTokenizer.from_pretrained(base_model_name)
 
-        # Extract specific layers from the model
+        # Load the base model, tokenizer and config
+        base_model = AutoModel.from_pretrained(base_model_name)
+        self.tokenizer = AutoTokenizer.from_pretrained(base_model_name)
+        self.tokenizer.pad_token = self.tokenizer.eos_token  # Set pad token to end of sequence token
+        self.config = AutoConfig.from_pretrained(base_model_name)
+
+        # Extract layer indices
         self.start_layer_idx = start_layer_idx
         self.end_layer_idx = end_layer_idx
 
-        # Add embedding projection layer
-        self.embedding_projection = nn.Linear(
-            self.base_model.config.hidden_size,
-            embedding_dim
-        )
+        # Get input dimension from the base model
+        self.input_dim = base_model.config.hidden_size
 
-    def forward(self, input_ids, attention_mask=None, token_type_ids=None):
-        # Run through base model to get all hidden states
-        outputs = self.base_model(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            token_type_ids=token_type_ids,
-            output_hidden_states=True
-        )
+        # For LLaMA models, we need to extract specific components
+        if hasattr(base_model, 'layers'):  # LLaMA models have this structure
+            # Extract the RMS normalization layer and rotary embeddings
+            self.norm = copy.deepcopy(base_model.norm)
+            self.rotary_emb = copy.deepcopy(base_model.rotary_emb)
 
-        # Extract hidden states from specified layers
-        hidden_states = outputs.hidden_states[self.start_layer_idx:self.end_layer_idx+1]
-
-        # Combine hidden states (e.g., by averaging across layers)
-        combined_states = torch.stack(hidden_states).mean(dim=0)
-
-        # Get CLS token representation or mean pooling
-        if attention_mask is not None:
-            # Mean pooling
-            token_embeddings = combined_states
-            input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
-            sum_embeddings = torch.sum(token_embeddings * input_mask_expanded, 1)
-            sum_mask = torch.clamp(input_mask_expanded.sum(1), min=1e-9)
-            pooled_output = sum_embeddings / sum_mask
+            # Extract the required transformer layers
+            self.layers = nn.ModuleList()
+            for i in range(start_layer_idx, end_layer_idx + 1):
+                if i < len(base_model.layers):
+                    self.layers.append(copy.deepcopy(base_model.layers[i]))
         else:
-            # CLS token
-            pooled_output = combined_states[:, 0]
+            raise ValueError(f"Unsupported model architecture: {base_model_name}. Expected LLaMA-style model.")
+
+        # Add embedding projection layer for sentence embeddings
+        self.embedding_projection = nn.Linear(self.input_dim, embedding_dim)
+
+        # Set up pooling strategy
+        self.pooling_strategy = "mean"  # can be "cls", "mean", etc.
+
+    def _prepare_decoder_attention_mask(self, attention_mask, input_shape, device):
+        """
+        Prepare attention mask similar to LLaMA implementation
+        """
+        # Create causal mask
+        if attention_mask is not None:
+            return attention_mask  # Use provided mask
+
+        batch_size, seq_length = input_shape
+
+        # Causal mask is not needed for sentence encoding
+        # Just create a simple attention mask (all ones) to allow full attention
+        return torch.ones((batch_size, seq_length), device=device)
+
+    def forward(self, hidden_states, attention_mask=None, position_ids=None):
+        """
+        Process hidden states through the extracted LLaMA layers
+
+        Args:
+            hidden_states: Input hidden states (batch_size, seq_len, hidden_dim)
+            attention_mask: Attention mask for the sequence (batch_size, seq_len)
+            position_ids: Optional position IDs (batch_size, seq_len)
+
+        Returns:
+            Tensor: Sentence embeddings
+        """
+        device = hidden_states.device
+        batch_size, seq_length, _ = hidden_states.shape
+        # batch_size, seq_length = hidden_states.shape
+
+        # Create position IDs if not provided
+        if position_ids is None:
+            position_ids = torch.arange(seq_length, device=device).unsqueeze(0).expand(batch_size, -1)
+
+        # Prepare attention mask
+        attention_mask = self._prepare_decoder_attention_mask(
+            attention_mask, (batch_size, seq_length), device
+        )
+        attention_mask = None
+
+        # Generate position embeddings - similar to LLaMA
+        position_embeddings = self.rotary_emb(hidden_states, position_ids)
+
+        # Pass through the extracted layers
+        for layer in self.layers:
+            # Process through LLaMA layer
+            layer_outputs = layer(
+                hidden_states,
+                attention_mask=attention_mask,
+                position_ids=position_ids,
+                position_embeddings=position_embeddings
+            )
+
+            # LLaMA layers return a tuple; first element is the hidden states
+            if isinstance(layer_outputs, tuple):
+                hidden_states = layer_outputs[0]
+            else:
+                hidden_states = layer_outputs
+
+        # Apply normalization
+        hidden_states = self.norm(hidden_states)
+
+        # Pooling strategy
+        if self.pooling_strategy == "cls":
+            # Use first token
+            pooled_output = hidden_states[:, 0]
+        else:  # Mean pooling
+            # Apply attention mask for proper mean pooling
+            if attention_mask is not None:
+                if attention_mask.dim() < hidden_states.dim():
+                    expanded_mask = attention_mask.unsqueeze(-1).expand(hidden_states.size())
+                else:
+                    expanded_mask = attention_mask
+
+                # Apply mask and compute mean
+                masked_hidden = hidden_states * expanded_mask
+                sum_mask = expanded_mask.sum(dim=1)
+                sum_mask = torch.clamp(sum_mask, min=1e-9)  # Avoid division by zero
+                pooled_output = masked_hidden.sum(dim=1) / sum_mask
+            else:
+                # Simple mean pooling
+                pooled_output = hidden_states.mean(dim=1)
 
         # Project to embedding space
         sentence_embedding = self.embedding_projection(pooled_output)
@@ -56,53 +136,53 @@ class CustomizedSentenceTransformer(nn.Module):
             sent1_embedding, sent2_embedding, dim=-1
         )
 
-    def embed_hidden_states(self, hidden_states, attention_mask=None):
+    def encode_text(self, texts, max_length=512):
         """
-        Process hidden states directly to generate embeddings
-
-        Args:
-            hidden_states: Hidden states from a model
-            attention_mask: Attention mask for the sequence
-
-        Returns:
-            Tensor: Embeddings
+        Encode text inputs to get hidden states that can be passed to forward
         """
-        # Process the hidden states as if they come from the matching layer
-        # We assume hidden_states are already appropriate for our model
+        # Tokenize the texts
+        inputs = self.tokenizer(
+            texts,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            max_length=max_length
+        ).to(next(self.parameters()).device)
 
-        # Apply mean pooling
-        if attention_mask is not None:
-            # Mean pooling
-            input_mask_expanded = attention_mask.unsqueeze(-1).expand(hidden_states.size()).float()
-            sum_embeddings = torch.sum(hidden_states * input_mask_expanded, 1)
-            sum_mask = torch.clamp(input_mask_expanded.sum(1), min=1e-9)
-            pooled_output = sum_embeddings / sum_mask
-        else:
-            # Use CLS token or average all tokens
-            pooled_output = hidden_states.mean(dim=1)
+        # Get the base model to process the text
+        base_model = AutoModel.from_pretrained(self.tokenizer.name_or_path)
+        base_model = base_model.to(next(self.parameters()).device)
+        base_model.eval()
 
-        # Project to embedding space
-        sentence_embedding = self.embedding_projection(pooled_output)
+        with torch.no_grad():
+            # Get hidden states from base model
+            outputs = base_model(
+                **inputs,
+                output_hidden_states=True
+            )
 
-        return sentence_embedding
+            # Get the hidden states from the start_layer_idx
+            hidden_states = outputs.hidden_states[self.start_layer_idx]
+
+        # Process through our extracted layers
+        return self.forward(
+            hidden_states,
+            attention_mask=inputs.attention_mask,
+            position_ids=None  # Will be auto-generated
+        )
 
     @classmethod
     def from_pretrained(cls, path):
         """
         Load a pre-trained sentence transformer
-
-        Args:
-            path: Path to the saved model directory
-
-        Returns:
-            CustomizedSentenceTransformer: Loaded model
         """
         # Load configuration
-        config_path = f"{path}/config.json"
+        config_path = os.path.join(path, "config.json")
         if not os.path.exists(config_path):
             raise FileNotFoundError(f"Configuration file not found at {config_path}")
 
-        config = utils.load_json(config_path)
+        with open(config_path, 'r') as f:
+            config = json.load(f)
 
         # Initialize model
         model = cls(
@@ -113,10 +193,30 @@ class CustomizedSentenceTransformer(nn.Module):
         )
 
         # Load model weights
-        model_path = f"{path}/model.pt"
+        model_path = os.path.join(path, "model.pt")
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"Model file not found at {model_path}")
 
         model.load_state_dict(torch.load(model_path))
 
         return model
+
+    def save_pretrained(self, path):
+        """
+        Save the model to disk
+        """
+        os.makedirs(path, exist_ok=True)
+
+        # Save configuration
+        config = {
+            "base_model_name": self.tokenizer.name_or_path,
+            "start_layer_idx": self.start_layer_idx,
+            "end_layer_idx": self.end_layer_idx,
+            "embedding_dim": self.embedding_projection.out_features
+        }
+
+        with open(os.path.join(path, "config.json"), 'w') as f:
+            json.dump(config, f)
+
+        # Save model weights
+        torch.save(self.state_dict(), os.path.join(path, "model.pt"))
