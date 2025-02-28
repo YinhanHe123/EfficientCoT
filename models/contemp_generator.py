@@ -31,30 +31,10 @@ class ContemplationGenerator(nn.Module):
 
         # Get the last hidden states
         hidden_states = outputs.last_hidden_state
-
         # Project to teacher model hidden dimension
         projected_states = self.projection_layer(hidden_states)
-
         return projected_states
 
-    def generate_contemplation_tokens(self, query, max_length=256):
-        # Tokenize the query
-        inputs = self.tokenizer(
-            query,
-            return_tensors="pt",
-            padding=True,
-            truncation=True,
-            max_length=max_length
-        ).to(self.student_model.device)
-
-        # Generate hidden states
-        with torch.no_grad():
-            hidden_states = self(
-                inputs.input_ids,
-                attention_mask=inputs.attention_mask
-            )
-
-        return hidden_states
 
     @classmethod
     def from_pretrained(cls, path):

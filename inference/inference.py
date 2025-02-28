@@ -70,15 +70,10 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
             # we'll implement a more direct approach using model's prepare_inputs_for_generation
             original_prepare_inputs = teacher_model.prepare_inputs_for_generation
 
-            # Keep track of first call to avoid infinite recursion
-            first_call = True
-
-            def modified_prepare_inputs(input_ids, **kwargs):
-                nonlocal first_call
-
-                if first_call:
-                    first_call = False
-
+            # Remove the first_call mechanism and modify the prepare_inputs function
+            def modified_prepare_inputs(input_ids, past_key_values=None, **kwargs):
+                # If this is the first call (no past_key_values)
+                if past_key_values is None:
                     # Get the embeddings from the model's embedding layer
                     inputs_embeds = teacher_model.get_input_embeddings()(input_ids)
 
@@ -103,8 +98,8 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
                     ).unsqueeze(0)
 
                     # Return the combined inputs with proper positioning
-                    kwargs.pop('attention_mask', None)  # Remove existing attention_mask
-                    kwargs.pop('position_ids', None)   # Remove existing position_ids
+                    kwargs.pop('attention_mask', None)
+                    kwargs.pop('position_ids', None)
 
                     return {
                         'inputs_embeds': combined_embeds,
@@ -113,8 +108,11 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
                         **kwargs
                     }
 
-                # For subsequent calls, use the original function
-                return original_prepare_inputs(input_ids, **kwargs)
+                # For subsequent calls, adjust the past_key_values to include the effect of contemp_states
+                else:
+                    # The model will continue generating based on the KV cache that already includes
+                    # the effect of the contemplation states from the first call
+                    return original_prepare_inputs(input_ids, past_key_values=past_key_values, **kwargs)
 
             # Replace the prepare_inputs_for_generation method temporarily
             teacher_model.prepare_inputs_for_generation = modified_prepare_inputs

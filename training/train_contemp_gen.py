@@ -26,7 +26,7 @@ def compute_loss_ans(contemp_states, teacher_model, teacher_tokenizer, answer_lo
         # Here we'll use a simple approach: replace the end of the sequence with contemplation states
         # In a more sophisticated implementation, you might want to use attention to combine them
         seq_len = insert_hidden_state.size(1)
-        contemp_len = min(contemp_states.size(1), seq_len // 2)  # Use half of the sequence length
+        contemp_len = min(contemp_states.size(1), exp_config.max_contemp_tokens)
 
         # Create a position for the contemplation tokens (after the query)
         modified_hidden_state = insert_hidden_state.clone()
@@ -114,6 +114,7 @@ def compute_loss_ans(contemp_states, teacher_model, teacher_tokenizer, answer_lo
                         shifted_labels.view(-1))
     return l_ans
 
+
 def train_contemplation_generator(
     contemp_generator,
     sentence_transformer,
@@ -175,6 +176,7 @@ def train_contemplation_generator(
             # Process batch
             query = batch["query"]
             ground_truth_reasoning = batch["reasoning"]
+            condensed_reasoning = batch["condensed_reasoning"]
             ground_truth_answer = batch["answer"]
 
             # Get teacher model's ground-truth reasoning hidden states
@@ -195,7 +197,7 @@ def train_contemplation_generator(
                     output_hidden_states=True  # Get hidden states
                 )
 
-                # Get the 16th hidden states
+                # Get the required hidden states
                 gt_reason_hidden_states = tc_output.hidden_states[exp_config.start_layer_idx]
 
                 # Get reasoning embeddings from sentence transformer
@@ -204,8 +206,9 @@ def train_contemplation_generator(
                 )
 
             # Generate contemplation tokens from student model
-            query_inputs = contemp_generator.tokenizer(
-                query,
+            query_condensed_reasoning = f"Question: {query[0]}\nAnswer: {condensed_reasoning[0]}"
+            contemp_inputs = contemp_generator.tokenizer(
+                query_condensed_reasoning,
                 return_tensors="pt",
                 padding=True,
                 truncation=True,
@@ -214,9 +217,9 @@ def train_contemplation_generator(
 
             # Generate hidden states
             contemp_states = contemp_generator(
-                query_inputs.input_ids,
-                attention_mask=query_inputs.attention_mask
-            )
+                contemp_inputs.input_ids,
+                attention_mask=contemp_inputs.attention_mask
+            )[:, -min(exp_config.max_contemp_tokens,contemp_inputs.input_ids.size(1)):, :]  # Get last N tokens
 
             # Get contemplation embeddings using sentence transformer
             contemp_embeddings = sentence_transformer(contemp_states)
