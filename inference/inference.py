@@ -122,8 +122,8 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
                     return original_prepare_inputs(input_ids, past_key_values=past_key_values, **kwargs)
 
             # Replace the prepare_inputs_for_generation method temporarily
-            # teacher_model.prepare_inputs_for_generation = modified_prepare_inputs
-            teacher_model.prepare_inputs_for_generation = original_prepare_inputs # for debugging
+            teacher_model.prepare_inputs_for_generation = modified_prepare_inputs
+            # teacher_model.prepare_inputs_for_generation = original_prepare_inputs # for debugging
             # Generate answer with the modified approach
             outputs = teacher_model.generate(
                 input_ids,

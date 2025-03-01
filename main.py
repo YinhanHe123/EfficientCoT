@@ -23,7 +23,7 @@ def parse_args():
                         help="Operation mode")
     parser.add_argument("--config", type=str, default="small",
                         help="Configuration name")
-    parser.add_argument("--baseline", type=str,
+    parser.add_argument("--baseline", type=str, default="effi_cot",
                         choices=["ccot", "pause", "implicit_cot"],
                         help="Baseline to run if mode is baseline")
     parser.add_argument("--experiment_file", type=str, default="experiments.json",
@@ -31,11 +31,13 @@ def parse_args():
     parser.add_argument("--device", type=int, default=0)
     parser.add_argument("--seed", type=int, default=42,
                         help="Random seed for reproducibility")
-    parser.add_argument("--baseline_type", type=str, default="vanilla_cot", choices=["vanilla_cot", "effi_cot_no_sentence_transformer", "effi_cot_no_l_reason"],
+    parser.add_argument("--variation", type=str, default="vanilla", choices=["vanilla", "no_sentence_transformer", "no_l_reason"],
+                        help="Variation of the effi_cot model to use")
+    parser.add_argument("--baseline_type", type=str, default="vanilla_cot", choices=["vanilla_cot"],
                         help="Baseline type for evaluation")
     return parser.parse_args()
 
-def run_experiment_sequence(device, experiment_file, base_seed):
+def run_experiment_sequence(variation, device, experiment_file, base_seed):
     """
     Run a sequence of experiments defined in a JSON file
 
@@ -149,7 +151,8 @@ def run_experiment_sequence(device, experiment_file, base_seed):
                 sentence_transformer,
                 train_dataset,
                 eval_dataset,
-                experiment_config
+                experiment_config,
+                variation
             )
 
             # Evaluate
@@ -247,6 +250,7 @@ def main():
     login(token='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')
     args = parse_args()
 
+
     # Set random seed
     utils.set_seed(args.seed)
 
@@ -257,13 +261,26 @@ def main():
         model_config = ModelConfig(args.config)
         experiment_config = ExperimentConfig(args.config)
         experiment_config.device = args.device
+        experiment_config.model_save_path = f"{experiment_config.model_save_path}/{args.baseline}/{args.variation}" if args.baseline == 'effi_cot' else f"{experiment_config.model_save_path}/{args.baseline}"
+        experiment_config.checkpoint_path = f"{experiment_config.checkpoint_path}/{args.baseline}/{args.variation}" if args.baseline == 'effi_cot' else f"{experiment_config.checkpoint_path}/{args.baseline}"
+        experiment_config.result_path = f"{experiment_config.result_path}/{args.baseline}/{args.variation}" if args.baseline == 'effi_cot' else f"{experiment_config.result_path}/{args.baseline}"
+
+        experiment_config.experiment_name = f"{args.baseline}_{args.variation}_{args.seed}"
+
+        if not os.path.exists(experiment_config.model_save_path):
+            os.makedirs(experiment_config.model_save_path)
+        if not os.path.exists(experiment_config.checkpoint_path):
+            os.makedirs(experiment_config.checkpoint_path)
+        if not os.path.exists(experiment_config.result_path):
+            os.makedirs(experiment_config.result_path)
+
         reasoning_pairs_path = os.path.join(experiment_config.reasoning_pairs_path,
                                                 f"{model_config.teacher_model_name}/reasoning_pairs_{args.seed}.json")
 
         # Load dataset
         train_dataset, eval_dataset = load_gsm8k_dataset(model_config.data_path)
 
-        if args.mode == "train_sentence_transformer":
+        if args.mode == "train_sentence_transformer" and args.variation == "vanilla":
             # Extract queries from the dataset
             queries = [item["query"] for item in train_dataset][:experiment_config.max_reasoning_pairs]
 
@@ -302,9 +319,12 @@ def main():
 
             # Load pre-trained sentence transformer
             from models.sentence_transformer import CustomizedSentenceTransformer
-            sentence_transformer = CustomizedSentenceTransformer.from_pretrained(
-                model_config.sentence_transformer_path
-            )
+            if args.variation == "no_sentence_transformer":
+                sentence_transformer = None
+            else:
+                sentence_transformer = CustomizedSentenceTransformer.from_pretrained(
+                    model_config.sentence_transformer_path
+                )
 
             # Initialize contemplation generator
             contemp_generator = ContemplationGenerator(
@@ -321,7 +341,8 @@ def main():
                 train_dataset,
                 eval_dataset,
                 model_config,
-                experiment_config
+                experiment_config,
+                args.variation
             )
 
         elif args.mode == "evaluate":
