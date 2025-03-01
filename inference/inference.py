@@ -42,6 +42,13 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
             # Prepare prompt with query
             prompt = f"Question: {query}\nAnswer:"
 
+            # for debugging
+            prompt = [
+                {'role':"user", "content":prompt}
+            ]
+            teacher_tokenizer.chat_template = "{% for message in messages %}{% if message['role'] == 'system' %}{{ message['content'] }}{% elif message['role'] == 'user' %}{{ '\n\nHuman: ' + message['content'] +  eos_token }}{% elif message['role'] == 'assistant' %}{{ '\n\nAssistant: '  + message['content'] +  eos_token  }}{% endif %}{% endfor %}{% if add_generation_prompt %}{{ '\n\nAssistant: ' }}{% endif %}"
+            prompt=teacher_tokenizer.apply_chat_template(prompt, tokenize=False)
+
             # Tokenize the prompt
             prompt_tokens = teacher_tokenizer(
                 prompt,
@@ -73,14 +80,14 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
             # Remove the first_call mechanism and modify the prepare_inputs function
             def modified_prepare_inputs(input_ids, past_key_values=None, **kwargs):
                 # If this is the first call (no past_key_values)
-                if past_key_values is None:
+                if len(past_key_values.key_cache) == 0:
                     # Get the embeddings from the model's embedding layer
                     inputs_embeds = teacher_model.get_input_embeddings()(input_ids)
 
                     # Create a new inputs_embeds by concatenating with contemp_states
                     combined_embeds = torch.cat([
                         inputs_embeds,
-                        contemp_states[:, :contemp_len, :]
+                        contemp_states[:, -contemp_len:, :]
                     ], dim=1)
 
                     # Create a proper attention mask that covers both parts
@@ -115,8 +122,8 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
                     return original_prepare_inputs(input_ids, past_key_values=past_key_values, **kwargs)
 
             # Replace the prepare_inputs_for_generation method temporarily
-            teacher_model.prepare_inputs_for_generation = modified_prepare_inputs
-
+            # teacher_model.prepare_inputs_for_generation = modified_prepare_inputs
+            teacher_model.prepare_inputs_for_generation = original_prepare_inputs # for debugging
             # Generate answer with the modified approach
             outputs = teacher_model.generate(
                 input_ids,
@@ -128,6 +135,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
 
             # Decode only the generated part
             answer = teacher_tokenizer.decode(outputs[0][input_ids.size(1):], skip_special_tokens=True)
+            print(f"Query: {query}\nAnswer: {answer}\n")
 
             result = {
                 "query": query,

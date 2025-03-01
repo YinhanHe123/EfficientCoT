@@ -31,6 +31,8 @@ def parse_args():
     parser.add_argument("--device", type=int, default=0)
     parser.add_argument("--seed", type=int, default=42,
                         help="Random seed for reproducibility")
+    parser.add_argument("--baseline_type", type=str, default="vanilla_cot", choices=["vanilla_cot", "effi_cot_no_sentence_transformer", "effi_cot_no_l_reason"],
+                        help="Baseline type for evaluation")
     return parser.parse_args()
 
 def run_experiment_sequence(device, experiment_file, base_seed):
@@ -292,6 +294,12 @@ def main():
             )
 
         elif args.mode == "train_contemp_generator":
+            # load condensed reasoning pairs dataset, add condensed reasoning to train_dataset
+            pairs_dataset = utils.load_json(reasoning_pairs_path)
+            # add to train dataset items with condensed reasoning of pairs_dataset
+            for i in range(len(train_dataset)):
+                train_dataset.update_item(i, "condensed_reasoning", pairs_dataset[i]["condensed_reasoning"])
+
             # Load pre-trained sentence transformer
             from models.sentence_transformer import CustomizedSentenceTransformer
             sentence_transformer = CustomizedSentenceTransformer.from_pretrained(

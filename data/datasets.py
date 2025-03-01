@@ -16,7 +16,7 @@ def load_gsm8k_dataset(data_path=None):
 class GSM8KDataset(Dataset):
     """Dataset class for GSM8K problems"""
     def __init__(self, hf_dataset, max_length=1024):
-        self.dataset = hf_dataset
+        self.dataset = list(hf_dataset)
         self.max_length = max_length
 
     def __len__(self):
@@ -31,6 +31,8 @@ class GSM8KDataset(Dataset):
         # GSM8K format has answers with reasoning steps followed by the final answer
         full_answer = item['answer']
 
+        condensed_reasoning = item['condensed_reasoning'] if 'condensed_reasoning' in item else None
+
         # Extract reasoning and final answer
         reasoning_parts = full_answer.split('####')
         reasoning = reasoning_parts[0].strip()
@@ -42,8 +44,39 @@ class GSM8KDataset(Dataset):
             "query": question,
             "reasoning": reasoning,
             "answer": final_answer,
-            "full_answer": full_answer
+            "full_answer": full_answer,
+            "condensed_reasoning": condensed_reasoning
         }
+
+    def update_item(self, idx, key, value):
+        """Add or update a field in the dataset at the specified index"""
+        # If we're adding a field that's one of our transformed fields
+        if key in ["query", "reasoning", "answer", "full_answer"]:
+            # Need to map back to the original dataset format
+            if key == "query":
+                self.dataset[idx]["question"] = value
+            elif key == "reasoning":
+                # Update reasoning while preserving the answer part
+                current_answer = self.dataset[idx]["answer"]
+                reasoning_parts = current_answer.split('####')
+                if len(reasoning_parts) > 1:
+                    self.dataset[idx]["answer"] = value + "\n#### " + reasoning_parts[1].strip()
+                else:
+                    self.dataset[idx]["answer"] = value
+            elif key == "answer":
+                # Update just the answer part after ####
+                current_answer = self.dataset[idx]["answer"]
+                reasoning_parts = current_answer.split('####')
+                if len(reasoning_parts) > 1:
+                    self.dataset[idx]["answer"] = reasoning_parts[0].strip() + "\n#### " + value
+                else:
+                    self.dataset[idx]["answer"] = current_answer + "\n#### " + value
+            elif key == "full_answer":
+                self.dataset[idx]["answer"] = value
+        else:
+            # For new fields, we need to add them to the underlying dataset
+            # Note: This will only work if the underlying dataset supports item assignment
+            self.dataset[idx][key] = value
 
 def create_dataloaders(train_dataset, eval_dataset, batch_size=16):
     """Create PyTorch DataLoaders for training and evaluation"""

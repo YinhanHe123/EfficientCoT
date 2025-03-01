@@ -2,116 +2,80 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from tqdm import tqdm
-from transformers import AutoModel, AutoTokenizer
+from transformers import AutoModel, AutoTokenizer, LlamaForCausalLM
 import utils.utils as utils
 from utils.logging import Logger
 
 
 def compute_loss_ans(contemp_states, teacher_model, teacher_tokenizer, answer_loss_fn, combined_inputs, answer_inputs, exp_config, device, mode="train"):
-# Forward with contemplation states
-    # We need to provide the contemplation states to the teacher model
-    # This requires modifying the hidden states of the teacher model
-    with torch.no_grad():
-        # Forward pass with initial tokens
-        teacher_outputs = teacher_model(
-            combined_inputs.input_ids,
-            attention_mask=combined_inputs.attention_mask,
-            output_hidden_states=True
-        )
+    # Determine whether to compute gradients based on mode
+    # In 'train' mode, we'll allow gradients to flow back to contemp_states
+    # In 'eval' mode, we'll ensure no gradients are computed
+    context_manager = torch.enable_grad() if mode == "train" else torch.no_grad()
 
-        # Get the hidden state at the injection point (start_layer_idx)
-        insert_hidden_state = teacher_outputs.hidden_states[exp_config.start_layer_idx]
-
-        # Inject contemplation tokens by replacing or concatenating
-        # Here we'll use a simple approach: replace the end of the sequence with contemplation states
-        # In a more sophisticated implementation, you might want to use attention to combine them
-        seq_len = insert_hidden_state.size(1)
+    with context_manager:
+        # Get the total sequence length and limit contemp states to max_contemp_tokens
         contemp_len = min(contemp_states.size(1), exp_config.max_contemp_tokens)
 
-        # Create a position for the contemplation tokens (after the query)
-        modified_hidden_state = insert_hidden_state.clone()
-        modified_hidden_state[:, -contemp_len:, :] = contemp_states[:, :contemp_len, :]
+        # With torch.no_grad for teacher model operations
+        with torch.no_grad():
+            # Get the embeddings from the model's embedding layer
+            inputs_embeds = teacher_model.get_input_embeddings()(combined_inputs.input_ids)
+            answer_embeds = teacher_model.get_input_embeddings()(answer_inputs.input_ids)
 
-    # Forward the teacher model from this point to get logits for answer generation
-    # Process through the remaining transformer layers
-    current_hidden_state = modified_hidden_state
+            # Create a new inputs_embeds by concatenating with contemp_states
+            # In train mode, we need to preserve the computation graph
+            # In eval mode, we can detach to save memory
+            contemp_states_to_use = contemp_states if mode == "train" else contemp_states.detach()
 
-    # Get position IDs and attention mask for the forward pass
-    position_ids = torch.arange(seq_len, device=device).unsqueeze(0).expand_as(combined_inputs.input_ids)
+            combined_embeds = torch.cat([
+                inputs_embeds,
+                contemp_states_to_use[:, -contemp_len:, :],
+                answer_embeds
+            ], dim=1)
 
-    # Create position embeddings for the remaining layers if needed
-    position_embeddings = None
-    if hasattr(teacher_model, 'rotary_emb'):
-        position_embeddings = teacher_model.rotary_emb(current_hidden_state, position_ids)
-
-    # Process through the remaining transformer layers starting after the injection point
-    for layer_idx in range(exp_config.start_layer_idx + 1, len(teacher_model.layers)):
-        # Get the current layer
-        layer = teacher_model.layers[layer_idx]
-
-        # Forward through the layer but don't accumulate gradients for the layer parameters
-        if mode == "train":
-            with torch.enable_grad():  # Enable grad for the input but not for layer parameters
-                # Store the requires_grad state
-                prev_grad_states = {}
-                for name, param in layer.named_parameters():
-                    prev_grad_states[name] = param.requires_grad
-                    param.requires_grad = False
-
-                # Process the layer
-                layer_outputs = layer(
-                    current_hidden_state,
-                    attention_mask=None,
-                    position_ids=position_ids,
-                    past_key_value=None,
-                    output_attentions=False,
-                    use_cache=False,
-                    position_embeddings=position_embeddings
-                )
-
-                # Restore the requires_grad state
-                for name, param in layer.named_parameters():
-                    param.requires_grad = prev_grad_states[name]
-        else:
-            layer_outputs = layer(
-                current_hidden_state,
-                attention_mask=None,
-                position_ids=position_ids,
-                past_key_value=None,
-                output_attentions=False,
-                use_cache=False,
-                position_embeddings=position_embeddings
+            # Create a proper attention mask that covers both parts
+            attention_mask = torch.ones(
+                (combined_inputs.input_ids.size(0), combined_embeds.shape[1]),
+                dtype=torch.long,
+                device=device
             )
 
-        if isinstance(layer_outputs, tuple):
-            current_hidden_state = layer_outputs[0]
-        else:
-            current_hidden_state = layer_outputs
+            # Create position ids that account for both parts
+            position_ids = torch.arange(
+                combined_embeds.shape[1],
+                dtype=torch.long,
+                device=device
+            ).unsqueeze(0).expand(combined_inputs.input_ids.size(0), -1)
 
-    # Apply the final normalization layer if available
-    if hasattr(teacher_model, 'norm'):
-        current_hidden_state = teacher_model.norm(current_hidden_state)
+            # Forward pass with combined embeddings
+            teacher_outputs = teacher_model(
+                inputs_embeds=combined_embeds,
+                attention_mask=attention_mask,
+                position_ids=position_ids,
+                output_hidden_states=True
+            )
 
-    # Generate logits using the language model head
-    if hasattr(teacher_model, 'lm_head'):
-        logits = teacher_model.lm_head(current_hidden_state)
-    else:
-        # If no lm_head is available, approximate with a linear projection
-        hidden_size = current_hidden_state.size(-1)
-        vocab_size = teacher_tokenizer.vocab_size
-        approx_lm_head = nn.Linear(hidden_size, vocab_size).to(device)
-        logits = approx_lm_head(current_hidden_state)
+            # Get logits from the teacher model
+            logits = teacher_outputs.logits
 
-    # Calculate cross entropy loss with answer tokens
-    # Shift the target tokens for language modeling (predict next token)
-    # shifted_logits = logits[:, :-1, :].contiguous()
-    shifted_labels = answer_inputs.input_ids[:, 1:].contiguous()
-    ans_length = shifted_labels.size(1)
-    shifted_logits = logits[:, -ans_length:, :].contiguous()
+        # Get answer labels (shifted by one token)
+        answer_labels = answer_inputs.input_ids[:, 1:]  # Shifted by one token
 
-    # Calculate loss
-    l_ans = answer_loss_fn(shifted_logits.view(-1, shifted_logits.size(-1)),
-                        shifted_labels.view(-1))
+        # Get the index to start predictions from (where the answer begins)
+        # This is where the original input ends plus the contemplation tokens
+        start_idx = combined_inputs.input_ids.size(1) + contemp_len - 1
+        seq_length = answer_labels.size(1)
+
+        # Get all relevant logits at once
+        answer_logits = logits[:, start_idx:start_idx+seq_length, :]
+        # Reshape for the loss function
+        answer_logits_flat = answer_logits.reshape(-1, answer_logits.size(-1))
+        answer_labels_flat = answer_labels.reshape(-1)
+
+        # Calculate loss for all positions at once
+        l_ans = answer_loss_fn(answer_logits_flat, answer_labels_flat)
+
     return l_ans
 
 
@@ -133,7 +97,7 @@ def train_contemplation_generator(
         param.requires_grad = False
 
     # Initialize teacher model
-    teacher_model = AutoModel.from_pretrained(model_config.teacher_model_name)
+    teacher_model = LlamaForCausalLM.from_pretrained(model_config.teacher_model_name)
     teacher_model = teacher_model.to(device)
     teacher_model.eval()  # Set to evaluation mode
     for param in teacher_model.parameters():
@@ -164,6 +128,7 @@ def train_contemplation_generator(
     best_val_loss = float('inf')
 
     for epoch in range(exp_config.num_epochs):
+        # Set contemp_generator to train mode only during training
         contemp_generator.train()
 
         total_loss = 0
@@ -231,7 +196,7 @@ def train_contemplation_generator(
 
             l_reason = 1 - similarity.mean()
 
-            # Implement answer loss (Lans) - Forward contemplation tokens to teacher model
+            # Implement answer loss with teacher forcing
             # Create combined input: [query + contemplation tokens]
             combined_input = f"Question: {query[0]}\nAnswer:"
             combined_inputs = teacher_tokenizer(
@@ -251,7 +216,11 @@ def train_contemplation_generator(
                 max_length=exp_config.max_seq_length
             ).to(device)
 
-            l_ans = compute_loss_ans(contemp_states, teacher_model, teacher_tokenizer, answer_loss_fn, combined_inputs, answer_inputs, exp_config, device)
+            # Compute loss using the modified function with mode="train"
+            l_ans = compute_loss_ans(contemp_states, teacher_model, teacher_tokenizer,
+                               answer_loss_fn, combined_inputs, answer_inputs,
+                               exp_config, device, mode="train")
+
             # Combined loss
             loss = exp_config.alpha * l_reason + (1 - exp_config.alpha) * l_ans
 
@@ -293,28 +262,31 @@ def train_contemplation_generator(
             # Save best model
             if eval_loss < best_val_loss:
                 best_val_loss = eval_loss
-                model_path = f"{exp_config.model_save_path}/contemp_generator"
-                utils.create_directory(model_path)
-                contemp_generator.save_pretrained(model_path)
-                print(f"Saved best model with validation loss: {best_val_loss:.4f}")
+                best_state_dict = contemp_generator.state_dict()
 
-        # Save checkpoint
-        if (epoch + 1) % exp_config.save_interval == 0:
-            ckpt_path = f"{exp_config.checkpoint_path}/contemp_generator_epoch{epoch+1}"
-            utils.create_directory(ckpt_path)
-            contemp_generator.save_pretrained(ckpt_path)
-
+        # # Save checkpoint
+        # if (epoch + 1) % exp_config.save_interval == 0:
+        #     ckpt_path = f"{exp_config.checkpoint_path}/contemp_generator_epoch{epoch+1}"
+        #     utils.create_directory(ckpt_path)
+        #     contemp_generator.save_pretrained(ckpt_path)
+    # save best contemp_generator
+    contemp_generator.load_state_dict(best_state_dict)
+    model_path = f"{exp_config.model_save_path}/contemp_generator"
+    utils.create_directory(model_path)
+    contemp_generator.save_pretrained(model_path)
+    print(f"Saved best model with validation loss: {best_val_loss:.4f}")
     logger.close()
     return contemp_generator
 
 
-
 def evaluate(contemp_generator, sentence_transformer, eval_dataset, model_config, exp_config):
     device = contemp_generator.device
+
+    # Ensure the contemp_generator is in evaluation mode during evaluation
     contemp_generator.eval()
 
     # Initialize teacher model and tokenizer for evaluation
-    teacher_model = AutoModel.from_pretrained(model_config.teacher_model_name)
+    teacher_model = LlamaForCausalLM.from_pretrained(model_config.teacher_model_name)
     teacher_model = teacher_model.to(device)
     teacher_model.eval()
 
@@ -328,7 +300,7 @@ def evaluate(contemp_generator, sentence_transformer, eval_dataset, model_config
     reason_loss_sum = 0
     ans_loss_sum = 0
 
-    with torch.no_grad():
+    with torch.no_grad():  # No gradients for evaluation
         for batch in tqdm(eval_dataset, desc="Evaluating"):
             # Process batch
             query = batch["query"]
@@ -387,7 +359,7 @@ def evaluate(contemp_generator, sentence_transformer, eval_dataset, model_config
             # Reasoning loss (1 - similarity)
             l_reason = 1 - similarity.mean()
 
-            # Implement answer loss - similar to training but in eval mode
+            # Implement answer loss - using the same teacher forcing approach
             # Create combined input: [query + contemplation tokens]
             combined_input = f"Question: {query[0]}\nAnswer:"
             combined_inputs = teacher_tokenizer(
@@ -407,7 +379,11 @@ def evaluate(contemp_generator, sentence_transformer, eval_dataset, model_config
                 max_length=exp_config.max_seq_length
             ).to(device)
 
-            l_ans = compute_loss_ans(contemp_states, teacher_model, teacher_tokenizer, answer_loss_fn, combined_inputs, answer_inputs, exp_config, device, mode="eval")
+            # Compute answer loss with mode="eval"
+            l_ans = compute_loss_ans(contemp_states, teacher_model, teacher_tokenizer,
+                               answer_loss_fn, combined_inputs, answer_inputs,
+                               exp_config, device, mode="eval")
+
             # Combined loss with alpha weighting
             loss = exp_config.alpha * l_reason + (1 - exp_config.alpha) * l_ans
 
