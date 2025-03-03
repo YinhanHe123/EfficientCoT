@@ -5,7 +5,7 @@ from tqdm import tqdm
 import os
 
 def run_inference(contemp_generator, dataset, teacher_model_name, config):
-    device = utils.get_device()
+    device = config.device
     contemp_generator = contemp_generator.to(device)
     contemp_generator.eval()
 
@@ -121,6 +121,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
                     # the effect of the contemplation states from the first call
                     return original_prepare_inputs(input_ids, past_key_values=past_key_values, **kwargs)
 
+
             # Replace the prepare_inputs_for_generation method temporarily
             teacher_model.prepare_inputs_for_generation = modified_prepare_inputs
             # teacher_model.prepare_inputs_for_generation = original_prepare_inputs # for debugging
@@ -142,8 +143,8 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
                 "ground_truth": sample.get("answer", ""),
                 "prediction": answer
             }
-
             results.append(result)
+            teacher_model.prepare_inputs_for_generation = original_prepare_inputs # change it back to original for the next sample in the loop
 
     # if path not exist, create it
     if not os.path.exists(result_dir):

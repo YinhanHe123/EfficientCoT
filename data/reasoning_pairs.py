@@ -1,13 +1,15 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
 from tqdm import tqdm
+from transformers import pipeline
 
 class ReasoningPairsGenerator:
-    def __init__(self, model_name):
+    def __init__(self, model_name, device):
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model = AutoModelForCausalLM.from_pretrained(model_name)
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model.to(self.device)
+        self.model = AutoModelForCausalLM.from_pretrained(model_name, device_map='auto',  # Automatically distribute across GPUs
+                        max_memory={0: "75GiB", 1: "6GiB", 2: "75GiB", 3: "75GiB"}  # Memory limits per GPU
+                        )
+        self.device = device
 
     def generate_reasoning(self, query, max_length=1024):
         """Generate detailed reasoning for a given query"""
@@ -23,16 +25,17 @@ class ReasoningPairsGenerator:
                 top_p=0.9,
                 do_sample=True
             )
+        # pipe = pipeline('text-generation', model=self.model, tokenizer=self.tokenizer)
+        # reasoning = pipe(prompt, max_length=max_length)[0]['generated_text']
 
         reasoning = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
         # Extract just the reasoning part (remove the prompt)
         reasoning = reasoning.replace(prompt, "").strip()
-
         return reasoning
 
     def generate_condensed_reasoning(self, original_reasoning, max_length=1024):
         """Generate condensed version of the original reasoning"""
-        prompt = f"Original reasoning: {original_reasoning}\n\nCondense the above reasoning into a concise but complete form:"
+        prompt = f"Original reasoning: {original_reasoning}\n\nCondense the above reasoning into a VERY VERY concise version:"
 
         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
 
@@ -55,7 +58,7 @@ class ReasoningPairsGenerator:
         """Generate a pair of original and condensed reasoning for a query"""
         original_reasoning = self.generate_reasoning(query)
         condensed_reasoning = self.generate_condensed_reasoning(original_reasoning)
-      
+
         return {
             "query": query,
             "original_reasoning": original_reasoning,

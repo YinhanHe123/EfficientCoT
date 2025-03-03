@@ -4,7 +4,7 @@ import json
 import numpy as np
 from config.model_config import ModelConfig
 from config.experiment_config import ExperimentConfig
-from data.datasets import load_gsm8k_dataset
+from data.cot_datasets import load_gsm8k_dataset
 from models.contemp_generator import ContemplationGenerator
 from training.train_contemp_gen import train_contemplation_generator
 from training.train_sent_trans import train_sentence_transformer, prepare_reasoning_pairs_dataset
@@ -106,6 +106,7 @@ def run_experiment_sequence(variation, device, experiment_file, base_seed):
             else:
                 pairs_dataset = prepare_reasoning_pairs_dataset(
                     model_config.teacher_model_name,
+                    device,
                     queries,
                     max_pairs=experiment_config.max_reasoning_pairs
                 )
@@ -259,11 +260,14 @@ def main():
     else:
         # Original logic for individual modes
         model_config = ModelConfig(args.config)
+        # model_config.sentence_transformer_path = f"./saved_models/effi_cot/{args.baseline}/{args.variation}/sentence_transformer"
+
         experiment_config = ExperimentConfig(args.config)
         experiment_config.device = args.device
         experiment_config.model_save_path = f"{experiment_config.model_save_path}/{args.baseline}/{args.variation}" if args.baseline == 'effi_cot' else f"{experiment_config.model_save_path}/{args.baseline}"
         experiment_config.checkpoint_path = f"{experiment_config.checkpoint_path}/{args.baseline}/{args.variation}" if args.baseline == 'effi_cot' else f"{experiment_config.checkpoint_path}/{args.baseline}"
         experiment_config.result_path = f"{experiment_config.result_path}/{args.baseline}/{args.variation}" if args.baseline == 'effi_cot' else f"{experiment_config.result_path}/{args.baseline}"
+
 
         experiment_config.experiment_name = f"{args.baseline}_{args.variation}_{args.seed}"
 
@@ -291,6 +295,7 @@ def main():
             else:
                 pairs_dataset = prepare_reasoning_pairs_dataset(
                     model_config.teacher_model_name,
+                    args.device,
                     queries,
                     max_pairs=experiment_config.max_reasoning_pairs
                 )
@@ -298,6 +303,7 @@ def main():
                 utils.create_directory(reasoning_pairs_path)
                 # save to gen_datasets folder
                 utils.save_json(pairs_dataset, reasoning_pairs_path)
+
 
 
             # Train sentence transformer
@@ -319,11 +325,11 @@ def main():
 
             # Load pre-trained sentence transformer
             from models.sentence_transformer import CustomizedSentenceTransformer
-            if args.variation == "no_sentence_transformer":
+            if args.variation != "vanilla":
                 sentence_transformer = None
             else:
                 sentence_transformer = CustomizedSentenceTransformer.from_pretrained(
-                    model_config.sentence_transformer_path
+                    experiment_config.model_save_path+"/sentence_transformer"
                 )
 
             # Initialize contemplation generator
@@ -348,7 +354,7 @@ def main():
         elif args.mode == "evaluate":
             # Load trained models and run inference
             contemp_generator = ContemplationGenerator.from_pretrained(
-                model_config.student_model_path
+                experiment_config.model_save_path+"/contemp_generator"
             )
             results = run_inference(
                 contemp_generator,
@@ -358,6 +364,8 @@ def main():
             )
             # Evaluate results
             metrics = evaluate_model(results, eval_dataset)
+            # save results
+            utils.save_json(metrics, f"{experiment_config.result_path}/evaluation_results.json")
             print(f"Evaluation results: {metrics}")
 
         elif args.mode == "baseline":

@@ -13,9 +13,6 @@ def set_seed(seed):
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
 
-def get_device():
-    """Get the appropriate device (CUDA or CPU)"""
-    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def count_parameters(model):
     """Count the number of trainable parameters in a model"""

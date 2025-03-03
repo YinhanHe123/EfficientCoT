@@ -9,7 +9,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 
 from config.model_config import ModelConfig
 from config.experiment_config import ExperimentConfig
-from data.datasets import load_gsm8k_dataset
+from data.cot_datasets import load_gsm8k_dataset
 from models.contemp_generator import ContemplationGenerator
 from models.sentence_transformer import CustomizedSentenceTransformer
 from training.distributed_train_sent_trans import train_sentence_transformer_distributed, prepare_reasoning_pairs_dataset_distributed

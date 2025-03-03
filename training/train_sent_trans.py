@@ -83,7 +83,7 @@ def train_sentence_transformer(
     # Training loop
     best_val_loss = float('inf')
 
-    for epoch in range(config.num_epochs):
+    for epoch in range(config.train_sen_trans_epochs):
         # Training phase
         sentence_transformer.train()
         train_loss = 0
@@ -237,7 +237,7 @@ def train_sentence_transformer(
     logger.close()
     return sentence_transformer
 
-def prepare_reasoning_pairs_dataset(model_name, queries, max_pairs=1000):
+def prepare_reasoning_pairs_dataset(model_name, device, queries, max_pairs=1000):
     """
     Prepare a dataset of original and condensed reasoning pairs
 
@@ -250,7 +250,7 @@ def prepare_reasoning_pairs_dataset(model_name, queries, max_pairs=1000):
         Dataset of reasoning pairs
     """
     # Initialize reasoning pairs generator
-    pairs_generator = ReasoningPairsGenerator(model_name)
+    pairs_generator = ReasoningPairsGenerator(model_name, device)
 
     # Limit number of queries to process
     queries = queries[:max_pairs]
@@ -258,7 +258,7 @@ def prepare_reasoning_pairs_dataset(model_name, queries, max_pairs=1000):
     # Generate reasoning pairs
     print(f"Generating {len(queries)} reasoning pairs...")
     dataset = pairs_generator.create_dataset(queries)
-
+    torch.cuda.empty_cache()
     return dataset
 
 if __name__ == "__main__":
@@ -275,7 +275,7 @@ if __name__ == "__main__":
     experiment_config = ExperimentConfig(args.config)
 
     # Load GSM8K dataset for queries
-    from data.datasets import load_gsm8k_dataset
+    from data.cot_datasets import load_gsm8k_dataset
     train_dataset, _ = load_gsm8k_dataset(model_config.data_path)
 
     # Extract queries from the dataset

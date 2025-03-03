@@ -4,59 +4,42 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 def evaluate_model(results, dataset):
     """Calculate metrics for the model's performance"""
     metrics = {}
+       # If ground truth contains numerical answers, compute numerical accuracy
+    num_correct = 0
+    num_close = 0  # Within 1% error
+    relative_errors = []
 
-    # Exact match accuracy
-    correct = 0
-    for result in results:
-        if result["prediction"].strip() == result["ground_truth"].strip():
-            correct += 1
+    for i, result in enumerate(results):
+        try:
+            # Extract all numbers from the prediction
+            pred_nums = extract_all_numbers(result["prediction"])
 
-    metrics["exact_match"] = correct / len(results)
+            # Get the answer from the data
+            gt_num = float(dataset[i]["answer"])
 
-    # If ground truth contains numerical answers, compute numerical accuracy
-    if all("ground_truth" in result and is_number(result["ground_truth"]) for result in results):
-        num_correct = 0
-        num_close = 0  # Within 1% error
-        relative_errors = []
+            # Check for exact match among any of the extracted numbers
+            if any(abs(pred - gt_num) < 1e-6 for pred in pred_nums):  # Allow for small floating point differences
+                num_correct += 1
 
-        for result in results:
-            try:
-                pred_num = extract_number(result["prediction"])
-                gt_num = extract_number(result["ground_truth"])
+            # Find the closest match and calculate relative error
+            if pred_nums:
+                closest_pred = min(pred_nums, key=lambda x: abs(x - gt_num))
+                rel_error = abs(closest_pred - gt_num) / abs(gt_num)
+                relative_errors.append(rel_error)
 
-                # Exact match
-                if abs(pred_num - gt_num) < 1e-6:  # Allow for small floating point differences
-                    num_correct += 1
+                # Check if the closest match is within 1% error
+                if rel_error < 0.01:
+                    num_close += 1
+        except (ValueError, TypeError):
+            continue
 
-                # Close match (within 1% error)
-                if gt_num != 0:
-                    rel_error = abs(pred_num - gt_num) / abs(gt_num)
-                    relative_errors.append(rel_error)
-                    if rel_error < 0.01:
-                        num_close += 1
-            except (ValueError, TypeError):
-                continue
-
-        metrics["numerical_accuracy"] = num_correct / len(results)
-        metrics["close_match_rate"] = num_close / len(results)
+        if results:  # Avoid division by zero
+            metrics["numerical_accuracy"] = num_correct / len(results)
+            metrics["close_match_rate"] = num_close / len(results)
 
         if relative_errors:
             metrics["mean_relative_error"] = np.mean(relative_errors)
             metrics["median_relative_error"] = np.median(relative_errors)
-
-    # Check if we can perform binary classification metrics
-    # For example, if ground truth and predictions can be mapped to binary values
-    try:
-        binary_gt = [int(bool(extract_number(r["ground_truth"]) > 0)) for r in results]
-        binary_pred = [int(bool(extract_number(r["prediction"]) > 0)) for r in results]
-
-        metrics["accuracy"] = accuracy_score(binary_gt, binary_pred)
-        metrics["precision"] = precision_score(binary_gt, binary_pred, zero_division=0)
-        metrics["recall"] = precision_score(binary_gt, binary_pred, zero_division=0)
-        metrics["f1"] = f1_score(binary_gt, binary_pred, zero_division=0)
-    except:
-        # Skip binary metrics if not applicable
-        pass
 
     return metrics
 
@@ -76,3 +59,9 @@ def extract_number(text):
     if numbers:
         return float(numbers[0])
     raise ValueError("No number found in text")
+
+def extract_all_numbers(text):
+    """Extract all numbers from a text"""
+    import re
+    numbers = re.findall(r'-?\d+\.?\d*', text)
+    return [float(num) for num in numbers]

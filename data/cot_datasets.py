@@ -5,8 +5,8 @@ def load_gsm8k_dataset(data_path=None):
     """Load and prepare the GSM8K dataset"""
     # Load from HuggingFace datasets or from local path
     gsm8k = load_dataset(data_path, 'main')
-    train_dataset = gsm8k['train']
-    eval_dataset = gsm8k['test']
+    train_dataset = gsm8k['train'].select(range(400))  # For debugging
+    eval_dataset = gsm8k['test'].select(range(100))  # For debugging
     # Create custom PyTorch datasets
     train_data = GSM8KDataset(train_dataset)
     eval_data = GSM8KDataset(eval_dataset)
