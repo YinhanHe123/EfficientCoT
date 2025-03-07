@@ -24,7 +24,7 @@ def parse_args():
     parser.add_argument("--config", type=str, default="small",
                         help="Configuration name")
     parser.add_argument("--baseline", type=str, default="effi_cot",
-                        choices=["ccot", "pause", "implicit_cot"],
+                        choices=["cot", "ccot", "pause", "implicit_cot","zero_shot_cot"],
                         help="Baseline to run if mode is baseline")
     parser.add_argument("--experiment_file", type=str, default="experiments.json",
                         help="JSON file containing experiment configurations")
@@ -33,8 +33,9 @@ def parse_args():
                         help="Random seed for reproducibility")
     parser.add_argument("--variation", type=str, default="vanilla", choices=["vanilla", "no_sentence_transformer", "no_l_reason"],
                         help="Variation of the effi_cot model to use")
-    parser.add_argument("--baseline_type", type=str, default="vanilla_cot", choices=["vanilla_cot"],
-                        help="Baseline type for evaluation")
+
+    parser.add_argument("--cot_bsl_shot", type=int, default=0,
+                        help="Number of shots for cot baseline")
     return parser.parse_args()
 
 def run_experiment_sequence(variation, device, experiment_file, base_seed):
@@ -374,10 +375,13 @@ def main():
                 args.baseline,
                 eval_dataset,
                 model_config,
-                experiment_config
+                experiment_config,
+                num_shots=args.cot_bsl_shot
             )
             # Evaluate results
             metrics = evaluate_model(results, eval_dataset)
+            # save
+            utils.save_json(metrics, f"{experiment_config.result_path}/{args.cot_bsl_shot}_shot__baseline_results.json")
             print(f"Baseline {args.baseline} results: {metrics}")
 
 if __name__ == "__main__":

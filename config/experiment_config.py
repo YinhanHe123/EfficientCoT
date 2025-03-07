@@ -15,7 +15,7 @@ class ExperimentConfig:
         # Training parameters
         self.learning_rate = 1e-5
         self.weight_decay = 0.01
-        self.num_epochs = 100 # for debugging
+        self.num_epochs = 50 # for debugging
         self.train_sen_trans_epochs = 15
         self.batch_size = 2
         self.alpha = 0.5  # Weight for Lreason in total loss
@@ -33,6 +33,7 @@ class ExperimentConfig:
 
         directory = str(os.path.abspath(os.path.join(__file__ ,"../..")))
         self.reasoning_pairs_path = os.path.join(directory, "gen_datasets")
+
 
         self.device = None
 

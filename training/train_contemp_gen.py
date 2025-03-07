@@ -342,7 +342,7 @@ def train_contemplation_generator(
         print(f"Epoch {epoch+1} - Loss: {avg_total_loss:.4f} (Reason: {avg_reason_loss:.4f}, Ans: {avg_ans_loss:.4f})")
 
         # Evaluate on validation set
-        if (epoch + 1) % 5 == 0:
+        if (epoch +5) % 1 == 0:
             eval_loss = evaluate(
                 contemp_generator,
                 sentence_transformer,
