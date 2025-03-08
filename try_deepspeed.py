@@ -54,11 +54,29 @@ def train_pipeline(model_engine, train_loader, epochs):
         running_loss = 0.0
         samples_processed = 0
 
+        # Create fresh iterator for each epoch
         train_iter = iter(train_loader)
-        loss = model_engine.train_batch(train_iter)
-        # model_engine.step()
+
+        # For DeepSpeed pipeline, we need to use train_batch
+        # The number of actual forward passes will be determined by
+        # gradient_accumulation_steps and micro_batch_size
+        try:
+            # Let DeepSpeed handle the data iteration
+            loss = model_engine.train_batch(train_iter)
+
+            # Only the last stage has the loss
+            if loss is not None and model_engine.is_last_stage():
+                print(f'Epoch {epoch+1} completed, loss: {loss.item():.4f}')
+            else:
+                print(f'Epoch {epoch+1} completed (loss not available on this stage)')
+
+        except StopIteration:
+            print(f"StopIteration in epoch {epoch+1} - not enough data")
+        except Exception as e:
+            print(f"Error in epoch {epoch+1}: {e}")
+
         epoch_time = time.time() - start_time
-        print(f'Epoch {epoch+1} completed in {epoch_time:.2f} seconds, loss: {loss.item()}')
+        print(f'Epoch {epoch+1} completed in {epoch_time:.2f} seconds')
 
 # Training function for non-pipelined model
 def train_standard(model_engine, train_loader, epochs):
@@ -92,27 +110,99 @@ def evaluate(model_engine, test_loader, is_pipeline=False):
     model_engine.eval()
     correct = 0
     total = 0
-    test_iter = iter(test_loader)
-    logits_list = []
-    for i in range(len(test_loader)):
-        eval_loss, logits = model_engine.eval_batch(test_iter, return_logits=True)
-            # else:
-            #     outputs = model_engine(inputs)
-        print("logits shape: ", logits.shape)
-        logits_list.append(logits)
-    logits = torch.cat(logits_list, dim=1)
-    print("logits shape: ", logits.shape)
 
-    # calculate accuracy based on logits
-    _, predicted = torch.max(logits.data, 1)
-    labels = test_loader.dataset.tensors[1]
-    total += labels.size(0)
-    correct += (predicted == labels).sum().item()
+    if is_pipeline:
+        # For pipeline parallelism, we need to handle evaluation differently
+        # Because logits are only available on the last stage of the pipeline
 
+        # Create a fresh iterator for evaluation
+        test_iter = iter(test_loader)
 
-    # total += labels.size(0)
-    # correct = (predicted == test_loader.
-    accuracy = 100 * correct / total
+        # Prepare data structures to collect results
+        all_logits = []
+        all_labels = []
+
+        # Track whether this process is the last stage
+        is_last_stage = model_engine.is_last_stage() if hasattr(model_engine, 'is_last_stage') else False
+
+        # Collect all the labels first for reference
+        all_test_labels = [batch[1] for batch in test_loader]
+        test_iter = iter(test_loader)  # Reset iterator
+
+        # Process each batch
+        for i in range(len(test_loader)):
+            try:
+                # Process batch through pipeline
+                loss, logits = model_engine.eval_batch(test_iter, return_logits=True)
+
+                # Only the last stage will have actual logits
+                if is_last_stage and logits is not None:
+                    # Print for debugging
+                    print(f"Batch {i}, logits shape: {logits.shape}")
+                    all_logits.append(logits.detach().cpu())
+
+            except Exception as e:
+                print(f"Error processing batch {i}: {e}")
+                continue
+
+        # Only the last stage computes accuracy
+        if is_last_stage:
+            if all_logits:
+                # Combine all predictions
+                all_logits = torch.cat(all_logits, dim=0)
+                all_labels = torch.cat(all_test_labels, dim=0)
+
+                print(f"All logits shape: {all_logits.shape}")
+                print(f"All labels shape: {all_labels.shape}")
+
+                # Make sure dimensions match
+                min_size = min(all_logits.size(0), all_labels.size(0))
+                all_logits = all_logits[:min_size]
+                all_labels = all_labels[:min_size]
+
+                # Calculate accuracy
+                _, predicted = torch.max(all_logits, 1)
+                total = all_labels.size(0)
+                correct = (predicted == all_labels).sum().item()
+
+                # Calculate and print accuracy
+                accuracy = 100 * correct / total
+                print(f'Accuracy on test set: {accuracy:.2f}%')
+
+                # Broadcast accuracy to all stages
+                if torch.distributed.is_initialized():
+                    accuracy_tensor = torch.tensor([accuracy], device=model_engine.device)
+                    torch.distributed.broadcast(accuracy_tensor, 0)
+                    accuracy = accuracy_tensor.item()
+            else:
+                print("No valid logits were collected during evaluation")
+                accuracy = 0
+        else:
+            # Non-last stages receive the accuracy
+            if torch.distributed.is_initialized():
+                accuracy_tensor = torch.tensor([0.0], device=model_engine.device)
+                torch.distributed.broadcast(accuracy_tensor, 0)
+                accuracy = accuracy_tensor.item()
+                print(f'Received accuracy from last stage: {accuracy:.2f}%')
+            else:
+                accuracy = 0
+
+        return accuracy
+    else:
+        # Standard evaluation for non-pipeline model
+        with torch.no_grad():
+            for inputs, labels in test_loader:
+                inputs = inputs.to(model_engine.device)
+                labels = labels.to(model_engine.device)
+
+                outputs = model_engine(inputs)
+                _, predicted = torch.max(outputs.data, 1)
+
+                total += labels.size(0)
+                correct += (predicted == labels).sum().item()
+
+    # Calculate and print accuracy
+    accuracy = 100 * correct / total if total > 0 else 0
     print(f'Accuracy on test set: {accuracy:.2f}%')
     return accuracy
 
@@ -168,7 +258,7 @@ def main():
     train_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=args.batch_size, shuffle=True)
     test_loader = torch.utils.data.DataLoader(
-        test_dataset, batch_size=args.batch_size, shuffle=False)
+        test_dataset, batch_size=args.batch_size, shuffle=False, drop_last=True)
 
     print(f"Created dataset with {num_train_samples} training samples and {num_test_samples} test samples")
     print(f"Input dimension: {input_dim}, Output classes: {output_dim}")
@@ -204,8 +294,12 @@ def main():
             LayerSpec(MLPLayer2, args.hidden_dim, args.output_dim)
         ]
 
-        # Create PipelineModule
-        model = PipelineModule(layers=layers, loss_fn=torch.nn.CrossEntropyLoss(), num_stages=args.num_stages)
+        # Create PipelineModule with appropriate loss function
+        model = PipelineModule(
+            layers=layers,
+            loss_fn=torch.nn.CrossEntropyLoss(),
+            num_stages=args.num_stages
+        )
 
         # Initialize DeepSpeed with pipeline
         model_engine, _, _, _ = deepspeed.initialize(
@@ -218,9 +312,15 @@ def main():
         # Train with pipeline parallelism
         train_pipeline(model_engine, train_loader, args.epochs)
 
-        # Evaluate pipelined model
-        evaluate(model_engine, test_loader, is_pipeline=True)
-
+        # Evaluate pipelined model with proper handling
+        try:
+            print("Starting pipeline model evaluation...")
+            accuracy = evaluate(model_engine, test_loader, is_pipeline=True)
+            print(f"Pipeline model evaluation complete. Accuracy: {accuracy:.2f}%")
+        except Exception as e:
+            import traceback
+            print(f"Error during pipeline evaluation: {e}")
+            print(traceback.format_exc())
     else:
         print("Using standard parallelism (no pipeline)")
         # Use ZeRO optimization for standard parallelism
