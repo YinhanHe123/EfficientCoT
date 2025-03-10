@@ -11,7 +11,7 @@ from training.deepspeed_train_sent_trans import train_sentence_transformer_with_
 from training.deepspeed_train_contemp_gen import train_contemplation_generator_with_deepspeed
 from inference.deepspeed_inference import run_inference_with_deepspeed
 from evaluation.metrics import evaluate_model
-from evaluation.baselines import run_baseline
+from baselines.baselines import run_baseline
 import utils.utils as utils
 from huggingface_hub import login
 import deepspeed
@@ -32,7 +32,7 @@ def parse_args():
                         help="Baseline to run if mode is baseline")
     parser.add_argument("--experiment_file", type=str, default="experiments.json",
                         help="JSON file containing experiment configurations")
-    parser.add_argument("--local_rank", type=int, default=-1,
+    parser.add_argument("--local_rank", type=int, default=0,
                         help="Local rank for distributed training")
     parser.add_argument("--seed", type=int, default=42,
                         help="Random seed for reproducibility")

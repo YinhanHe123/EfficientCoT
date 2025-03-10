@@ -1,7 +1,8 @@
 #!/bin/bash
+export CUDA_VISIBLE_DEVICES='0,2,3'
 
 # Define variables
-NUM_GPUS=4  # Adjust based on your system
+NUM_GPUS=3  # Adjust based on your system
 CONFIG="large"  # Use 'large' for the larger model configuration
 VARIATION="vanilla"
 MODE="train_sentence_transformer"
@@ -24,7 +25,7 @@ run_deepspeed() {
     print_header "Running $mode with config=$config, variation=$variation"
 
     # Use DeepSpeed launcher to run the command
-    deepspeed --num_gpus=$NUM_GPUS \
+    deepspeed --launcher_args '--world_info "{\"localhost\": [0, 2, 3]}"' \
         deepspeed_main.py \
         --mode $mode \
         --config $config \

@@ -10,7 +10,7 @@ from training.train_contemp_gen import train_contemplation_generator
 from training.train_sent_trans import train_sentence_transformer, prepare_reasoning_pairs_dataset
 from inference.inference import run_inference
 from evaluation.metrics import evaluate_model
-from evaluation.baselines import run_baseline
+from baselines.baselines import run_baseline
 import utils.utils as utils
 from huggingface_hub import login
 
@@ -18,7 +18,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Contemplation Tokens with Reasoning Ability")
     parser.add_argument("--mode", type=str,
                         choices=["train_sentence_transformer", "train_contemp_generator",
-                                 "evaluate", "baseline", "run_experiments"],
+                                 "evaluate", "baseline", "run_experiments", "train_ccot"],
                         default="train_sentence_transformer",
                         help="Operation mode")
     parser.add_argument("--config", type=str, default="small",
@@ -33,7 +33,10 @@ def parse_args():
                         help="Random seed for reproducibility")
     parser.add_argument("--variation", type=str, default="vanilla", choices=["vanilla", "no_sentence_transformer", "no_l_reason"],
                         help="Variation of the effi_cot model to use")
-
+    parser.add_argument("--compression_ratio", type=float, default=0.1, 
+                        help="Compression ratio for CCoT (ratio of compressed tokens to full chain)")
+    parser.add_argument("--autoregressive_layer", type=int, default=15,
+                        help="Layer to use for autoregressive generation in CCoT")
     parser.add_argument("--cot_bsl_shot", type=int, default=0,
                         help="Number of shots for cot baseline")
     return parser.parse_args()
@@ -252,26 +255,32 @@ def main():
     login(token='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')
     args = parse_args()
 
-
     # Set random seed
     utils.set_seed(args.seed)
 
     if args.mode == "run_experiments":
-        run_experiment_sequence(args.device, args.experiment_file, args.seed)
+        run_experiment_sequence(args.variation, args.device, args.experiment_file, args.seed)
     else:
         # Original logic for individual modes
         model_config = ModelConfig(args.config)
-        # model_config.sentence_transformer_path = f"./saved_models/effi_cot/{args.baseline}/{args.variation}/sentence_transformer"
-
+        
         experiment_config = ExperimentConfig(args.config)
         experiment_config.device = args.device
-        experiment_config.model_save_path = f"{experiment_config.model_save_path}/{args.baseline}/{args.variation}" if args.baseline == 'effi_cot' else f"{experiment_config.model_save_path}/{args.baseline}"
-        experiment_config.checkpoint_path = f"{experiment_config.checkpoint_path}/{args.baseline}/{args.variation}" if args.baseline == 'effi_cot' else f"{experiment_config.checkpoint_path}/{args.baseline}"
-        experiment_config.result_path = f"{experiment_config.result_path}/{args.baseline}/{args.variation}" if args.baseline == 'effi_cot' else f"{experiment_config.result_path}/{args.baseline}"
-
-
-        experiment_config.experiment_name = f"{args.baseline}_{args.variation}_{args.seed}"
-
+        
+        # Special handling for CCoT mode
+        if args.mode == "train_ccot" or (args.mode == "baseline" and args.baseline == "ccot"):
+            experiment_config.model_save_path = f"{experiment_config.model_save_path}/ccot"
+            experiment_config.checkpoint_path = f"{experiment_config.checkpoint_path}/ccot"
+            experiment_config.result_path = f"{experiment_config.result_path}/ccot"
+            experiment_config.experiment_name = f"ccot_{args.compression_ratio}_{args.seed}"
+        else:
+            # Original path handling for other modes
+            experiment_config.model_save_path = f"{experiment_config.model_save_path}/{args.baseline}/{args.variation}" if args.baseline == 'effi_cot' else f"{experiment_config.model_save_path}/{args.baseline}"
+            experiment_config.checkpoint_path = f"{experiment_config.checkpoint_path}/{args.baseline}/{args.variation}" if args.baseline == 'effi_cot' else f"{experiment_config.checkpoint_path}/{args.baseline}"
+            experiment_config.result_path = f"{experiment_config.result_path}/{args.baseline}/{args.variation}" if args.baseline == 'effi_cot' else f"{experiment_config.result_path}/{args.baseline}"
+            experiment_config.experiment_name = f"{args.baseline}_{args.variation}_{args.seed}"
+        
+        # Create necessary directories
         if not os.path.exists(experiment_config.model_save_path):
             os.makedirs(experiment_config.model_save_path)
         if not os.path.exists(experiment_config.checkpoint_path):
@@ -285,6 +294,7 @@ def main():
         # Load dataset
         train_dataset, eval_dataset = load_gsm8k_dataset(model_config.data_path)
 
+        # Process different modes
         if args.mode == "train_sentence_transformer" and args.variation == "vanilla":
             # Extract queries from the dataset
             queries = [item["query"] for item in train_dataset][:experiment_config.max_reasoning_pairs]
@@ -304,8 +314,6 @@ def main():
                 utils.create_directory(reasoning_pairs_path)
                 # save to gen_datasets folder
                 utils.save_json(pairs_dataset, reasoning_pairs_path)
-
-
 
             # Train sentence transformer
             from training.train_sent_trans import train_sentence_transformer
@@ -351,6 +359,29 @@ def main():
                 experiment_config,
                 args.variation
             )
+
+        elif args.mode == "train_ccot":
+            # Import CCoT model and training function
+            from models.ccot_model import train_ccot_model, CCoTModel
+            
+            # Set up output path for CCoT model
+            ccot_model_path = os.path.join(experiment_config.model_save_path, "ccot_model")
+            
+            # Train CCoT model
+            train_ccot_model(
+                model_config.teacher_model_name,
+                train_dataset,
+                eval_dataset,
+                ccot_model_path,
+                compression_ratio=args.compression_ratio,
+                autoregressive_layer=args.autoregressive_layer,
+                learning_rate=experiment_config.learning_rate,
+                num_epochs=experiment_config.num_epochs,
+                batch_size=experiment_config.batch_size,
+                device=args.device
+            )
+            
+            print(f"CCoT model trained and saved to {ccot_model_path}")
 
         elif args.mode == "evaluate":
             # Load trained models and run inference

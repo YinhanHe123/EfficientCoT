@@ -113,8 +113,6 @@ def train_contemplation_generator_with_deepspeed(
         variation: Training variation ('vanilla', 'no_sentence_transformer', or 'no_l_reason')
         num_stages: Number of pipeline stages
     """
-    # Initialize DeepSpeed distributed environment
-    deepspeed.init_distributed()
 
     # Create the model
     model = PipelinedContemplationGenerator(
@@ -131,7 +129,7 @@ def train_contemplation_generator_with_deepspeed(
     ds_config = {
         "train_batch_size": exp_config.batch_size,
         "train_micro_batch_size_per_gpu": 2,
-        "gradient_accumulation_steps": exp_config.batch_size // 2,
+        "gradient_accumulation_steps": 1,
         "steps_per_print": 10,
         "optimizer": {
             "type": "Adam",

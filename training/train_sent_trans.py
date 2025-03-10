@@ -112,6 +112,7 @@ def train_sentence_transformer(
                 max_length=config.max_seq_length
             ).to(device)
 
+
             # Get hidden states from base model
             with torch.no_grad():
                 original_outputs = base_model(
@@ -128,6 +129,7 @@ def train_sentence_transformer(
                 original_hidden_states = original_outputs.hidden_states[start_layer_idx]
                 condensed_hidden_states = condensed_outputs.hidden_states[start_layer_idx]
 
+                
             # Generate embeddings using the sentence transformer
             original_embeddings = sentence_transformer(
                 original_hidden_states,

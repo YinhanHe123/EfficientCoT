@@ -29,42 +29,28 @@ class PipelinedSentenceTransformer(nn.Module):
     def create_pipeline(self, num_stages=2):
         """
         Create a PipelineModule with the extracted layers
-
         Args:
             num_stages: Number of pipeline stages
-
         Returns:
             PipelineModule: DeepSpeed pipeline model
         """
         # Load the base model
         base_model = AutoModel.from_pretrained(self.base_model_name)
-
         layers = []
-
-        # Create layer specs for the transformer layers we want to use
-        if hasattr(base_model, 'layers'):  # LLaMA models have this structure
-            # Add the norm layer and rotary embeddings as layer specs
-            layers.append(LayerSpec(copy.deepcopy, base_model.norm))
-            layers.append(LayerSpec(copy.deepcopy, base_model.rotary_emb))
-
-            # Extract the required transformer layers
-            for i in range(self.start_layer_idx, self.end_layer_idx + 1):
-                if i < len(base_model.layers):
-                    layers.append(LayerSpec(copy.deepcopy, base_model.layers[i]))
-        else:
-            raise ValueError(f"Unsupported model architecture: {self.base_model_name}. Expected LLaMA-style model.")
-
+        layers.append(base_model.rotary_emb)
+        # Extract the required transformer layers
+        for i in range(self.start_layer_idx, self.end_layer_idx + 1):
+            if i < len(base_model.layers):
+                layers.append(base_model.layers[i])
         # Add embedding projection as the final layer
-        layers.append(LayerSpec(nn.Linear, self.config.hidden_size, self.embedding_projection.out_features))
+        layers.append(nn.Linear(self.config.hidden_size, self.embedding_projection.out_features))
 
         # Create PipelineModule
         pipe_model = PipelineModule(
             layers=layers,
             num_stages=num_stages,
-            loss_fn=torch.nn.MSELoss(),  # Placeholder loss function
-            partition_method='uniform'  # Distribute layers evenly
+            loss_fn=torch.nn.MSELoss()  # Placeholder loss function
         )
-
         return pipe_model
 
     def forward(self, hidden_states, attention_mask=None):

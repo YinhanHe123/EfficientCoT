@@ -25,7 +25,7 @@ class ModelConfig:
 
     def _load_specific_config(self):
         if self.config_name == "small":
-            self.teacher_model_name = "meta-llama/Llama-2-7b-hf"
+            self.teacher_model_name = "meta-llama/Llama-2-7b-chat-hf"
             self.student_model_name = "princeton-nlp/Sheared-LLaMA-1.3B"
             self.teacher_hidden_dim = 4096
             self.contemp_seq_length = 32
