@@ -4,18 +4,19 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers import pipeline
 import os
 from utils import utils
+from .ccot_baseline_runner import run_ccot_baseline
 
-def run_baseline(baseline_name, dataset, model_config, experiment_config, num_shots=0):
+def run_baseline(baseline_name, train_dataset, eval_dataset, model_config, experiment_config, num_shots=0):
     """Run one of the baseline methods for comparison"""
 
     if baseline_name == "ccot":
-        return run_ccot_baseline(dataset, model_config, experiment_config)
+        return run_ccot_baseline(train_dataset, eval_dataset, model_config, experiment_config)
     elif baseline_name == "pause":
-        return run_pause_baseline(dataset, model_config, experiment_config)
+        return run_pause_baseline(train_dataset, eval_dataset, model_config, experiment_config)
     elif baseline_name == "implicit_cot":
-        return run_implicit_cot_baseline(dataset, model_config, experiment_config)
+        return run_implicit_cot_baseline(train_dataset, eval_dataset, model_config, experiment_config)
     elif baseline_name == "cot":
-        return run_cot_baseline(dataset, model_config, experiment_config, num_shots)
+        return run_cot_baseline(train_dataset, eval_dataset, model_config, experiment_config, num_shots)
     else:
         raise ValueError(f"Unknown baseline: {baseline_name}")
 
@@ -129,112 +130,6 @@ def run_cot_baseline(dataset, model_config, experiment_config, num_shots):
     utils.save_json(results, f"{results_dir}/inference_results.json")
     return results
 
-def run_ccot_baseline(dataset, model_config, experiment_config):
-    """
-    Compressed Chain of Thought baseline
-    Based on: Cheng & Van Durme "Compressed chain of thought: Efficient reasoning through dense representations"
-    """
-    import os
-    from models.ccot_model import CCoTModel
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    # Check if we have a pre-trained CCoT model
-    ccot_model_path = os.path.join(experiment_config.model_save_path, "ccot_model")
-    if os.path.exists(ccot_model_path):
-        # Load pre-trained CCoT model
-        ccot_model = CCoTModel.from_pretrained(ccot_model_path)
-        ccot_model = ccot_model.to(device)
-        ccot_model.eval()
-    else:
-        # Initialize CCoT model
-        ccot_model = CCoTModel(
-            model_config.teacher_model_name,
-            compression_ratio=0.1,  # Using a default 10x compression
-            autoregressive_layer=15,  # Middle layer for autoregressive generation
-            device=device
-        )
-        ccot_model = ccot_model.to(device)
-
-    # Load teacher model for generation
-    teacher_model = AutoModelForCausalLM.from_pretrained(model_config.teacher_model_name)
-    teacher_model = teacher_model.to(device)
-    teacher_model.eval()
-
-    # Initialize tokenizer
-    tokenizer = AutoTokenizer.from_pretrained(model_config.teacher_model_name)
-    tokenizer.pad_token = tokenizer.eos_token
-
-    results = []
-
-    with torch.no_grad():
-        for sample in tqdm(dataset, desc="Running CCOT baseline"):
-            query = sample["query"]
-
-            # Prepare input for CCoT model
-            input_text = f"Question: {query}\nAnswer:"
-            inputs = tokenizer(
-                input_text,
-                return_tensors="pt",
-                padding=True,
-                truncation=True,
-                max_length=experiment_config.max_seq_length // 2  # Leave room for answer
-            ).to(device)
-
-            # Generate contemplation tokens
-            contemplation_states = ccot_model(
-                inputs.input_ids,
-                attention_mask=inputs.attention_mask
-            )
-
-            # Prepare for teacher model generation
-            # Get the input embeddings
-            inputs_embeds = teacher_model.get_input_embeddings()(inputs.input_ids)
-
-            # Create the combined inputs with contemplation states
-            # Limit contemplation states to a reasonable length
-            max_contemp_tokens = min(contemplation_states.size(1), 50)
-            combined_embeds = torch.cat([
-                inputs_embeds,
-                contemplation_states[:, :max_contemp_tokens, :]
-            ], dim=1)
-
-            # Create proper attention mask for the combined sequence
-            combined_attention_mask = torch.ones(
-                (inputs.input_ids.size(0), combined_embeds.size(1)),
-                dtype=torch.long,
-                device=device
-            )
-
-            # Generate answer conditioned on query and contemplation tokens
-            outputs = teacher_model.generate(
-                inputs_embeds=combined_embeds,
-                attention_mask=combined_attention_mask,
-                max_length=512 + combined_embeds.size(1),  # Account for input length
-                temperature=0.7,
-                top_p=0.9,
-                do_sample=True
-            )
-
-            # Decode the generated answer
-            # We need to skip the input length since we provided embeddings
-            response = tokenizer.decode(outputs[0][inputs.input_ids.size(1):], skip_special_tokens=True)
-
-            results.append({
-                "query": query,
-                "ground_truth": sample.get("answer", ""),
-                "prediction": response
-            })
-
-    # Save results
-    results_dir = experiment_config.result_path+"/ccot"
-    if not os.path.exists(results_dir):
-        os.makedirs(results_dir)
-
-    # Save results to file
-    utils.save_json(results, f"{results_dir}/inference_results.json")
-
-    return results
 
 def run_pause_baseline(dataset, model_config, experiment_config):
     """

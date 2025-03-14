@@ -1,8 +1,12 @@
 import torch
 import torch.nn as nn
-from transformers import AutoModel, AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from peft import get_peft_model, LoraConfig, TaskType
 import os
 from tqdm import tqdm
+import copy
+import pdb
+from peft.peft_model import PeftModelForCausalLM
 
 class CCoTModel(nn.Module):
     """
@@ -22,6 +26,7 @@ class CCoTModel(nn.Module):
         """
         super().__init__()
         self.device = device
+        self.base_model_name = base_model_name
         self.compression_ratio = compression_ratio
         self.autoregressive_layer = autoregressive_layer
 
@@ -32,10 +37,12 @@ class CCoTModel(nn.Module):
 
         # Create special tokens for CCoT
         self.reasoning_token = "[REASONING]"
+        self.end_token = "[END]"
 
-        # Add special token if it doesn't exist
+        # Add special tokens if they don't exist
         if self.reasoning_token not in self.tokenizer.get_vocab():
-            num_added = self.tokenizer.add_special_tokens({"additional_special_tokens": [self.reasoning_token]})
+            special_tokens = {"additional_special_tokens": [self.reasoning_token, self.end_token]}
+            num_added = self.tokenizer.add_special_tokens(special_tokens)
             # Resize token embeddings if new tokens were added
             if num_added > 0:
                 self.model.resize_token_embeddings(len(self.tokenizer))
@@ -46,15 +53,15 @@ class CCoTModel(nn.Module):
         # Move model to the specified device
         self.model = self.model.to(device)
         self.end_predictor = self.end_predictor.to(device)
-        self.rotary_emb = self.model.model.rotary_emb
-        
-    def forward(self, input_ids, attention_mask=None):
+
+    def forward(self, input_ids, attention_mask=None, output_hidden_states=False, target_states=None): #target_states is None is set to avoid 'target_states' signiture removal when data is passed to trainer()
         """
         Generate compressed contemplation tokens using autoregressive generation.
 
         Args:
             input_ids: Input token IDs
             attention_mask: Attention mask for the input
+            output_hidden_states: Whether to return all hidden states
 
         Returns:
             Contemplation token hidden states
@@ -70,7 +77,6 @@ class CCoTModel(nn.Module):
         )
 
         # Get the hidden state of the last token at the specified layer
-        # This will be used as the first autoregressive token
         last_token_idx = attention_mask.sum(dim=1) - 1
         hidden_states = outputs.hidden_states[self.autoregressive_layer]
 
@@ -85,54 +91,44 @@ class CCoTModel(nn.Module):
         max_contemplation_tokens = 50  # Maximum number of contemplation tokens to generate
 
         # Autoregressively generate contemplation tokens
-        for i in range(max_contemplation_tokens):
+        for _ in range(max_contemplation_tokens):
             # Current token hidden state (for autoregressively generating the next token)
             current_token = all_contemplation_tokens[-1].squeeze(1)
 
-            # Pass through the model to get next token representation
-            # We're using the model differently from standard usage - we're directly
-            # feeding hidden states as inputs
-            extended_hidden_states = torch.cat(
-                [hidden_states] + [token for token in all_contemplation_tokens],
-                dim=1
-            )
+            # Pass the current token through the transformer layers starting from autoregressive_layer
+            layer_input = current_token.unsqueeze(1)  # Shape: [batch_size, 1, hidden_size]
+            
+            # Forward pass through remaining layers
+            layer_output = layer_input
+            seq_length = layer_output.size(1)
+            position_ids = torch.arange(seq_length).unsqueeze(0).expand(batch_size, -1).to(hidden_states.device)
+            attention_mask = None
 
-            # Get attention mask for the extended sequence
-            extended_attention_mask = torch.ones(
-                batch_size,
-                extended_hidden_states.size(1),
-                device=self.device
-            )
-            extended_attention_mask = None
+            # Generate position embeddings - similar to LLaMA
+            if isinstance(self.model, PeftModelForCausalLM):
+                model_conductor = self.model.base_model.model.model
+            else:
+                model_conductor = self.model.model
+            position_embeddings = model_conductor.rotary_emb(hidden_states, position_ids)
+            for i in range(self.autoregressive_layer, len(model_conductor.layers)):
+                layer = model_conductor.layers[i]
+                layer_output = layer(layer_output,
+                                     attention_mask=attention_mask,
+                                     position_ids=position_ids,
+                                     position_embeddings=position_embeddings)[0]
+                
+                
+            # position_embeddings = self.model.base_model.model.model.rotary_emb(hidden_states, position_ids)
 
-
-            # Forward pass through the model using hidden states
-            with torch.no_grad():
-                # We'll simulate the forward pass through transformer layers
-                # starting from the autoregressive layer
-                seq_length = extended_hidden_states.size(1)
-                # if position_ids is None:
-                position_ids = torch.arange(seq_length, device=self.device).unsqueeze(0).expand(batch_size, -1)
-
-                position_embeddings = self.rotary_emb(hidden_states, position_ids)
-
-                current_layer = self.autoregressive_layer
-                current_hidden = extended_hidden_states
-
-                while current_layer < self.model.config.num_hidden_layers:
-                    # Simulate transformer layer computation
-                    # This is a simplified version and depends on the specific model architecture
-                    next_hidden = self.model.model.layers[current_layer](
-                        current_hidden,
-                        attention_mask=extended_attention_mask,
-                        position_ids=position_ids,
-                        position_embeddings=position_embeddings
-                    )[0]
-                    current_hidden = next_hidden
-                    current_layer += 1
-
-                # Get the last token hidden state
-                next_token_hidden = current_hidden[:, -1].unsqueeze(1)
+            # for i in range(self.autoregressive_layer, len(self.model.base_model.model.model.layers)):
+            #     layer = self.model.base_model.model.model.layers[i]
+            #     layer_output = layer(layer_output,
+            #                             attention_mask=None,
+            #                             position_ids=position_ids,
+            #                             position_embeddings=position_embeddings)[0]
+            
+            # Get the next token hidden state
+            next_token_hidden = layer_output.squeeze(1).unsqueeze(1)
 
             # Add the generated token to our collection
             all_contemplation_tokens.append(next_token_hidden)
@@ -145,7 +141,38 @@ class CCoTModel(nn.Module):
         # Concatenate all generated contemplation tokens
         contemplation_states = torch.cat(all_contemplation_tokens, dim=1)
 
+        if output_hidden_states:
+            return contemplation_states, outputs.hidden_states
         return contemplation_states
+
+    def apply_lora_layer_by_layer(self, layer_idx, rank=16, alpha=32):
+        """
+        Apply LoRA to a specific layer in the model
+        
+        Args:
+            layer_idx: Index of the layer to apply LoRA to
+            rank: Rank for LoRA adaptation
+            alpha: Alpha parameter for LoRA
+            
+        Returns:
+            Model with LoRA applied to the specified layer
+        """
+        # Configure LoRA for the specific layer
+        target_modules = [f"model.layers.{layer_idx}.self_attn.q_proj", 
+                          f"model.layers.{layer_idx}.self_attn.k_proj",
+                          f"model.layers.{layer_idx}.self_attn.v_proj",
+                          f"model.layers.{layer_idx}.self_attn.o_proj"]
+        
+        peft_config = LoraConfig(
+            task_type=TaskType.CAUSAL_LM,
+            inference_mode=False,
+            r=rank,
+            lora_alpha=alpha,
+            lora_dropout=0.05,
+            target_modules=target_modules,
+        )
+        
+        return get_peft_model(self.model, peft_config)
 
     @classmethod
     def from_pretrained(cls, path):
@@ -187,7 +214,7 @@ class CCoTModel(nn.Module):
 
         # Save config
         config = {
-            "base_model_name": self.model.config._name_or_path,
+            "base_model_name": self.base_model_name,
             "compression_ratio": self.compression_ratio,
             "autoregressive_layer": self.autoregressive_layer,
             "device": self.device
@@ -197,235 +224,136 @@ class CCoTModel(nn.Module):
         # Save state dict
         torch.save(self.state_dict(), os.path.join(path, "model.pt"))
 
-def train_ccot_model(
-    base_model_name,
-    train_dataset,
-    eval_dataset,
-    output_path,
-    compression_ratio=0.1,
-    autoregressive_layer=15,
-    learning_rate=1e-4,
-    num_epochs=10,
-    batch_size=8,
-    device="cuda"
-):
-    """
-    Train a CCoT model using LoRA fine-tuning.
-
-    Args:
-        base_model_name: Name of the base model
-        train_dataset: Dataset for training
-        eval_dataset: Dataset for evaluation
-        output_path: Path to save the model
-        compression_ratio: Ratio of compressed contemplation tokens to full reasoning chain
-        autoregressive_layer: Layer index to use for autoregressive generation
-        learning_rate: Learning rate for optimization
-        num_epochs: Number of training epochs
-        batch_size: Batch size for training
-        device: Device to run the model on
-
-    Returns:
-        Trained CCoT model
-    """
-    from transformers import get_linear_schedule_with_warmup
-    import torch.nn.functional as F
-
-    # Initialize model
-    model = CCoTModel(
-        base_model_name,
-        compression_ratio=compression_ratio,
-        autoregressive_layer=autoregressive_layer,
-        device=device
-    )
-    model = model.to(device)
-
-    # Create data loaders
-    train_loader = torch.utils.data.DataLoader(
-        train_dataset.dataset,
-        batch_size=batch_size,
-        shuffle=True
-    )
-
-    eval_loader = torch.utils.data.DataLoader(
-        eval_dataset.dataset,
-        batch_size=batch_size,
-        shuffle=False
-    )
-
-    # Set up optimizer and scheduler
-    # We only optimize the added parameters for efficient training
-    optimizer = torch.optim.AdamW([
-        {"params": model.end_predictor.parameters()}
-    ], lr=learning_rate)
-
-    total_steps = len(train_loader) * num_epochs
-    scheduler = get_linear_schedule_with_warmup(
-        optimizer,
-        num_warmup_steps=0.1 * total_steps,
-        num_training_steps=total_steps
-    )
-
-    # Loss function for hidden state similarity
-    def hidden_state_loss(pred_states, target_states):
-        # Normalize the vectors
-        # mean the 1th dimension
-        pred_norm = torch.mean(pred_states, dim=1)
-        target_norm = torch.mean(target_states, dim=1)
-
-        # Compute cosine similarity
-        cosine_sim = F.cosine_similarity(pred_norm, target_norm, dim=1)
-
-        # Loss = 1 - similarity (lower is better)
-        return 1 - cosine_sim.mean()
-
-    # Training loop
-    best_eval_loss = float('inf')
-
-    for epoch in tqdm(range(num_epochs)):
-        model.train()
-        train_loss = 0.0
-
-        for batch in train_loader:
-            optimizer.zero_grad()
-
-            # Extract data
-            queries = batch["question"]
-            reasonings = batch["answer"] # this is reasoning
-
-            # Tokenize input
-            input_ids = model.tokenizer(
-                queries,
-                padding=True,
-                truncation=True,
-                return_tensors="pt"
-            ).input_ids.to(device)
-
-            attention_mask = (input_ids != model.tokenizer.pad_token_id).long()
-
-            # Generate contemplation tokens
-            contemplation_states = model(input_ids, attention_mask)
-
-            # Get target hidden states from full reasoning
-            with torch.no_grad():
-                reasoning_inputs = model.tokenizer(
-                    reasonings,
-                    padding=True,
-                    truncation=True,
-                    return_tensors="pt"
-                ).input_ids.to(device)
-
-                reasoning_mask = (reasoning_inputs != model.tokenizer.pad_token_id).long()
-
-                reasoning_outputs = model.model(
-                    input_ids=reasoning_inputs,
-                    attention_mask=reasoning_mask,
-                    output_hidden_states=True,
-                    return_dict=True
-                )
-
-                # Get the hidden states from the teacher model
-                target_states = reasoning_outputs.hidden_states[model.autoregressive_layer]
-
-                # Apply the compression ratio - only keep a subset of the states
-                seq_len = target_states.shape[1]
-                keep_indices = torch.linspace(
-                    0, seq_len-1,
-                    steps=int(seq_len * model.compression_ratio),
-                    dtype=torch.long,
-                    device=device
-                )
-                compressed_target_states = target_states[:, keep_indices]
-
-            # Compute loss - match the compressed contemplation states to the compressed target states
-            loss = hidden_state_loss(
-                contemplation_states[:, :compressed_target_states.size(1)],
-                compressed_target_states
+# Decode model that uses the generated contemplation tokens
+class CCOTDecodeModel(nn.Module):
+    """Model to generate answers based on the query and contemplation tokens"""
+    def __init__(self, base_model_name, device="cuda"):
+        super().__init__()
+        self.device = device
+        self.base_model_name = base_model_name
+        
+        # Load the base model
+        self.model = AutoModelForCausalLM.from_pretrained(base_model_name)
+        self.tokenizer = AutoTokenizer.from_pretrained(base_model_name)
+        self.tokenizer.pad_token = self.tokenizer.eos_token
+        
+        # Move model to device
+        self.model = self.model.to(device)
+        
+    def forward(self, input_ids, attention_mask=None, contemp_states=None, labels=None):
+        """
+        Generate an answer based on input and contemplation tokens
+        
+        Args:
+            input_ids: Input token IDs for the query
+            attention_mask: Attention mask for the input
+            contemp_states: Contemplation token states from CCoT model
+            labels: Optional labels for computing loss
+            
+        Returns:
+            Model outputs
+        """
+        # Get the embeddings from the model's embedding layer
+        inputs_embeds = self.model.get_input_embeddings()(input_ids).squeeze()
+        
+        # If contemplation tokens are provided, concatenate them with the input embeddings
+        if contemp_states is not None:
+            # Limit contemplation states to a reasonable number
+            max_contemp_tokens = min(contemp_states.size(1), 50)
+            contemp_to_use = contemp_states[:, :max_contemp_tokens, :].squeeze()
+            
+            # Concatenate input embeddings and contemplation states
+            combined_embeds = torch.cat([inputs_embeds, contemp_to_use], dim=1)
+            
+            # Create a new attention mask for the combined sequence
+            combined_attention_mask = torch.ones(
+                (input_ids.size(0), combined_embeds.size(1)),
+                dtype=torch.long,
+                device=self.device
             )
-
-            # Backpropagation
-            loss.backward()
-            optimizer.step()
-            scheduler.step()
-
-            train_loss += loss.item()
-
-        # Evaluate
-        model.eval()
-        eval_loss = 0.0
-
-        with torch.no_grad():
-            for batch in eval_loader:
-                # Extract data
-                queries = batch["question"]
-                reasonings = batch["answer"]
-
-                # Tokenize input
-                input_ids = model.tokenizer(
-                    queries,
-                    padding=True,
-                    truncation=True,
-                    return_tensors="pt"
-                ).input_ids.to(device)
-
-                attention_mask = (input_ids != model.tokenizer.pad_token_id).long()
-
-                # Generate contemplation tokens
-                contemplation_states = model(input_ids, attention_mask)
-
-                # Get target hidden states from full reasoning
-                reasoning_inputs = model.tokenizer(
-                    reasonings,
-                    padding=True,
-                    truncation=True,
-                    return_tensors="pt"
-                ).input_ids.to(device)
-
-                reasoning_mask = (reasoning_inputs != model.tokenizer.pad_token_id).long()
-
-                reasoning_outputs = model.model(
-                    input_ids=reasoning_inputs,
-                    attention_mask=reasoning_mask,
-                    output_hidden_states=True,
-                    return_dict=True
-                )
-
-                # Get the hidden states from the teacher model
-                target_states = reasoning_outputs.hidden_states[model.autoregressive_layer]
-
-                # Apply the compression ratio
-                seq_len = target_states.shape[1]
-                keep_indices = torch.linspace(
-                    0, seq_len-1,
-                    steps=int(seq_len * model.compression_ratio),
-                    dtype=torch.long,
-                    device=device
-                )
-                compressed_target_states = target_states[:, keep_indices]
-
-                # Compute loss
-                loss = hidden_state_loss(
-                    contemplation_states[:, :compressed_target_states.size(1)],
-                    compressed_target_states
-                )
-
-                eval_loss += loss.item()
-
-        # Log training progress
-        avg_train_loss = train_loss / len(train_loader)
-        avg_eval_loss = eval_loss / len(eval_loader)
-
-        print(f"Epoch {epoch+1}/{num_epochs}:")
-        print(f"  Train Loss: {avg_train_loss:.4f}")
-        print(f"  Eval Loss: {avg_eval_loss:.4f}")
-
-        # Save best model
-        if avg_eval_loss < best_eval_loss:
-            best_eval_loss = avg_eval_loss
-            # model.save_pretrained(output_path)
-            best_state_dict = model.state_dict()
+            
+            # Forward pass with combined embeddings
+            outputs = self.model(
+                inputs_embeds=combined_embeds,
+                attention_mask=combined_attention_mask,
+                # labels=labels,
+                return_dict=True
+            )
+        else:
+            # Forward pass with just input embeddings
+            outputs = self.model(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                # labels=labels,
+                return_dict=True
+            )
+            
+        return outputs
     
-    model.load_state_dict(best_state_dict)
-    model.save_pretrained(output_path)    
-    print(f"  Saved new best model with loss: {best_eval_loss:.4f}")
+    def apply_lora(self, rank=16, alpha=32):
+        """
+        Apply LoRA to the model
+        
+        Args:
+            rank: Rank for LoRA adaptation
+            alpha: Alpha parameter for LoRA
+            
+        Returns:
+            Model with LoRA applied
+        """
+        # Configure LoRA
+        # target_modules = ["q_proj", "k_proj", "v_proj", "o_proj"]
+        target_modules = ["model.layers.15.self_attn.q_proj", 
+                        "model.layers.15.self_attn.k_proj",
+                        "model.layers.15.self_attn.v_proj",
+                        "model.layers.15.self_attn.o_proj"]
+        
+        peft_config = LoraConfig(
+            task_type=TaskType.CAUSAL_LM,
+            inference_mode=False,
+            r=rank,
+            lora_alpha=alpha,
+            lora_dropout=0.05,
+            target_modules=target_modules
+        )
+        
+        self.model.enable_input_require_grads()
+        self.model = get_peft_model(self.model, peft_config)
+        # self.model.config.use_cache = False
+        self.model.gradient_checkpointing_enable()
+        return self
 
-    return model
+    @classmethod
+    def from_pretrained(cls, path):
+        """Load a pretrained Decode model"""
+        # Load config
+        config_path = os.path.join(path, "config.pt")
+        config = torch.load(config_path)
+
+        # Initialize model with loaded config
+        model = cls(
+            config["base_model_name"],
+            device=config["device"]
+        )
+
+        # Load state dict
+        model_path = os.path.join(path, "model.pt")
+        model.load_state_dict(torch.load(model_path))
+
+        return model
+
+    def save_pretrained(self, path):
+        """Save the Decode model"""
+        os.makedirs(path, exist_ok=True)
+
+        # Save config
+        config = {
+            "base_model_name": self.base_model_name,
+            "device": self.device
+        }
+        torch.save(config, os.path.join(path, "config.pt"))
+
+        # Save state dict
+        torch.save(self.state_dict(), os.path.join(path, "model.pt"))
+        
+
