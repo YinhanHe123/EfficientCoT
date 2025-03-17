@@ -154,7 +154,7 @@ def run_inference_with_deepspeed(contemp_generator, dataset, teacher_model_name,
                 inputs_embeds=combined_embeds,
                 attention_mask=attention_mask,
                 position_ids=position_ids,
-                max_length=512 + total_seq_length,  # Account for the input length
+                max_length=120 + total_seq_length,  # Account for the input length
                 temperature=0.7,
                 top_p=0.9,
                 do_sample=True

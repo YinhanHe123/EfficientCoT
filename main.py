@@ -26,6 +26,8 @@ def parse_args():
     parser.add_argument("--baseline", type=str, default="effi_cot",
                         choices=["cot", "ccot", "pause", "implicit_cot","zero_shot_cot"],
                         help="Baseline to run if mode is baseline")
+    parser.add_argument("--ccot_stage", type=str, default="encode",choices=["encode", "decode", "prepare_decode_data", "evaluate"],
+                        help="Stage for CCoT")
     parser.add_argument("--experiment_file", type=str, default="experiments.json",
                         help="JSON file containing experiment configurations")
     parser.add_argument("--device", type=int, default=0)
@@ -39,6 +41,7 @@ def parse_args():
                         help="Layer to use for autoregressive generation in CCoT")
     parser.add_argument("--cot_bsl_shot", type=int, default=0,
                         help="Number of shots for cot baseline")
+    
     return parser.parse_args()
 
 def run_experiment_sequence(variation, device, experiment_file, base_seed):
@@ -251,169 +254,7 @@ def run_experiment_sequence(variation, device, experiment_file, base_seed):
 
         print(" | ".join(row))
 
-# def main():
-#     login(token='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')
-#     args = parse_args()
 
-#     # Set random seed
-#     utils.set_seed(args.seed)
-
-#     if args.mode == "run_experiments":
-#         run_experiment_sequence(args.variation, args.device, args.experiment_file, args.seed)
-#     else:
-#         # Original logic for individual modes
-#         model_config = ModelConfig(args.config)
-        
-#         experiment_config = ExperimentConfig(args.config)
-#         experiment_config.device = args.device
-        
-#         # Special handling for CCoT mode
-#         if args.mode == "train_ccot" or (args.mode == "baseline" and args.baseline == "ccot"):
-#             experiment_config.model_save_path = f"{experiment_config.model_save_path}/ccot"
-#             experiment_config.checkpoint_path = f"{experiment_config.checkpoint_path}/ccot"
-#             experiment_config.result_path = f"{experiment_config.result_path}/ccot"
-#             experiment_config.experiment_name = f"ccot_{args.compression_ratio}_{args.seed}"
-#         else:
-#             # Original path handling for other modes
-#             experiment_config.model_save_path = f"{experiment_config.model_save_path}/{args.baseline}/{args.variation}" if args.baseline == 'effi_cot' else f"{experiment_config.model_save_path}/{args.baseline}"
-#             experiment_config.checkpoint_path = f"{experiment_config.checkpoint_path}/{args.baseline}/{args.variation}" if args.baseline == 'effi_cot' else f"{experiment_config.checkpoint_path}/{args.baseline}"
-#             experiment_config.result_path = f"{experiment_config.result_path}/{args.baseline}/{args.variation}" if args.baseline == 'effi_cot' else f"{experiment_config.result_path}/{args.baseline}"
-#             experiment_config.experiment_name = f"{args.baseline}_{args.variation}_{args.seed}"
-        
-#         # Create necessary directories
-#         if not os.path.exists(experiment_config.model_save_path):
-#             os.makedirs(experiment_config.model_save_path)
-#         if not os.path.exists(experiment_config.checkpoint_path):
-#             os.makedirs(experiment_config.checkpoint_path)
-#         if not os.path.exists(experiment_config.result_path):
-#             os.makedirs(experiment_config.result_path)
-
-#         reasoning_pairs_path = os.path.join(experiment_config.reasoning_pairs_path,
-#                                                 f"{model_config.teacher_model_name}/reasoning_pairs_{args.seed}.json")
-
-#         # Load dataset
-#         train_dataset, eval_dataset = load_gsm8k_dataset(model_config.data_path)
-
-#         # Process different modes
-#         if args.mode == "train_sentence_transformer" and args.variation == "vanilla":
-#             # Extract queries from the dataset
-#             queries = [item["query"] for item in train_dataset][:experiment_config.max_reasoning_pairs]
-
-#             # Prepare reasoning pairs dataset
-#             from training.train_sent_trans import prepare_reasoning_pairs_dataset
-#             if os.path.exists(reasoning_pairs_path):
-#                 pairs_dataset = utils.load_json(reasoning_pairs_path)
-#             else:
-#                 pairs_dataset = prepare_reasoning_pairs_dataset(
-#                     model_config.teacher_model_name,
-#                     args.device,
-#                     queries,
-#                     max_pairs=experiment_config.max_reasoning_pairs
-#                 )
-#                 # create directory
-#                 utils.create_directory(reasoning_pairs_path)
-#                 # save to gen_datasets folder
-#                 utils.save_json(pairs_dataset, reasoning_pairs_path)
-
-#             # Train sentence transformer
-#             from training.train_sent_trans import train_sentence_transformer
-#             sentence_transformer = train_sentence_transformer(
-#                 model_config.teacher_model_name,
-#                 experiment_config.start_layer_idx,
-#                 experiment_config.end_layer_idx,
-#                 pairs_dataset,
-#                 experiment_config
-#             )
-
-#         elif args.mode == "train_contemp_generator":
-#             # load condensed reasoning pairs dataset, add condensed reasoning to train_dataset
-#             pairs_dataset = utils.load_json(reasoning_pairs_path)
-#             # add to train dataset items with condensed reasoning of pairs_dataset
-#             for i in range(len(train_dataset)):
-#                 train_dataset.update_item(i, "condensed_reasoning", pairs_dataset[i]["condensed_reasoning"])
-
-#             # Load pre-trained sentence transformer
-#             from models.sentence_transformer import CustomizedSentenceTransformer
-#             if args.variation != "vanilla":
-#                 sentence_transformer = None
-#             else:
-#                 sentence_transformer = CustomizedSentenceTransformer.from_pretrained(
-#                     experiment_config.model_save_path+"/sentence_transformer"
-#                 )
-
-#             # Initialize contemplation generator
-#             contemp_generator = ContemplationGenerator(
-#                 model_config.student_model_name,
-#                 model_config.teacher_model_name,
-#                 model_config.teacher_hidden_dim,
-#                 device=args.device
-#             )
-
-#             # Train the contemplation generator
-#             train_contemplation_generator(
-#                 contemp_generator,
-#                 sentence_transformer,
-#                 train_dataset,
-#                 eval_dataset,
-#                 model_config,
-#                 experiment_config,
-#                 args.variation
-#             )
-
-#         elif args.mode == "train_ccot":
-#             # Import CCoT model and training function
-#             from models.ccot_model import train_ccot_model, CCoTModel
-            
-#             # Set up output path for CCoT model
-#             ccot_model_path = os.path.join(experiment_config.model_save_path, "ccot_model")
-            
-#             # Train CCoT model
-#             train_ccot_model(
-#                 model_config.teacher_model_name,
-#                 train_dataset,
-#                 eval_dataset,
-#                 ccot_model_path,
-#                 compression_ratio=args.compression_ratio,
-#                 autoregressive_layer=args.autoregressive_layer,
-#                 learning_rate=experiment_config.learning_rate,
-#                 num_epochs=experiment_config.num_epochs,
-#                 batch_size=experiment_config.batch_size,
-#                 device=args.device
-#             )
-            
-#             print(f"CCoT model trained and saved to {ccot_model_path}")
-
-#         elif args.mode == "evaluate":
-#             # Load trained models and run inference
-#             contemp_generator = ContemplationGenerator.from_pretrained(
-#                 experiment_config.model_save_path+"/contemp_generator"
-#             )
-#             results = run_inference(
-#                 contemp_generator,
-#                 eval_dataset,
-#                 model_config.teacher_model_name,
-#                 experiment_config
-#             )
-#             # Evaluate results
-#             metrics = evaluate_model(results, eval_dataset)
-#             # save results
-#             utils.save_json(metrics, f"{experiment_config.result_path}/evaluation_results.json")
-#             print(f"Evaluation results: {metrics}")
-
-#         elif args.mode == "baseline":
-#             # Run baseline method
-#             results = run_baseline(
-#                 args.baseline,
-#                 eval_dataset,
-#                 model_config,
-#                 experiment_config,
-#                 num_shots=args.cot_bsl_shot
-#             )
-#             # Evaluate results
-#             metrics = evaluate_model(results, eval_dataset)
-#             # save
-#             utils.save_json(metrics, f"{experiment_config.result_path}/{args.cot_bsl_shot}_shot__baseline_results.json")
-#             print(f"Baseline {args.baseline} results: {metrics}")
 def main():
     login(token='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')
     args = parse_args()
@@ -429,6 +270,7 @@ def main():
         
         experiment_config = ExperimentConfig(args.config)
         experiment_config.device = args.device
+        experiment_config.ccot_stage = args.ccot_stage
         
         # Special handling for CCoT mode
         if args.mode == "train_ccot" or (args.mode == "baseline" and args.baseline == "ccot"):

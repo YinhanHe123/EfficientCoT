@@ -259,8 +259,12 @@ class CCOTDecodeModel(nn.Module):
         # If contemplation tokens are provided, concatenate them with the input embeddings
         if contemp_states is not None:
             # Limit contemplation states to a reasonable number
+            # pdb.set_trace()
+            contemp_states = contemp_states.squeeze()
             max_contemp_tokens = min(contemp_states.size(1), 50)
-            contemp_to_use = contemp_states[:, :max_contemp_tokens, :].squeeze()
+            contemp_to_use = contemp_states[:, :max_contemp_tokens, :]
+            print('input_embes', inputs_embeds.size())
+            print('contemp_states', contemp_to_use.size())
             
             # Concatenate input embeddings and contemplation states
             combined_embeds = torch.cat([inputs_embeds, contemp_to_use], dim=1)

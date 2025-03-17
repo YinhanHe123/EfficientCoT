@@ -44,7 +44,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
 
             # for debugging
             prompt = [
-                {'role':"user", "content":prompt}
+                {'role':"user", "content": prompt}
             ]
             teacher_tokenizer.chat_template = "{% for message in messages %}{% if message['role'] == 'system' %}{{ message['content'] }}{% elif message['role'] == 'user' %}{{ '\n\nHuman: ' + message['content'] +  eos_token }}{% elif message['role'] == 'assistant' %}{{ '\n\nAssistant: '  + message['content'] +  eos_token  }}{% endif %}{% endfor %}{% if add_generation_prompt %}{{ '\n\nAssistant: ' }}{% endif %}"
             prompt=teacher_tokenizer.apply_chat_template(prompt, tokenize=False)
@@ -128,7 +128,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
             # Generate answer with the modified approach
             outputs = teacher_model.generate(
                 input_ids,
-                max_length=512 + input_ids.size(1),  # Account for the input length
+                max_length=120 + input_ids.size(1),  # Account for the input length
                 temperature=0.7,
                 top_p=0.9,
                 do_sample=True

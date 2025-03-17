@@ -5,8 +5,8 @@ def load_gsm8k_dataset(data_path=None):
     """Load and prepare the GSM8K dataset"""
     # Load from HuggingFace datasets or from local path
     gsm8k = load_dataset(data_path, 'main')
-    train_dataset = gsm8k['train'].select(range(4))  # For debugging
-    eval_dataset = gsm8k['test'].select(range(1))  # For debugging
+    train_dataset = gsm8k['train'].select(range(400))  # For debugging
+    eval_dataset = gsm8k['test'].select(range(100))  # For debugging
     # Create custom PyTorch datasets
     train_data = GSM8KDataset(train_dataset)
     eval_data = GSM8KDataset(eval_dataset)
@@ -84,14 +84,14 @@ def create_dataloaders(train_dataset, eval_dataset, batch_size=16):
         train_dataset,
         batch_size=batch_size,
         shuffle=True,
-        num_workers=2
+        num_workers=3
     )
 
     eval_loader = DataLoader(
         eval_dataset,
         batch_size=batch_size,
         shuffle=False,
-        num_workers=2
+        num_workers=3
     )
 
     return train_loader, eval_loader
