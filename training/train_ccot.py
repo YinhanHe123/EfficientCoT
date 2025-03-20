@@ -7,7 +7,7 @@ from tqdm import tqdm
 import os
 import numpy as np
 from peft import get_peft_model, LoraConfig, TaskType
-from datasets import Dataset as HFDataset 
+from datasets import Dataset as HFDataset
 from datasets import load_from_disk
 import torch.nn.functional as F
 import openai
@@ -22,13 +22,13 @@ def prepare_ccot_layer_dataset(queries, reasonings, tokenizer, device, layer_idx
     teacher_model = AutoModelForCausalLM.from_pretrained(tokenizer.name_or_path)
     teacher_model.to(device)
     teacher_model.eval()
-    
+
     # Prepare data dictionaries
     input_ids_list = []
     attention_mask_list = []
     target_states_list = []
     #
-    
+
     # Process each query-reasoning pair
     for query, reasoning in tqdm(zip(queries, reasonings), total=len(queries), desc="Preparing dataset"):
         # Tokenize the reasoning chain
@@ -45,7 +45,7 @@ def prepare_ccot_layer_dataset(queries, reasonings, tokenizer, device, layer_idx
             selected_indices = openai.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "user", 
+                {"role": "user",
                 "content": f"You should select {num_of_compressed_tokens} important words from the following text. I need you to only output the words' indices increasingly, DO NOT OUTPUT ANYTHING ELSE. For example, for text 'Where is my pencil?', the important words are 'Where' and 'pencil' at position 0 and 4, so the output is '0, 4'. Now, do it for the following text: "+reasoning}
             ]
             ).choices[0].message.content
@@ -53,65 +53,65 @@ def prepare_ccot_layer_dataset(queries, reasonings, tokenizer, device, layer_idx
             repeat += 1
         selected_indices = selected_indices[:num_of_compressed_tokens]
         # print('selected_indices:', selected_indices)
-        
+
         # Tokenize the reasoning
-        reasoning_inputs = tokenizer(reasoning, return_tensors="pt", padding="max_length", 
+        reasoning_inputs = tokenizer(reasoning, return_tensors="pt", padding="max_length",
                                      truncation=True, max_length=max_length).to(device)
-        
+
         # Get teacher hidden states
         with torch.no_grad():
-            outputs = teacher_model(reasoning_inputs.input_ids, 
+            outputs = teacher_model(reasoning_inputs.input_ids,
                                    attention_mask=reasoning_inputs.attention_mask,
                                    output_hidden_states=True)
             hidden_states = outputs.hidden_states[15]
-            
+
             # Select subset based on compression ratio
             target_states = hidden_states[:, selected_indices, :]
-            
+
         # Tokenize the query
         query_inputs = tokenizer(query, return_tensors="pt", padding="max_length",
                                 truncation=True, max_length=max_length).to(device)
-        
+
         # Store the data
         input_ids_list.append(query_inputs.input_ids.squeeze().cpu().numpy())
         attention_mask_list.append(query_inputs.attention_mask.squeeze().cpu().numpy())
         target_states_list.append(target_states.squeeze().cpu().numpy())
-    
+
     # Free up GPU memory
     del teacher_model
     torch.cuda.empty_cache()
-    
+
     # Create HuggingFace Dataset
     dataset_dict = {
         "input_ids": input_ids_list,
         "attention_mask": attention_mask_list,
         "target_states": target_states_list
     }
-    
+
     return HFDataset.from_dict(dataset_dict)
 
 # Utility functions
 def hidden_state_loss(pred_states, target_states):
     """
     Compute a scaled mean squared error loss between hidden states
-    
+
     Args:
         pred_states: Predicted hidden states
         target_states: Target hidden states
-        
+
     Returns:
         Tensor: Loss value
     """
     # Compute the variance of target states for scaling
     target_variance = torch.var(target_states, dim=1, keepdim=True)
-    
+
     # Compute MSE loss
-    
+
     mse_loss = F.mse_loss(pred_states, target_states, reduction='none') / pred_states.shape[-1]
-    
+
     # Scale by variance to normalize
     scaled_loss = mse_loss / (target_variance + 1e-6)
-    
+
     return scaled_loss.mean()
 
 
@@ -120,17 +120,17 @@ class CCOTLayerTrainer(Trainer):
     def __init__(self, model, args, train_dataset, eval_dataset=None, layer_idx=0, **kwargs):
         super().__init__(model=model, args=args, train_dataset=train_dataset, eval_dataset=eval_dataset, **kwargs)
         self.layer_idx = layer_idx
-        
+
     def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
         input_ids = inputs["input_ids"]
         attention_mask = inputs["attention_mask"]
         target_states = inputs["target_states"]
-        
+
         # print shapes for debugging
-        
+
         # Get model outputs
         outputs = model(input_ids=input_ids, attention_mask=attention_mask, output_hidden_states=True)
-        
+
         # Extract the predicted hidden states
         if isinstance(outputs, tuple):
             # When the model returns a tuple (contemplation_states, hidden_states)
@@ -138,35 +138,35 @@ class CCOTLayerTrainer(Trainer):
         else:
             # When the model directly returns contemplation_states
             predicted_states = outputs
-            
+
         # Compute loss
         # print('predicted_states', predicted_states.shape)
         # print('target_states', target_states.shape)
         # temporary fix (implement the token selector later)
         target_states = target_states[:, :predicted_states.shape[1], :]
         loss = hidden_state_loss(predicted_states, target_states)
-        
+
         return (loss, outputs) if return_outputs else loss
-    
+
     def evaluation_loop(self, dataloader, description, prediction_loss_only=None, ignore_keys=None, metric_key_prefix="eval"):
         """
         Override the evaluation loop to ensure the loss is properly added to metrics
         """
         # Call the parent evaluation loop
         output = super().evaluation_loop(
-            dataloader, 
-            description, 
-            prediction_loss_only, 
-            ignore_keys, 
+            dataloader,
+            description,
+            prediction_loss_only,
+            ignore_keys,
             metric_key_prefix
         )
-        
+
         # Make sure loss is in the metrics
         if "loss" in output.metrics:
             output.metrics[f"{metric_key_prefix}_loss"] = output.metrics.pop("loss")
-            
+
         return output
-    
+
 
 def prepare_ccot_decode_dataset(queries, answers, ccot_model, tokenizer, device, max_length=120):
     """
@@ -177,18 +177,18 @@ def prepare_ccot_decode_dataset(queries, answers, ccot_model, tokenizer, device,
     attention_mask_list = []
     contemp_states_list = []
     labels_list = []
-    
+
     # Process each query-answer pair
     for query, answer in tqdm(zip(queries, answers), total=len(queries), desc="Preparing decode dataset"):
         # Tokenize the query
         query_inputs = tokenizer(query, return_tensors="pt", truncation=True, padding="max_length",
                                 max_length=max_length).to(device)
-        
+
         # Generate contemplation tokens
         with torch.no_grad():
-            contemp_states = ccot_model(query_inputs.input_ids, 
+            contemp_states = ccot_model(query_inputs.input_ids,
                                       attention_mask=query_inputs.attention_mask)
-        
+
         # Extract reasoning and final answer
         reasoning_parts = answer.split('####')
         reasoning = reasoning_parts[0].strip()
@@ -196,26 +196,26 @@ def prepare_ccot_decode_dataset(queries, answers, ccot_model, tokenizer, device,
         # The final answer comes after ####
         final_answer = reasoning_parts[1].strip() if len(reasoning_parts) > 1 else ""
 
-        
+
         # Tokenize the answer
-        answer_inputs = tokenizer(final_answer, return_tensors="pt", truncation=True, padding="max_length", 
+        answer_inputs = tokenizer(final_answer, return_tensors="pt", truncation=True, padding="max_length",
                                  max_length=5)
-        
+
         # # Combine query and answer for label creation
         # combined = f"{query} {answer}"
         # combined_inputs = tokenizer(combined, return_tensors="pt", truncation=True, padding="max_length",
         #                            max_length=max_length).to(device)
-        
+
         # # Create labels (shift by 1)
         # labels = combined_inputs.input_ids.clone()
         # labels[:, :query_inputs.input_ids.size(1)] = -100  # Mask out the query part
-        
+
         # Store the data
         input_ids_list.append(query_inputs.input_ids.cpu().numpy())
         attention_mask_list.append(query_inputs.attention_mask.cpu().numpy())
         contemp_states_list.append(contemp_states.cpu().numpy())
         labels_list.append(answer_inputs.input_ids.squeeze().numpy())
-    
+
     # Create HuggingFace Dataset
     dataset_dict = {
         "input_ids": input_ids_list,
@@ -223,7 +223,7 @@ def prepare_ccot_decode_dataset(queries, answers, ccot_model, tokenizer, device,
         "contemp_states": contemp_states_list,
         "labels": labels_list
     }
-    
+
     return HFDataset.from_dict(dataset_dict)
 
 class CCOTDecodeTrainer(Trainer):
@@ -233,11 +233,11 @@ class CCOTDecodeTrainer(Trainer):
         attention_mask = inputs["attention_mask"]
         contemp_states = inputs["contemp_states"]
         labels = inputs["labels"]
-        
+
         print(f"input_ids shape: {input_ids.shape}")
         print(f"contemp_states shape: {contemp_states.shape}")
         print(f"labels shape: {labels.shape}")
-        
+
         # Forward pass with contemplation states
         outputs = model(
             input_ids=input_ids,
@@ -245,7 +245,7 @@ class CCOTDecodeTrainer(Trainer):
             contemp_states=contemp_states,
             labels=None
         )
-        
+
         # Cross-entropy loss is computed inside the model
         # loss = outputs.loss
         # crop logits to be the same size as labels
@@ -270,7 +270,7 @@ def train_ccot_model(
 ):
     """
     Train a CCoT model layer-by-layer using LoRA fine-tuning
-    
+
     Args:
         base_model_name: Name of the base model
         train_dataset: Dataset for training
@@ -285,19 +285,19 @@ def train_ccot_model(
         batch_size: Batch size for training
         device: Device to run the model on
         eval_steps: Number of steps between evaluations
-        
+
     Returns:
         Trained CCoT model
     """
     from models.ccot_model import CCoTModel
-    
+
     # Create output directory
     os.makedirs(output_path, exist_ok=True)
-    
+
     # Initialize the base model
     tokenizer = AutoTokenizer.from_pretrained(base_model_name)
     tokenizer.pad_token = tokenizer.eos_token
-    
+
     # Initialize the CCoT model
     ccot_model = CCoTModel(
         base_model_name,
@@ -305,7 +305,7 @@ def train_ccot_model(
         autoregressive_layer=autoregressive_layer,
         device=device
     )
-    
+
     # Extract training data
     queries = [item["question"] for item in train_dataset.dataset]
     reasonings = [item["answer"] for item in train_dataset.dataset]
@@ -313,11 +313,11 @@ def train_ccot_model(
     # Extract evaluation data
     eval_queries = [item["question"] for item in eval_dataset.dataset]
     eval_reasonings = [item["answer"] for item in eval_dataset.dataset]
-    
+
     # Determine the number of layers to train
     # We train from autoregressive_layer to the end
     num_layers = ccot_model.model.config.num_hidden_layers
-    
+
     # Training arguments
     training_args = TrainingArguments(
         output_dir=f"{output_path}/checkpoints",
@@ -340,12 +340,12 @@ def train_ccot_model(
         metric_for_best_model="eval_loss",
         greater_is_better=False
     )
-    
+
     # Train each layer starting from autoregressive_layer
     for layer_idx in range(0, num_layers, 3): # train every three layers
     # for layer_idx in range(autoregressive_layer, autoregressive_layer+2): # this line is for debugging
         print(f"===== Training layer {layer_idx} =====")
-        
+
         # Apply LoRA to the current layer
         ccot_model.model = ccot_model.apply_lora_layer_by_layer(
             layer_idx=layer_idx,
@@ -380,7 +380,7 @@ def train_ccot_model(
             )
             eval_layer_dataset.save_to_disk(f"{output_path}/layer_eval_dataset.json")
         print('eval_dataset_attributes', eval_layer_dataset[0].keys())
-        
+
         # Create layer trainer
         trainer = CCOTLayerTrainer(
             model=ccot_model,
@@ -389,16 +389,16 @@ def train_ccot_model(
             eval_dataset=eval_layer_dataset,
             layer_idx=layer_idx
         )
-        
+
         # Train the layer
         trainer.train() # continue iterations will go from the parameters of the previously trained iteration
         # merge Lora parameters with original ccot to get new ccot mode parameters
         ccot_model.model = ccot_model.model.merge_and_unload(progressbar=True, safe_merge=True)
-        
+
         gc.collect()
         # Free up GPU memory
         torch.cuda.empty_cache()
-    # save the model 
+    # save the model
     ccot_model.save_pretrained(output_path)
     return ccot_model
 
@@ -417,7 +417,7 @@ def train_ccot_decode_model(
 ):
     """
     Train a decoder model to generate answers using contemplation tokens
-    
+
     Args:
         base_model_name: Name of the base model
         train_decode_dataset: Dataset for training
@@ -430,7 +430,7 @@ def train_ccot_decode_model(
         batch_size: Batch size for training
         device: Device to run the model on
         eval_steps: Number of steps between evaluations
-        
+
     Returns:
         Trained decoder model
     """
@@ -440,10 +440,10 @@ def train_ccot_decode_model(
     tokenizer.pad_token = tokenizer.eos_token
     # Initialize the decode model
     decode_model = CCOTDecodeModel(base_model_name, device=device)
-    
+
     # Apply LoRA to the model
     decode_model = decode_model.apply_lora(rank=lora_rank, alpha=lora_alpha)
-    
+
     # Training arguments
     os.makedirs(output_path, exist_ok=True)
     print(output_path)
@@ -454,13 +454,13 @@ def train_ccot_decode_model(
         num_train_epochs=num_epochs,
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
-        evaluation_strategy="steps",
+        evaluation_strategy="epoch",
         eval_steps=eval_steps,
         logging_dir=f"{output_path}/logs",
         logging_steps=10,
-        label_names=['target_states'],
+        label_names=['labels'],
         load_best_model_at_end=True,
-        save_strategy="steps",
+        save_strategy="best",
         save_steps=eval_steps,
         learning_rate=learning_rate,
         weight_decay=0.01,
@@ -471,7 +471,7 @@ def train_ccot_decode_model(
         metric_for_best_model="eval_loss",
         greater_is_better=False
     )
-    
+
     # Create trainer
     trainer = CCOTDecodeTrainer(
         model=decode_model,

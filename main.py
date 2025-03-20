@@ -35,13 +35,15 @@ def parse_args():
                         help="Random seed for reproducibility")
     parser.add_argument("--variation", type=str, default="vanilla", choices=["vanilla", "no_sentence_transformer", "no_l_reason"],
                         help="Variation of the effi_cot model to use")
-    parser.add_argument("--compression_ratio", type=float, default=0.1, 
+    parser.add_argument("--compression_ratio", type=float, default=0.1,
                         help="Compression ratio for CCoT (ratio of compressed tokens to full chain)")
+    parser.add_argument("--max_contemp_tokens", type=int, default=None, help="Maximum number of contemplation tokens for CCoT (this conflicts with compression ratio, just for temporary debug, should be removed very soon)")
     parser.add_argument("--autoregressive_layer", type=int, default=15,
                         help="Layer to use for autoregressive generation in CCoT")
     parser.add_argument("--cot_bsl_shot", type=int, default=0,
                         help="Number of shots for cot baseline")
-    
+
+
     return parser.parse_args()
 
 def run_experiment_sequence(variation, device, experiment_file, base_seed):
@@ -256,6 +258,7 @@ def run_experiment_sequence(variation, device, experiment_file, base_seed):
 
 
 def main():
+    os.environ['HF_HOME'] = '/data/nee7ne/huggingface'
     login(token='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')
     args = parse_args()
 
@@ -267,18 +270,19 @@ def main():
     else:
         # Original logic for individual modes
         model_config = ModelConfig(args.config)
-        
+
         experiment_config = ExperimentConfig(args.config)
         experiment_config.device = args.device
         experiment_config.ccot_stage = args.ccot_stage
-        
+        experiment_config.max_contemp_tokens = args.max_contemp_tokens if args.max_contemp_tokens is not None else experiment_config.max_contemp_tokens # SHOULD BE REMOVED, JUST DEBUG FOR DIFFERENT CONTEMP FOR CCOT
+
         # Special handling for CCoT mode
         if args.mode == "train_ccot" or (args.mode == "baseline" and args.baseline == "ccot"):
             experiment_config.model_save_path = f"{experiment_config.model_save_path}/ccot"
             experiment_config.checkpoint_path = f"{experiment_config.checkpoint_path}/ccot"
             experiment_config.result_path = f"{experiment_config.result_path}/ccot"
             experiment_config.experiment_name = f"ccot_{args.compression_ratio}_{args.seed}"
-            
+
             # Add compression ratio and autoregressive layer to experiment config
             experiment_config.compression_ratio = args.compression_ratio
             experiment_config.autoregressive_layer = args.autoregressive_layer
@@ -288,7 +292,7 @@ def main():
             experiment_config.checkpoint_path = f"{experiment_config.checkpoint_path}/{args.baseline}/{args.variation}" if args.baseline == 'effi_cot' else f"{experiment_config.checkpoint_path}/{args.baseline}"
             experiment_config.result_path = f"{experiment_config.result_path}/{args.baseline}/{args.variation}" if args.baseline == 'effi_cot' else f"{experiment_config.result_path}/{args.baseline}"
             experiment_config.experiment_name = f"{args.baseline}_{args.variation}_{args.seed}"
-        
+
         # Create necessary directories
         if not os.path.exists(experiment_config.model_save_path):
             os.makedirs(experiment_config.model_save_path)

@@ -3,6 +3,7 @@ from utils import utils
 import torch
 from tqdm import tqdm
 import os
+import time
 
 def run_inference(contemp_generator, dataset, teacher_model_name, config):
     device = config.device
@@ -20,7 +21,8 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
     utils.create_directory(result_dir)
 
     results = []
-
+    time_list = []
+    contemp_time_list = []
     with torch.no_grad():
         for sample in tqdm(dataset, desc="Running inference"):
             query = sample["query"]
@@ -31,23 +33,26 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
                 return_tensors="pt",
                 padding=True,
                 truncation=True,
-                max_length=config.max_seq_length // 2  # Leave room for the answer
+                max_length=config.max_seq_length   # Leave room for the answer
             ).to(device)
-
+            contemp_start = time.time()
             contemp_states = contemp_generator(
                 query_inputs.input_ids,
                 attention_mask=query_inputs.attention_mask
             )
+            contemp_end = time.time()
+            contemp_time = contemp_end - contemp_start
+            contemp_time_list.append(contemp_time)
 
             # Prepare prompt with query
-            prompt = f"Question: {query}\nAnswer:"
+            prompt = f"Question: {query}\n Generate the answer directly. Answer:"
 
             # for debugging
-            prompt = [
-                {'role':"user", "content": prompt}
-            ]
-            teacher_tokenizer.chat_template = "{% for message in messages %}{% if message['role'] == 'system' %}{{ message['content'] }}{% elif message['role'] == 'user' %}{{ '\n\nHuman: ' + message['content'] +  eos_token }}{% elif message['role'] == 'assistant' %}{{ '\n\nAssistant: '  + message['content'] +  eos_token  }}{% endif %}{% endfor %}{% if add_generation_prompt %}{{ '\n\nAssistant: ' }}{% endif %}"
-            prompt=teacher_tokenizer.apply_chat_template(prompt, tokenize=False)
+            # prompt = [
+            #     {'role':"user", "content": prompt}
+            # ]
+            # teacher_tokenizer.chat_template = "{% for message in messages %}{% if message['role'] == 'system' %}{{ message['content'] }}{% elif message['role'] == 'user' %}{{ '\n\nHuman: ' + message['content'] +  eos_token }}{% elif message['role'] == 'assistant' %}{{ '\n\nAssistant: '  + message['content'] +  eos_token  }}{% endif %}{% endfor %}{% if add_generation_prompt %}{{ '\n\nAssistant: ' }}{% endif %}"
+            # prompt=teacher_tokenizer.apply_chat_template(prompt, tokenize=False)
 
             # Tokenize the prompt
             prompt_tokens = teacher_tokenizer(
@@ -55,7 +60,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
                 return_tensors="pt",
                 padding=False,
                 truncation=True,
-                max_length=config.max_seq_length // 2  # Leave room for the answer
+                max_length=config.max_seq_length  # Leave room for the answer
             ).to(device)
 
             # Define a special token to separate prompt from contemplation
@@ -124,28 +129,35 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
 
             # Replace the prepare_inputs_for_generation method temporarily
             teacher_model.prepare_inputs_for_generation = modified_prepare_inputs
-            # teacher_model.prepare_inputs_for_generation = original_prepare_inputs # for debugging
+
             # Generate answer with the modified approach
+            gen_start = time.time()
             outputs = teacher_model.generate(
                 input_ids,
-                max_length=120 + input_ids.size(1),  # Account for the input length
-                temperature=0.7,
+                # max_length=120 + input_ids.size(1),  # Account for the input length
+                max_length = 30+input_ids.size(1)+contemp_len,
+                # temperature=0.7,
+                temperature=0.3,
                 top_p=0.9,
                 do_sample=True
             )
-
+            gen_end = time.time()
+            gen_time = gen_end - gen_start
+            print('Time taken for teacher generation:', gen_time)
             # Decode only the generated part
             answer = teacher_tokenizer.decode(outputs[0][input_ids.size(1):], skip_special_tokens=True)
-            print(f"Query: {query}\nAnswer: {answer}\n")
+            # print(f"Query: {query}\nAnswer: {answer}\n")
+            print('Answer', answer)
 
             result = {
                 "query": query,
                 "ground_truth": sample.get("answer", ""),
                 "prediction": answer
             }
+            time_list.append(contemp_time+gen_time)
             results.append(result)
             teacher_model.prepare_inputs_for_generation = original_prepare_inputs # change it back to original for the next sample in the loop
-
+    print(f"Average time taken for each sample: {sum(time_list)/len(time_list)}, Average time taken for contemplation: {sum(contemp_time_list)/len(contemp_time_list)}")
     # if path not exist, create it
     if not os.path.exists(result_dir):
         os.makedirs(result_dir)

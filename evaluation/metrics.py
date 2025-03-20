@@ -34,8 +34,8 @@ def evaluate_model(results, dataset):
             continue
 
         if results:  # Avoid division by zero
-            metrics["numerical_accuracy"] = num_correct / len(results)
-            metrics["close_match_rate"] = num_close / len(results)
+            metrics["numerical_accuracy"] = round(num_correct / len(results), 3)
+            metrics["close_match_rate"] = round(num_close / len(results), 3)
 
         if relative_errors:
             metrics["mean_relative_error"] = np.mean(relative_errors)

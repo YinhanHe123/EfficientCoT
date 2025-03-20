@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from transformers import AutoModel, AutoTokenizer
 import os
+import time
 
 class ContemplationGenerator(nn.Module):
     def __init__(self, student_model_name, teacher_model_name, teacher_hidden_dim, device):
@@ -24,12 +25,15 @@ class ContemplationGenerator(nn.Module):
 
     def forward(self, input_ids, attention_mask=None):
         # Generate student model hidden states
+        stud_start = time.time()
         outputs = self.student_model(
             input_ids=input_ids,
             attention_mask=attention_mask,
             output_hidden_states=True
         )
-
+        stud_end = time.time()
+        stud_time = stud_end - stud_start
+        # print(f"Contemplation generation time: {stud_time}")
         # Get the last hidden states
         hidden_states = outputs.last_hidden_state
         # Project to teacher model hidden dimension

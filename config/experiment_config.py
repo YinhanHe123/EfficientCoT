@@ -15,7 +15,7 @@ class ExperimentConfig:
         # Training parameters
         self.learning_rate = 1e-5
         self.weight_decay = 0.01
-        self.num_epochs = 100 
+        self.num_epochs = 100
         self.train_sen_trans_epochs = 15
         self.batch_size = 4
         self.alpha = 0.5  # Weight for Lreason in total loss
@@ -24,8 +24,8 @@ class ExperimentConfig:
         self.embedding_dim = 768  # Dimension for embeddings
         # self.max_reasoning_pairs = 1000  # Maximum reasoning pairs to generate
         # self.max_reasoning_pairs = 7473
-        self.max_reasoning_pairs = 16 # for debugging
-        self.max_contemp_tokens = 15
+        self.max_reasoning_pairs = 400
+        self.max_contemp_tokens = 5
 
         # Model-specific parameters
         self.start_layer_idx = 16  # Start layer for sentence transformer

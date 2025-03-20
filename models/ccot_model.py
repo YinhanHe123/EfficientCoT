@@ -1,4 +1,5 @@
 import torch
+import torch.nn.functional as F
 import torch.nn as nn
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import get_peft_model, LoraConfig, TaskType
@@ -54,7 +55,7 @@ class CCoTModel(nn.Module):
         self.model = self.model.to(device)
         self.end_predictor = self.end_predictor.to(device)
 
-    def forward(self, input_ids, attention_mask=None, output_hidden_states=False, target_states=None): #target_states is None is set to avoid 'target_states' signiture removal when data is passed to trainer()
+    def forward(self, input_ids, attention_mask=None, output_hidden_states=False, target_states=None, max_contemplation_tokens=None): #target_states is None is set to avoid 'target_states' signiture removal when data is passed to trainer()
         """
         Generate compressed contemplation tokens using autoregressive generation.
 
@@ -88,8 +89,8 @@ class CCoTModel(nn.Module):
 
         # Prepare for autoregressive generation of contemplation tokens
         all_contemplation_tokens = [last_token_hidden.unsqueeze(1)]
-        max_contemplation_tokens = 50  # Maximum number of contemplation tokens to generate
-
+        # max_contemplation_tokens = 5  # Maximum number of contemplation tokens to generate
+        max_contemplation_tokens = max_contemplation_tokens if max_contemplation_tokens is not None else 5
         # Autoregressively generate contemplation tokens
         for _ in range(max_contemplation_tokens):
             # Current token hidden state (for autoregressively generating the next token)
@@ -97,7 +98,7 @@ class CCoTModel(nn.Module):
 
             # Pass the current token through the transformer layers starting from autoregressive_layer
             layer_input = current_token.unsqueeze(1)  # Shape: [batch_size, 1, hidden_size]
-            
+
             # Forward pass through remaining layers
             layer_output = layer_input
             seq_length = layer_output.size(1)
@@ -116,8 +117,8 @@ class CCoTModel(nn.Module):
                                      attention_mask=attention_mask,
                                      position_ids=position_ids,
                                      position_embeddings=position_embeddings)[0]
-                
-                
+
+
             # position_embeddings = self.model.base_model.model.model.rotary_emb(hidden_states, position_ids)
 
             # for i in range(self.autoregressive_layer, len(self.model.base_model.model.model.layers)):
@@ -126,7 +127,7 @@ class CCoTModel(nn.Module):
             #                             attention_mask=None,
             #                             position_ids=position_ids,
             #                             position_embeddings=position_embeddings)[0]
-            
+
             # Get the next token hidden state
             next_token_hidden = layer_output.squeeze(1).unsqueeze(1)
 
@@ -140,7 +141,7 @@ class CCoTModel(nn.Module):
 
         # Concatenate all generated contemplation tokens
         contemplation_states = torch.cat(all_contemplation_tokens, dim=1)
-
+        contemplation_states = F.pad(contemplation_states,(0,0,0,max_contemplation_tokens-contemplation_states.shape[1],0,0))
         if output_hidden_states:
             return contemplation_states, outputs.hidden_states
         return contemplation_states
@@ -148,21 +149,21 @@ class CCoTModel(nn.Module):
     def apply_lora_layer_by_layer(self, layer_idx, rank=16, alpha=32):
         """
         Apply LoRA to a specific layer in the model
-        
+
         Args:
             layer_idx: Index of the layer to apply LoRA to
             rank: Rank for LoRA adaptation
             alpha: Alpha parameter for LoRA
-            
+
         Returns:
             Model with LoRA applied to the specified layer
         """
         # Configure LoRA for the specific layer
-        target_modules = [f"model.layers.{layer_idx}.self_attn.q_proj", 
+        target_modules = [f"model.layers.{layer_idx}.self_attn.q_proj",
                           f"model.layers.{layer_idx}.self_attn.k_proj",
                           f"model.layers.{layer_idx}.self_attn.v_proj",
                           f"model.layers.{layer_idx}.self_attn.o_proj"]
-        
+
         peft_config = LoraConfig(
             task_type=TaskType.CAUSAL_LM,
             inference_mode=False,
@@ -171,7 +172,7 @@ class CCoTModel(nn.Module):
             lora_dropout=0.05,
             target_modules=target_modules,
         )
-        
+
         return get_peft_model(self.model, peft_config)
 
     @classmethod
@@ -231,31 +232,31 @@ class CCOTDecodeModel(nn.Module):
         super().__init__()
         self.device = device
         self.base_model_name = base_model_name
-        
+
         # Load the base model
         self.model = AutoModelForCausalLM.from_pretrained(base_model_name)
         self.tokenizer = AutoTokenizer.from_pretrained(base_model_name)
         self.tokenizer.pad_token = self.tokenizer.eos_token
-        
+
         # Move model to device
         self.model = self.model.to(device)
-        
+
     def forward(self, input_ids, attention_mask=None, contemp_states=None, labels=None):
         """
         Generate an answer based on input and contemplation tokens
-        
+
         Args:
             input_ids: Input token IDs for the query
             attention_mask: Attention mask for the input
             contemp_states: Contemplation token states from CCoT model
             labels: Optional labels for computing loss
-            
+
         Returns:
             Model outputs
         """
         # Get the embeddings from the model's embedding layer
         inputs_embeds = self.model.get_input_embeddings()(input_ids).squeeze()
-        
+
         # If contemplation tokens are provided, concatenate them with the input embeddings
         if contemp_states is not None:
             # Limit contemplation states to a reasonable number
@@ -265,17 +266,17 @@ class CCOTDecodeModel(nn.Module):
             contemp_to_use = contemp_states[:, :max_contemp_tokens, :]
             print('input_embes', inputs_embeds.size())
             print('contemp_states', contemp_to_use.size())
-            
+
             # Concatenate input embeddings and contemplation states
             combined_embeds = torch.cat([inputs_embeds, contemp_to_use], dim=1)
-            
+
             # Create a new attention mask for the combined sequence
             combined_attention_mask = torch.ones(
                 (input_ids.size(0), combined_embeds.size(1)),
                 dtype=torch.long,
                 device=self.device
             )
-            
+
             # Forward pass with combined embeddings
             outputs = self.model(
                 inputs_embeds=combined_embeds,
@@ -291,27 +292,37 @@ class CCOTDecodeModel(nn.Module):
                 # labels=labels,
                 return_dict=True
             )
-            
+
         return outputs
-    
+
     def apply_lora(self, rank=16, alpha=32):
         """
         Apply LoRA to the model
-        
+
         Args:
             rank: Rank for LoRA adaptation
             alpha: Alpha parameter for LoRA
-            
+
         Returns:
             Model with LoRA applied
         """
         # Configure LoRA
+        target_modules = []
+        for i in range(0, len(self.model.model.layers), 6):
+            target_modules.extend([
+                f"model.layers.{i}.self_attn.q_proj",
+                f"model.layers.{i}.self_attn.k_proj",
+                f"model.layers.{i}.self_attn.v_proj",
+                f"model.layers.{i}.self_attn.o_proj"
+            ])
+
         # target_modules = ["q_proj", "k_proj", "v_proj", "o_proj"]
-        target_modules = ["model.layers.15.self_attn.q_proj", 
-                        "model.layers.15.self_attn.k_proj",
-                        "model.layers.15.self_attn.v_proj",
-                        "model.layers.15.self_attn.o_proj"]
-        
+
+        # target_modules = ["model.layers.15.self_attn.q_proj",
+        #                 "model.layers.15.self_attn.k_proj",
+        #                 "model.layers.15.self_attn.v_proj",
+        #                 "model.layers.15.self_attn.o_proj"]
+
         peft_config = LoraConfig(
             task_type=TaskType.CAUSAL_LM,
             inference_mode=False,
@@ -320,7 +331,7 @@ class CCOTDecodeModel(nn.Module):
             lora_dropout=0.05,
             target_modules=target_modules
         )
-        
+
         self.model.enable_input_require_grads()
         self.model = get_peft_model(self.model, peft_config)
         # self.model.config.use_cache = False
@@ -359,5 +370,5 @@ class CCOTDecodeModel(nn.Module):
 
         # Save state dict
         torch.save(self.state_dict(), os.path.join(path, "model.pt"))
-        
+
 
