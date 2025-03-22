@@ -94,25 +94,44 @@ def prepare_ccot_layer_dataset(queries, reasonings, tokenizer, device, layer_idx
 def hidden_state_loss(pred_states, target_states):
     """
     Compute a scaled mean squared error loss between hidden states
+    as described in the CCoT paper (Section 4.1).
+
+    LOSSφ(zl_i, ẑl_i) = (1/k) * Σ_(i=1 to k) [1/σ²(zl_i) * MSE(zl_i, ẑl_i)]
 
     Args:
-        pred_states: Predicted hidden states
-        target_states: Target hidden states
+        pred_states: Predicted hidden states [batch_size, num_tokens, hidden_dim]
+        target_states: Target hidden states [batch_size, num_tokens, hidden_dim]
 
     Returns:
         Tensor: Loss value
     """
-    # Compute the variance of target states for scaling
-    target_variance = torch.var(target_states, dim=1, keepdim=True)
+    # Number of tokens (k in the paper's notation)
+    k = pred_states.shape[1]
 
-    # Compute MSE loss
+    # Initialize total loss
+    total_loss = 0.0
 
-    mse_loss = F.mse_loss(pred_states, target_states, reduction='none') / pred_states.shape[-1]
+    # Process each token position independently as per the paper formula
+    for i in range(k):
+        # Get the hidden states for the current token position
+        z_i = target_states[:, i, :]  # [batch_size, hidden_dim]
+        z_hat_i = pred_states[:, i, :]  # [batch_size, hidden_dim]
 
-    # Scale by variance to normalize
-    scaled_loss = mse_loss / (target_variance + 1e-6)
+        # Compute variance of target states for each sample in the batch
+        # This computes σ²(zl_i) along the hidden dimension
+        variance = torch.var(z_i, dim=1, keepdim=True)  # [batch_size, 1]
 
-    return scaled_loss.mean()
+        # Compute Mean Squared Error
+        mse = torch.mean((z_i - z_hat_i) ** 2, dim=1, keepdim=True)  # [batch_size, 1]
+
+        # Scale MSE by variance
+        scaled_mse = mse / (variance + 1e-6)  # Add epsilon for numerical stability
+
+        # Sum the scaled MSE for this token position
+        total_loss += scaled_mse.mean()
+
+    # Average over all token positions
+    return total_loss / k
 
 
 class CCOTLayerTrainer(Trainer):
@@ -260,10 +279,10 @@ def train_ccot_model(
     output_path,
     compression_ratio=0.1,
     autoregressive_layer=15,
-    lora_rank=16,
-    lora_alpha=32,
+    lora_rank=128,
+    lora_alpha=256,
     learning_rate=1e-4,
-    num_epochs_per_layer=2,
+    num_epochs_per_layer=10,
     batch_size=8,
     device="cuda",
     eval_steps=5
@@ -309,7 +328,7 @@ def train_ccot_model(
     # Extract training data
     queries = [item["question"] for item in train_dataset.dataset]
     reasonings = [item["answer"] for item in train_dataset.dataset]
-    # print(queries)
+
     # Extract evaluation data
     eval_queries = [item["question"] for item in eval_dataset.dataset]
     eval_reasonings = [item["answer"] for item in eval_dataset.dataset]
@@ -331,7 +350,6 @@ def train_ccot_model(
         label_names=['target_states'],
         load_best_model_at_end = True,
         save_strategy="best",
-        save_steps=eval_steps,
         learning_rate=learning_rate,
         weight_decay=0.01,
         fp16=torch.cuda.is_available(),
@@ -342,7 +360,7 @@ def train_ccot_model(
     )
 
     # Train each layer starting from autoregressive_layer
-    for layer_idx in range(0, num_layers, 3): # train every three layers
+    for layer_idx in range(0, num_layers): # train every three layers
     # for layer_idx in range(autoregressive_layer, autoregressive_layer+2): # this line is for debugging
         print(f"===== Training layer {layer_idx} =====")
 
@@ -394,11 +412,33 @@ def train_ccot_model(
         trainer.train() # continue iterations will go from the parameters of the previously trained iteration
         # merge Lora parameters with original ccot to get new ccot mode parameters
         ccot_model.model = ccot_model.model.merge_and_unload(progressbar=True, safe_merge=True)
+        os.system(f"rm -r {output_path}/checkpoints")
 
         gc.collect()
         # Free up GPU memory
         torch.cuda.empty_cache()
-    # save the model
+
+    # Save the model after layer training
+    temp_model_save_path = f"{output_path}/model_before_end_predictor"
+    os.makedirs(temp_model_save_path, exist_ok=True)
+    ccot_model.save_pretrained(temp_model_save_path)
+    # delete the saved checkpoints
+
+
+    # Train the END_psi module as a separate step
+    print("===== Training END_psi module =====")
+    ccot_model = train_end_predictor(
+        ccot_model=ccot_model,
+        train_dataset=train_dataset,
+        eval_dataset=eval_dataset,
+        output_path=output_path,
+        learning_rate=learning_rate / 10,  # Use lower learning rate for end predictor
+        num_epochs=3,
+        batch_size=batch_size,
+        device=device
+    )
+
+    # Save the final model
     ccot_model.save_pretrained(output_path)
     return ccot_model
 
@@ -407,8 +447,8 @@ def train_ccot_decode_model(
     train_decode_dataset,
     eval_decode_dataset,
     output_path,
-    lora_rank=16,
-    lora_alpha=32,
+    lora_rank=64,
+    lora_alpha=128,
     learning_rate=5e-5,
     num_epochs=15,
     batch_size=4,
@@ -461,7 +501,6 @@ def train_ccot_decode_model(
         label_names=['labels'],
         load_best_model_at_end=True,
         save_strategy="best",
-        save_steps=eval_steps,
         learning_rate=learning_rate,
         weight_decay=0.01,
         fp16=torch.cuda.is_available(),
@@ -485,4 +524,153 @@ def train_ccot_decode_model(
     decode_model.model = decode_model.model.merge_and_unload(progressbar=True, safe_merge=True)
     # Save the model
     decode_model.save_pretrained(output_path)
+    os.system(f"rm -r {output_path}/checkpoints")
+
     return decode_model
+
+
+def train_end_predictor(
+    ccot_model,
+    train_dataset,
+    eval_dataset,
+    output_path,
+    learning_rate=1e-5,
+    num_epochs=5,
+    batch_size=8,
+    device="cuda"
+):
+    """
+    Train the END_psi module, which is a binary classifier that predicts
+    when to stop generating contemplation tokens.
+
+    As clarified by the author: "The END_psi module is a simple binary classifier
+    on the last layer hidden state of the generated responses. This is trained
+    separately from DECODE (crucially when the DECODE_psi weights are frozen)."
+
+    Args:
+        ccot_model: Trained CCOT model
+        train_dataset: Dataset for training
+        eval_dataset: Dataset for evaluation
+        output_path: Path to save the model
+        learning_rate: Learning rate for optimization
+        num_epochs: Number of training epochs
+        batch_size: Batch size for training
+        device: Device to run the model on
+
+    Returns:
+        Trained CCOT model with END_psi module updated
+    """
+    import torch
+    import torch.nn as nn
+    import torch.optim as optim
+    from torch.utils.data import DataLoader, TensorDataset
+    from tqdm import tqdm
+
+    print("=== Training END_psi Module ===")
+
+    # Freeze all parameters except the end predictor
+    for param in ccot_model.parameters():
+        param.requires_grad = False
+
+    # Only enable gradients for the end_predictor
+    for param in ccot_model.end_predictor.parameters():
+        param.requires_grad = True
+
+    # Extract queries for generating contemplation tokens
+    queries = [item["question"] for item in train_dataset.dataset]
+    reasonings = [item["answer"] for item in train_dataset.dataset]
+
+    # Tokenizer for processing inputs
+    tokenizer = ccot_model.tokenizer
+
+    # Prepare training data for the end predictor
+    end_pred_inputs = []
+    end_pred_labels = []
+
+    for query, reasoning in tqdm(zip(queries, reasonings), total=len(queries), desc="Preparing END_psi training data"):
+        # Tokenize query
+        query_inputs = tokenizer(query, return_tensors="pt", truncation=True, padding="max_length",
+                                max_length=120).to(device)
+
+        # Tokenize reasoning to determine target sequence length
+        reasoning_inputs = tokenizer(reasoning, return_tensors="pt").to(device)
+        target_length = min(int(reasoning_inputs.input_ids.size(1) * ccot_model.compression_ratio), 50)
+
+        # Generate contemplation tokens with gradient tracking for the end predictor
+        ccot_model.eval()  # Set model to eval mode but with end predictor gradients enabled
+
+        # Forward pass to generate complete sequence of contemplation tokens
+        with torch.no_grad():  # No need for gradients here, just generating training data
+            contemplation_states, _ = ccot_model(
+                query_inputs.input_ids,
+                attention_mask=query_inputs.attention_mask,
+                output_hidden_states=True
+            )
+
+        # For each position, create training samples for the end predictor
+        max_pos = min(contemplation_states.size(1), target_length + 5)  # Add a few extra positions
+
+        for pos in range(1, max_pos):
+            # Use the hidden state at this position
+            hidden_state = contemplation_states[0, pos-1]  # Previous token's hidden state
+
+            # Label: 1 if we should stop (position >= target_length), 0 otherwise
+            label = 1.0 if pos >= target_length else 0.0
+
+            end_pred_inputs.append(hidden_state.cpu().numpy())
+            end_pred_labels.append(label)
+
+    # Convert to PyTorch tensors
+    end_pred_inputs = torch.tensor(end_pred_inputs, dtype=torch.float32)
+    end_pred_labels = torch.tensor(end_pred_labels, dtype=torch.float32).unsqueeze(1)
+
+    # Create dataset and dataloader
+    end_pred_dataset = TensorDataset(end_pred_inputs, end_pred_labels)
+    end_pred_loader = DataLoader(end_pred_dataset, batch_size=batch_size, shuffle=True)
+
+    # Optimizer for end predictor only
+    optimizer = optim.AdamW(ccot_model.end_predictor.parameters(), lr=learning_rate)
+    criterion = nn.BCEWithLogitsLoss()
+
+    # Training loop
+    ccot_model.train()
+    for epoch in range(num_epochs):
+        epoch_loss = 0.0
+        correct_preds = 0
+        total_preds = 0
+
+        for inputs, labels in tqdm(end_pred_loader, desc=f"Epoch {epoch+1}/{num_epochs}"):
+            inputs = inputs.to(device)
+            labels = labels.to(device)
+
+            # Reset gradients
+            optimizer.zero_grad()
+
+            # Forward pass
+            logits = ccot_model.end_predictor(inputs)
+
+            # Compute loss
+            loss = criterion(logits, labels)
+
+            # Backward pass
+            loss.backward()
+
+            # Update weights
+            optimizer.step()
+
+            # Track metrics
+            epoch_loss += loss.item() * inputs.size(0)
+            predictions = (torch.sigmoid(logits) >= 0.5).float()
+            correct_preds += (predictions == labels).sum().item()
+            total_preds += labels.size(0)
+
+        # Epoch summary
+        epoch_loss = epoch_loss / len(end_pred_dataset)
+        accuracy = correct_preds / total_preds
+        print(f"Epoch {epoch+1}/{num_epochs}, Loss: {epoch_loss:.4f}, Accuracy: {accuracy:.4f}")
+
+    # Save the model with updated end predictor
+    ccot_model.save_pretrained(output_path)
+
+    print("END_psi module training completed!")
+    return ccot_model

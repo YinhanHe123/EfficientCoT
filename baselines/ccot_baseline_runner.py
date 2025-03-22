@@ -327,7 +327,7 @@ def run_ccot_baseline(train_dataset, eval_dataset, model_config, experiment_conf
                         max_length=15 + inputs.input_ids.size(1) + experiment_config.max_contemp_tokens,  # Account for the input length
                         # max_length=15 + inputs.input_ids.size(1)+2,  # Account for the input length
                         # max_new_tokens=20,
-                        temperature=0.6,
+                        temperature=0.8,
                         top_p=0.9,
                         do_sample=True
                     )
