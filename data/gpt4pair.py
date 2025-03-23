@@ -10,7 +10,7 @@ from datasets import load_dataset
 
 class ReasoningPairsGenerator:
     """
-    Generate detailed and condensed reasoning pairs for GSM8K problems using ChatGPT-4o-mini.
+    Generate detailed and condensed reasoning pairs for raw problems using ChatGPT-4o-mini.
     """
 
     def __init__(self, api_key: str, model: str = "gpt-4o-mini"):
@@ -221,18 +221,18 @@ class ReasoningPairsGenerator:
         return dataset
 
 
-def load_gsm8k_dataset(limit: int = None):
+def load_raw_dataset(limit: int = None):
     """
-    Load GSM8K dataset directly from Hugging Face datasets.
+    Load raw dataset directly from Hugging Face datasets.
 
     Args:
         limit: Maximum number of examples to load
 
     Returns:
-        List of questions from the GSM8K dataset
+        List of questions from the raw dataset
     """
-    # Load GSM8K dataset from Hugging Face
-    dataset = load_dataset("gsm8k", "main")
+    # Load raw dataset from Hugging Face
+    dataset = load_dataset("raw", "main")
 
     # Extract questions from the training set
     train_data = dataset["train"]
@@ -247,11 +247,11 @@ def load_gsm8k_dataset(limit: int = None):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate reasoning pairs for GSM8K dataset using ChatGPT")
+    parser = argparse.ArgumentParser(description="Generate reasoning pairs for raw dataset using ChatGPT")
     parser.add_argument("--output_file", type=str, default="reasoning_pairs.json", help="Output JSON file path")
     parser.add_argument("--limit", type=int, default=500, help="Limit number of examples to process")
     parser.add_argument("--model", type=str, default="gpt-4o-mini", help="OpenAI model to use")
-    parser.add_argument("--start_index", type=int, default=0, help="Starting index in the GSM8K dataset")
+    parser.add_argument("--start_index", type=int, default=0, help="Starting index in the raw dataset")
     parser.add_argument("--retry_failed", action="store_true", help="Try to reprocess examples that failed before")
 
     args = parser.parse_args()
@@ -259,19 +259,19 @@ def main():
     # Hardcoded API key directly in the code
     api_key = "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"  # Replace with your actual OpenAI API key
 
-    # Load GSM8K dataset directly from Hugging Face
+    # Load raw dataset directly from Hugging Face
     try:
         # Load all queries within the range [start_index, start_index + limit)
-        all_queries = load_gsm8k_dataset()
+        all_queries = load_raw_dataset()
         if args.limit:
             end_index = min(args.start_index + args.limit, len(all_queries))
             queries = all_queries[args.start_index:end_index]
         else:
             queries = all_queries[args.start_index:]
 
-        print(f"Loaded {len(queries)} problems from GSM8K dataset (starting at index {args.start_index})")
+        print(f"Loaded {len(queries)} problems from raw dataset (starting at index {args.start_index})")
     except Exception as e:
-        print(f"Error loading GSM8K dataset: {e}")
+        print(f"Error loading raw dataset: {e}")
         return
 
     # Check for existing output file and handle failed examples

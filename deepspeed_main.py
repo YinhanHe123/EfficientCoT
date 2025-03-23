@@ -4,7 +4,7 @@ import json
 import numpy as np
 from config.model_config import ModelConfig
 from config.experiment_config import ExperimentConfig
-from data.cot_datasets import load_gsm8k_dataset
+from data.cot_datasets import load_raw_dataset
 from models.deepspeed_contemp_generator import PipelinedContemplationGenerator
 from models.deepspeed_sentence_transformer import PipelinedSentenceTransformer
 from training.deepspeed_train_sent_trans import train_sentence_transformer_with_deepspeed
@@ -87,7 +87,7 @@ def main():
                                         f"{model_config.teacher_model_name}/reasoning_pairs_{args.seed}.json")
 
     # Load dataset
-    train_dataset, eval_dataset = load_gsm8k_dataset(model_config.data_path)
+    train_dataset, eval_dataset = load_raw_dataset(model_config.data_path)
 
     # Login to Hugging Face if needed for downloading models
     login(token='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')

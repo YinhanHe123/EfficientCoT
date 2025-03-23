@@ -4,7 +4,7 @@ import json
 import numpy as np
 from config.model_config import ModelConfig
 from config.experiment_config import ExperimentConfig
-from data.cot_datasets import load_gsm8k_dataset
+from data.cot_datasets import load_raw_dataset
 from models.contemp_generator import ContemplationGenerator
 from training.train_contemp_gen import train_contemplation_generator
 from training.train_sent_trans import train_sentence_transformer, prepare_reasoning_pairs_dataset
@@ -23,10 +23,12 @@ def parse_args():
                         help="Operation mode")
     parser.add_argument("--config", type=str, default="small",
                         help="Configuration name")
+    parser.add_argument("--dataset", type=str, default="gsm8k", choices=["gsm8k", "svamp", "multiarith"],
+                        help="Dataset to use")
     parser.add_argument("--baseline", type=str, default="effi_cot",
                         choices=["cot", "ccot", "pause", "implicit_cot","zero_shot_cot"],
                         help="Baseline to run if mode is baseline")
-    parser.add_argument("--ccot_stage", type=str, default="encode",choices=["encode", "decode", "prepare_decode_data", "evaluate"],
+    parser.add_argument("--ccot_stage", type=str, default="encode",choices=["encode", "decode", "prepare_decode_data", "evaluate", "cotrain_encode_decode"],
                         help="Stage for CCoT")
     parser.add_argument("--experiment_file", type=str, default="experiments.json",
                         help="JSON file containing experiment configurations")
@@ -106,7 +108,7 @@ def run_experiment_sequence(variation, device, experiment_file, base_seed):
                     setattr(experiment_config, key, value)
 
             # Load dataset
-            train_dataset, eval_dataset = load_gsm8k_dataset(model_config.data_path)
+            train_dataset, eval_dataset = load_raw_dataset(model_config.data_path)
 
             # Train sentence transformer
             queries = [item["query"] for item in train_dataset][:experiment_config.max_reasoning_pairs]
@@ -262,6 +264,7 @@ def main():
     login(token='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')
     args = parse_args()
 
+
     # Set random seed
     utils.set_seed(args.seed)
 
@@ -305,7 +308,14 @@ def main():
                                                 f"{model_config.teacher_model_name}/reasoning_pairs_{args.seed}.json")
 
         # Load dataset
-        train_dataset, eval_dataset = load_gsm8k_dataset(model_config.data_path)
+        if args.dataset == 'gsm8k':
+            model_config.data_path = 'openai/gsm8k'
+        elif args.dataset == 'svamp':
+            model_config.data_path = 'ChilleD/SVAMP'
+        elif args.dataset == 'multiarith':
+            model_config.data_path = 'ChilleD/MultiArith'
+
+        train_dataset, eval_dataset = load_raw_dataset(model_config.data_path)
 
         # Process different modes
         if args.mode == "train_sentence_transformer" and args.variation == "vanilla":

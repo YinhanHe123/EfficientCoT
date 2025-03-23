@@ -10,7 +10,7 @@ contemplation-reasoning/
 │   └── experiment_config.py   # Configuration for experiments and evaluation
 ├── data/
 │   ├── __init__.py
-│   ├── datasets.py            # Dataset loading and processing (GSM8K)
+│   ├── datasets.py            # Dataset loading and processing (raw)
 │   └── reasoning_pairs.py     # Generate original and condensed reasoning pairs
 ├── models/
 │   ├── __init__.py

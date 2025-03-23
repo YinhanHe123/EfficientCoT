@@ -184,7 +184,7 @@ def train_sentence_transformer_with_deepspeed(
                 # Get the hidden states from the start_layer_idx
                 original_hidden_states = original_outputs.hidden_states[start_layer_idx]
                 condensed_hidden_states = condensed_outputs.hidden_states[start_layer_idx]
-            
+
 
             # Generate embeddings using the sentence transformer
             original_embeddings = sentence_transformer(
@@ -332,9 +332,9 @@ if __name__ == "__main__":
     model_config = ModelConfig(args.config)
     experiment_config = ExperimentConfig(args.config)
 
-    # Load GSM8K dataset for queries
-    from data.cot_datasets import load_gsm8k_dataset
-    train_dataset, _ = load_gsm8k_dataset(model_config.data_path)
+    # Load raw dataset for queries
+    from data.cot_datasets import load_raw_dataset
+    train_dataset, _ = load_raw_dataset(model_config.data_path)
 
     # Extract queries from the dataset
     queries = [item["query"] for item in train_dataset][:100]  # Limit for testing

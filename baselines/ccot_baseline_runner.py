@@ -10,7 +10,7 @@ from datasets import Dataset as HFDataset
 import gc
 import sys
 
-def prepare_ccot_decode_dataset(queries, answers, ccot_model, tokenizer, device, max_length=120):
+def prepare_ccot_decode_dataset(queries, answers, ccot_model, tokenizer, device, max_length=120, cotrain_mode=False):
     """
     Prepare a dataset for training the decode model with HuggingFace Dataset
     """
@@ -27,9 +27,14 @@ def prepare_ccot_decode_dataset(queries, answers, ccot_model, tokenizer, device,
                                 max_length=max_length).to(device)
 
         # Generate contemplation tokens
-        with torch.no_grad():
+        if cotrain_mode:
             contemp_states = ccot_model(query_inputs.input_ids,
-                                      attention_mask=query_inputs.attention_mask)
+                                      attention_mask=query_inputs.attention_mask,
+                                      max_contemplation_tokens=10)
+        else:
+            with torch.no_grad():
+                contemp_states = ccot_model(query_inputs.input_ids,
+                                        attention_mask=query_inputs.attention_mask)
 
         # Extract reasoning and final answer
         reasoning_parts = answer.split('####')
@@ -53,22 +58,37 @@ def prepare_ccot_decode_dataset(queries, answers, ccot_model, tokenizer, device,
         # labels[:, :query_inputs.input_ids.size(1)] = -100  # Mask out the query part
 
         # Store the data
-        input_ids_list.append(query_inputs.input_ids.cpu().numpy())
-        attention_mask_list.append(query_inputs.attention_mask.cpu().numpy())
-        contemp_states_list.append(contemp_states.cpu().numpy())
-        labels_list.append(answer_inputs.input_ids.squeeze().numpy())
+        if cotrain_mode:
+            input_ids_list.append(query_inputs.input_ids)
+            attention_mask_list.append(query_inputs.attention_mask)
+            contemp_states_list.append(contemp_states)
+            labels_list.append(answer_inputs.input_ids.squeeze())
+        else:
+            input_ids_list.append(query_inputs.input_ids.cpu().numpy())
+            attention_mask_list.append(query_inputs.attention_mask.cpu().numpy())
+            contemp_states_list.append(contemp_states.cpu().numpy())
+            labels_list.append(answer_inputs.input_ids.squeeze().numpy())
 
     # Create HuggingFace Dataset
-    dataset_dict = {
+
+
+    if cotrain_mode:
+        dataset_dict = {
+            "input_ids": torch.stack(input_ids_list),
+            "attention_mask": torch.stack(attention_mask_list),
+            "contemp_states": torch.stack(contemp_states_list),
+            "labels": torch.stack(labels_list)}
+        return dataset_dict
+    else:
+        dataset_dict = {
         "input_ids": input_ids_list,
         "attention_mask": attention_mask_list,
         "contemp_states": contemp_states_list,
         "labels": labels_list
     }
+        return HFDataset.from_dict(dataset_dict)
 
-    return HFDataset.from_dict(dataset_dict)
-
-def get_decode_dataset(train_dataset, eval_dataset, ccot_model, tokenizer, device):
+def get_decode_dataset(train_dataset, eval_dataset, ccot_model, tokenizer, device, cotrain_mode=False):
     # Extract training data
     queries = [item["question"] for item in train_dataset.dataset]
     answers = [item["answer"] for item in train_dataset.dataset]
@@ -84,7 +104,8 @@ def get_decode_dataset(train_dataset, eval_dataset, ccot_model, tokenizer, devic
         answers=answers,
         ccot_model=ccot_model,
         tokenizer=tokenizer,
-        device=device
+        device=device,
+        cotrain_mode=cotrain_mode
     )
 
     eval_decode_dataset = prepare_ccot_decode_dataset(
@@ -92,7 +113,8 @@ def get_decode_dataset(train_dataset, eval_dataset, ccot_model, tokenizer, devic
         answers=eval_answers,
         ccot_model=ccot_model,
         tokenizer=tokenizer,
-        device=device
+        device=device,
+        cotrain_mode=cotrain_mode
     )
 
     return train_decode_dataset, eval_decode_dataset
@@ -137,7 +159,7 @@ def run_ccot_baseline(train_dataset, eval_dataset, model_config, experiment_conf
                 compression_ratio=experiment_config.compression_ratio,
                 autoregressive_layer=experiment_config.autoregressive_layer,
                 learning_rate=experiment_config.learning_rate,
-                num_epochs_per_layer=10,
+                num_epochs_per_layer=1,
                 batch_size=experiment_config.batch_size,
                 device=device
             )
@@ -186,7 +208,7 @@ def run_ccot_baseline(train_dataset, eval_dataset, model_config, experiment_conf
                 eval_decode_dataset=eval_decode_dataset,
                 output_path=decode_model_path,
                 learning_rate=experiment_config.learning_rate / 10,  # Lower learning rate for decoder
-                num_epochs=5,
+                num_epochs=3,
                 batch_size=2,
                 device=device
             )
@@ -203,6 +225,13 @@ def run_ccot_baseline(train_dataset, eval_dataset, model_config, experiment_conf
             contemplation_states_list = []
             contemp_gen_time = []
             decode_time = []
+            # Check if cotuned models are available
+            cotrain_output_path = os.path.join(experiment_config.model_save_path, "cotrained")
+            cotrained_ccot_path = os.path.join(cotrain_output_path, "ccot_model")
+            cotrained_decode_path = os.path.join(cotrain_output_path, "ccot_decode_model")
+            # If cotuned models exist, use them instead of the original ones
+            ccot_model_path = cotrained_ccot_path if os.path.exists(cotrained_ccot_path+'/config.pt') else ccot_model_path
+            decode_model_path = cotrained_decode_path if os.path.exists(cotrained_decode_path+'/config.pt') else decode_model_path
             with torch.no_grad():
                 ccot_model = CCoTModel.from_pretrained(ccot_model_path)
                 ccot_model = ccot_model.to(device)
@@ -327,7 +356,7 @@ def run_ccot_baseline(train_dataset, eval_dataset, model_config, experiment_conf
                         max_length=15 + inputs.input_ids.size(1) + experiment_config.max_contemp_tokens,  # Account for the input length
                         # max_length=15 + inputs.input_ids.size(1)+2,  # Account for the input length
                         # max_new_tokens=20,
-                        temperature=0.8,
+                        temperature=0.6,
                         top_p=0.9,
                         do_sample=True
                     )
@@ -385,3 +414,34 @@ def run_ccot_baseline(train_dataset, eval_dataset, model_config, experiment_conf
         except:
             print("CCOT / Decode data/ Decode model not found. Please train them first (e.g, ccot_stage=encode/prepare_decode_data/decode).")
 
+    if experiment_config.ccot_stage == "cotrain_encode_decode":
+        from training.train_ccot import cotrain_encode_decode
+
+        ccot_model_path = os.path.join(experiment_config.model_save_path, "ccot_model")
+        # Check if prerequisites exist
+        if not os.path.exists(ccot_model_path+'/config.pt'):
+            print("CCOT model not found. Please train the CCOT model first (i.e., ccot_stage=encode).")
+            sys.exit()
+
+        # Create output directory for the cotuned model
+        cotrain_output_path = os.path.join(experiment_config.model_save_path, "cotrained")
+        os.makedirs(cotrain_output_path, exist_ok=True)
+
+        print("Cotraining encoder and decoder models...")
+        ccot_model, decode_model = cotrain_encode_decode(
+            ccot_model_path=ccot_model_path,
+            train_dataset=train_dataset,
+            eval_dataset=eval_dataset,
+            output_path=cotrain_output_path,
+            autoregressive_layer=experiment_config.autoregressive_layer,
+            learning_rate=experiment_config.learning_rate / 20,  # Lower learning rate for cotuning
+            num_epochs=3,
+            batch_size=2,
+            device=device
+        )
+
+        print("Cotraining completed! The cotuned models are saved at:")
+        print(f"- Encoder: {os.path.join(cotrain_output_path, 'ccot_model')}")
+        print(f"- Decoder: {os.path.join(cotrain_output_path, 'ccot_decode_model')}")
+        print("Cotraining completed!")
+        sys.exit()

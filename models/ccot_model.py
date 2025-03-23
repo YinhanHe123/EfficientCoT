@@ -123,7 +123,7 @@ class CCoTModel(nn.Module):
                                 position_embeddings=position_embeddings)[0]
 
             # Get the next token hidden state
-            next_token_hidden = layer_output.squeeze(1).unsqueeze(1)
+            next_token_hidden = model_conductor.norm(layer_output)
 
             # Add the generated token to our collection
             all_contemplation_tokens.append(next_token_hidden)
@@ -264,8 +264,8 @@ class CCOTDecodeModel(nn.Module):
             contemp_states = contemp_states.squeeze()
             max_contemp_tokens = min(contemp_states.size(1), 50)
             contemp_to_use = contemp_states[:, :max_contemp_tokens, :]
-            print('input_embes', inputs_embeds.size())
-            print('contemp_states', contemp_to_use.size())
+            # print('input_embes', inputs_embeds.size())
+            # print('contemp_states', contemp_to_use.size())
 
             # Concatenate input embeddings and contemplation states
             combined_embeds = torch.cat([inputs_embeds, contemp_to_use], dim=1)
@@ -308,7 +308,7 @@ class CCOTDecodeModel(nn.Module):
         """
         # Configure LoRA
         target_modules = []
-        for i in range(0, len(self.model.model.layers), 6):
+        for i in range(0, len(self.model.model.layers)):
             target_modules.extend([
                 f"model.layers.{i}.self_attn.q_proj",
                 f"model.layers.{i}.self_attn.k_proj",

@@ -12,7 +12,8 @@ from datasets import load_from_disk
 import torch.nn.functional as F
 import openai
 import gc
-
+from torch.utils.data import DataLoader
+from baselines.ccot_baseline_runner import prepare_ccot_decode_dataset
 
 def prepare_ccot_layer_dataset(queries, reasonings, tokenizer, device, layer_idx, compression_ratio=0.1, max_length=120):
     """
@@ -134,6 +135,7 @@ def hidden_state_loss(pred_states, target_states):
     return total_loss / k
 
 
+
 class CCOTLayerTrainer(Trainer):
     """Custom trainer for a specific layer of the CCOT model"""
     def __init__(self, model, args, train_dataset, eval_dataset=None, layer_idx=0, **kwargs):
@@ -187,63 +189,6 @@ class CCOTLayerTrainer(Trainer):
         return output
 
 
-def prepare_ccot_decode_dataset(queries, answers, ccot_model, tokenizer, device, max_length=120):
-    """
-    Prepare a dataset for training the decode model with HuggingFace Dataset
-    """
-    # Prepare data dictionaries
-    input_ids_list = []
-    attention_mask_list = []
-    contemp_states_list = []
-    labels_list = []
-
-    # Process each query-answer pair
-    for query, answer in tqdm(zip(queries, answers), total=len(queries), desc="Preparing decode dataset"):
-        # Tokenize the query
-        query_inputs = tokenizer(query, return_tensors="pt", truncation=True, padding="max_length",
-                                max_length=max_length).to(device)
-
-        # Generate contemplation tokens
-        with torch.no_grad():
-            contemp_states = ccot_model(query_inputs.input_ids,
-                                      attention_mask=query_inputs.attention_mask)
-
-        # Extract reasoning and final answer
-        reasoning_parts = answer.split('####')
-        reasoning = reasoning_parts[0].strip()
-
-        # The final answer comes after ####
-        final_answer = reasoning_parts[1].strip() if len(reasoning_parts) > 1 else ""
-
-
-        # Tokenize the answer
-        answer_inputs = tokenizer(final_answer, return_tensors="pt", truncation=True, padding="max_length",
-                                 max_length=5)
-
-        # # Combine query and answer for label creation
-        # combined = f"{query} {answer}"
-        # combined_inputs = tokenizer(combined, return_tensors="pt", truncation=True, padding="max_length",
-        #                            max_length=max_length).to(device)
-
-        # # Create labels (shift by 1)
-        # labels = combined_inputs.input_ids.clone()
-        # labels[:, :query_inputs.input_ids.size(1)] = -100  # Mask out the query part
-
-        # Store the data
-        input_ids_list.append(query_inputs.input_ids.cpu().numpy())
-        attention_mask_list.append(query_inputs.attention_mask.cpu().numpy())
-        contemp_states_list.append(contemp_states.cpu().numpy())
-        labels_list.append(answer_inputs.input_ids.squeeze().numpy())
-
-    # Create HuggingFace Dataset
-    dataset_dict = {
-        "input_ids": input_ids_list,
-        "attention_mask": attention_mask_list,
-        "contemp_states": contemp_states_list,
-        "labels": labels_list
-    }
-
-    return HFDataset.from_dict(dataset_dict)
 
 class CCOTDecodeTrainer(Trainer):
     """Custom trainer for the CCOT decode model"""
@@ -253,9 +198,9 @@ class CCOTDecodeTrainer(Trainer):
         contemp_states = inputs["contemp_states"]
         labels = inputs["labels"]
 
-        print(f"input_ids shape: {input_ids.shape}")
-        print(f"contemp_states shape: {contemp_states.shape}")
-        print(f"labels shape: {labels.shape}")
+        # print(f"input_ids shape: {input_ids.shape}")
+        # print(f"contemp_states shape: {contemp_states.shape}")
+        # print(f"labels shape: {labels.shape}")
 
         # Forward pass with contemplation states
         outputs = model(
@@ -527,6 +472,220 @@ def train_ccot_decode_model(
     os.system(f"rm -r {output_path}/checkpoints")
 
     return decode_model
+
+def cotrain_encode_decode(
+    ccot_model_path,
+    train_dataset,
+    eval_dataset,
+    output_path,
+    autoregressive_layer=15,
+    learning_rate=5e-6,
+    num_epochs=3,
+    batch_size=2,
+    device="cuda"
+):
+    """
+    Jointly finetune the CCoT encode and decode models, specifically unfreezing
+    encoder parameters corresponding to layers after the autoregressive layer
+    to allow the encoder to receive signal from the downstream task.
+
+    Args:
+        ccot_model_path: Path to the trained CCoT model
+        decode_dataset_path: Path to the decode dataset
+        output_path: Path to save the cotuned models
+        autoregressive_layer: Layer used for autoregressive generation in CCoT
+        learning_rate: Learning rate for optimization
+        num_epochs: Number of training epochs
+        batch_size: Batch size for training
+        device: Device to run the model on
+        eval_steps: Number of steps between evaluations
+
+    Returns:
+        Trained encoder and decoder models
+    """
+    from models.ccot_model import CCoTModel, CCOTDecodeModel
+    from datasets import load_from_disk
+
+    # Load pre-trained models
+    ccot_model = CCoTModel.from_pretrained(ccot_model_path)
+    ccot_model = ccot_model.to(device)
+
+    decode_model = CCOTDecodeModel(ccot_model.base_model_name, device=device)
+    decode_model = decode_model.apply_lora(rank=64, alpha=128)
+    decode_model = decode_model.to(device)
+
+    tokenizer = AutoTokenizer.from_pretrained(ccot_model.base_model_name)
+    tokenizer.pad_token = tokenizer.eos_token
+
+
+
+    # Apply LoRA to the encoder model for layers after the autoregressive layer
+    from peft import get_peft_model, LoraConfig, TaskType
+
+    # Define target modules for LoRA in the encoder
+    target_modules = []
+
+    # Get the number of layers in the model
+    if hasattr(ccot_model.model, 'model') and hasattr(ccot_model.model.model, 'layers'):
+        num_layers = len(ccot_model.model.model.layers)
+        base_path = "model.layers"
+    elif hasattr(ccot_model.model, 'layers'):
+        num_layers = len(ccot_model.model.layers)
+        base_path = "layers"
+    else:
+        # Fallback for other model structures
+        print("Warning: Could not determine model structure. Using default LoRA configuration.")
+        num_layers = 32  # Default assumption for Llama-2-7b
+        base_path = "model.layers"
+
+    # Only add layers after the autoregressive layer to LoRA
+    for layer_idx in range(autoregressive_layer, num_layers):
+        target_modules.extend([
+            f"{base_path}.{layer_idx}.self_attn.q_proj",
+            f"{base_path}.{layer_idx}.self_attn.k_proj",
+            f"{base_path}.{layer_idx}.self_attn.v_proj",
+            f"{base_path}.{layer_idx}.self_attn.o_proj"
+        ])
+
+    # Configure LoRA for the encoder
+    lora_config = LoraConfig(
+        task_type=TaskType.CAUSAL_LM,
+        inference_mode=False,
+        r=128,  # Same rank as in train_ccot.py
+        lora_alpha=256,  # Same alpha as in train_ccot.py
+        lora_dropout=0.05,
+        target_modules=target_modules,
+    )
+
+    # Check if input requires grads is enabled
+    if hasattr(ccot_model.model, 'enable_input_require_grads'):
+        ccot_model.model.enable_input_require_grads()
+
+    # Apply LoRA to the encoder model
+    ccot_model.model = get_peft_model(ccot_model.model, lora_config)
+
+    # Create a combined optimizer
+    optimizer_params = [
+        {'params': [p for p in ccot_model.parameters() if p.requires_grad], 'lr': learning_rate},
+        {'params': decode_model.parameters(), 'lr': learning_rate}
+    ]
+    optimizer = torch.optim.AdamW(optimizer_params, weight_decay=0.01)
+
+    # Training arguments
+    os.makedirs(output_path, exist_ok=True)
+    os.makedirs(f"{output_path}/checkpoints", exist_ok=True)
+    os.makedirs(f"{output_path}/logs", exist_ok=True)
+
+
+    best_loss = float('inf')
+    for epoch in range(num_epochs):
+        ccot_model.train()
+        decode_model.train()
+
+        total_loss = 0.0
+        # train_decode_dataset, eval_decode_dataset = get_decode_dataset(train_dataset, eval_dataset, ccot_model, tokenizer, device, cotrain_mode=True)
+        # # Training
+        # train_loader = DataLoader(train_decode_dataset, batch_size=batch_size, shuffle=True)
+        # eval_loader = DataLoader(eval_decode_dataset, batch_size=batch_size, shuffle=False)
+        train_loader = DataLoader(train_dataset.dataset, batch_size=batch_size, shuffle=True)
+        eval_loader = DataLoader(eval_dataset.dataset, batch_size=batch_size, shuffle=False)
+        for batch_idx, batch in enumerate(tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs}")):
+            optimizer.zero_grad()
+            # Extract training data
+            queries = batch['question']
+            answers = batch['answer']
+
+            # Create datasets using the new function
+            batch = prepare_ccot_decode_dataset(
+                queries=queries,
+                answers=answers,
+                ccot_model=ccot_model,
+                tokenizer=tokenizer,
+                device=device,
+                cotrain_mode=True
+            )
+
+            outputs = decode_model(
+                input_ids=batch["input_ids"],
+                attention_mask=batch["attention_mask"],
+                contemp_states=batch["contemp_states"]
+            )
+
+            # Compute loss
+            labels = batch['labels'].to(device)
+            logits = outputs.logits[:, :labels.shape[1], :]
+            loss = F.cross_entropy(logits.transpose(1, 2), labels, reduction='mean')
+
+            # Backward pass
+            loss.backward()
+            # Update weights
+            optimizer.step()
+            total_loss += loss.item()
+            if (batch_idx + 1) % 10 == 0:
+                print(f"Batch {batch_idx+1}, Loss: {loss.item():.4f}")
+
+        # Calculate average loss for the epoch
+        avg_train_loss = total_loss / len(train_loader)
+        print(f"Training Epoch {epoch+1}/{num_epochs}, Avg Loss: {avg_train_loss:.4f}")
+
+        # Evaluation
+        ccot_model.eval()
+        decode_model.eval()
+        eval_loss = 0.0
+
+        with torch.no_grad():
+            for batch in tqdm(eval_loader, desc="Evaluation"):
+                # Extract evaluation data
+                eval_queries = batch['question']
+                eval_answers = batch['answer']
+
+                batch = prepare_ccot_decode_dataset(
+                    queries=eval_queries,
+                    answers=eval_answers,
+                    ccot_model=ccot_model,
+                    tokenizer=tokenizer,
+                    device=device,
+                    cotrain_mode=True
+                )
+
+                # Get decoder outputs
+                outputs = decode_model(
+                    input_ids=batch["input_ids"],
+                    attention_mask=batch["attention_mask"],
+                    contemp_states=batch["contemp_states"]
+                )
+
+                # Compute loss
+                logits = outputs.logits[:, :labels.shape[1], :]
+                loss = F.cross_entropy(logits.transpose(1, 2), labels, reduction='mean')
+                eval_loss += loss.item()
+
+        # Calculate average evaluation loss
+        avg_eval_loss = eval_loss / len(eval_loader)
+        print(f"Evaluation Epoch {epoch+1}/{num_epochs}, Avg Loss: {avg_eval_loss:.4f}")
+
+        # Save best model
+        if avg_eval_loss < best_loss:
+            best_loss = avg_eval_loss
+            print(f"Saving best model with loss {best_loss:.4f}")
+
+            # Save cotuned models
+            # For the encoder model, merge and unload LoRA weights
+            if hasattr(ccot_model.model, 'merge_and_unload'):
+                ccot_model.model = ccot_model.model.merge_and_unload(progressbar=True, safe_merge=True)
+            ccot_model.save_pretrained(f"{output_path}/ccot_model")
+
+            # For the decoder model, merge and unload LoRA weights
+            if hasattr(decode_model.model, 'merge_and_unload'):
+                decode_model.model = decode_model.model.merge_and_unload(progressbar=True, safe_merge=True)
+            decode_model.save_pretrained(f"{output_path}/ccot_decode_model")
+
+        # Clear memory
+        gc.collect()
+        torch.cuda.empty_cache()
+
+    print("Cotraining completed!")
+    return ccot_model, decode_model
 
 
 def train_end_predictor(
