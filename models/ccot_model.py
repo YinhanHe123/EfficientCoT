@@ -306,6 +306,9 @@ class CCOTDecodeModel(nn.Module):
         Returns:
             Model with LoRA applied
         """
+        # Freeze all parameters in the base model
+        for param in self.model.parameters():
+            param.requires_grad = False
         # Configure LoRA
         target_modules = []
         for i in range(0, len(self.model.model.layers)):
@@ -335,7 +338,16 @@ class CCOTDecodeModel(nn.Module):
         self.model.enable_input_require_grads()
         self.model = get_peft_model(self.model, peft_config)
         # self.model.config.use_cache = False
-        self.model.gradient_checkpointing_enable()
+        # self.model.gradient_checkpointing_enable()
+
+        # Optional: Add this debugging code to verify only LoRA params are trainable
+        trainable_params = 0
+        all_param = 0
+        for _, param in self.model.named_parameters():
+            all_param += param.numel()
+            if param.requires_grad:
+                trainable_params += param.numel()
+        print(f"trainable params: {trainable_params} || all params: {all_param} || trainable%: {100 * trainable_params / all_param}")
         return self
 
     @classmethod

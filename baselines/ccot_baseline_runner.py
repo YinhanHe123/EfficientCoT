@@ -229,6 +229,7 @@ def run_ccot_baseline(train_dataset, eval_dataset, model_config, experiment_conf
             cotrain_output_path = os.path.join(experiment_config.model_save_path, "cotrained")
             cotrained_ccot_path = os.path.join(cotrain_output_path, "ccot_model")
             cotrained_decode_path = os.path.join(cotrain_output_path, "ccot_decode_model")
+
             # If cotuned models exist, use them instead of the original ones
             ccot_model_path = cotrained_ccot_path if os.path.exists(cotrained_ccot_path+'/config.pt') else ccot_model_path
             decode_model_path = cotrained_decode_path if os.path.exists(cotrained_decode_path+'/config.pt') else decode_model_path
@@ -353,10 +354,10 @@ def run_ccot_baseline(train_dataset, eval_dataset, model_config, experiment_conf
                     start_time = time.time()
                     outputs = decode_model.model.generate(
                         inputs.input_ids,
-                        max_length=15 + inputs.input_ids.size(1) + experiment_config.max_contemp_tokens,  # Account for the input length
+                        max_length=30 + inputs.input_ids.size(1) + experiment_config.max_contemp_tokens,  # Account for the input length
                         # max_length=15 + inputs.input_ids.size(1)+2,  # Account for the input length
                         # max_new_tokens=20,
-                        temperature=0.6,
+                        temperature=0.3,
                         top_p=0.9,
                         do_sample=True
                     )

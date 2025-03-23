@@ -30,7 +30,7 @@ class ModelConfig:
             self.teacher_hidden_dim = 4096
             self.contemp_seq_length = 32
         elif self.config_name == "large":
-            self.teacher_model_name = "meta-llama/Llama-2-13b-hf"
-            self.student_model_name = "meta-llama/Llama-2-7b-hf"
+            self.teacher_model_name = "meta-llama/Llama-2-13b-chat-hf"
+            self.student_model_name = "princeton-nlp/Sheared-LLaMA-1.3B"
             self.teacher_hidden_dim = 2000
-            self.contemp_seq_length = 128
+            self.contemp_seq_length = 32

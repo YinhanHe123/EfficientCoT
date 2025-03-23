@@ -46,8 +46,8 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
             contemp_time_list.append(contemp_time)
 
             # Prepare prompt with query
-            # prompt = f"Question: {query}\n Generate the answer directly. Answer:"
-            prompt = f"Question: {query}\n Think step by step. Answer:"
+            prompt = f"Question: {query}\n Generate the answer directly. Answer:"
+            # prompt = f"Question: {query}\n Think step by step. Answer:"
 
             # for debugging
             # prompt = [
@@ -137,7 +137,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
             outputs = teacher_model.generate(
                 input_ids,
                 # max_length=120 + input_ids.size(1),  # Account for the input length
-                max_length = 1024+input_ids.size(1)+contemp_len,
+                max_length = 30+input_ids.size(1)+contemp_len,
                 temperature=0.3,
                 top_p=0.9,
                 do_sample=True
@@ -158,6 +158,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
             time_list.append(contemp_time+gen_time)
             results.append(result)
             teacher_model.prepare_inputs_for_generation = original_prepare_inputs # change it back to original for the next sample in the loop
+
     print(f"Average time taken for each sample: {sum(time_list)/len(time_list)}, Average time taken for contemplation: {sum(contemp_time_list)/len(contemp_time_list)}")
     # if path not exist, create it
     if not os.path.exists(result_dir):
