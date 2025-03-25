@@ -291,10 +291,10 @@ def main():
             experiment_config.autoregressive_layer = args.autoregressive_layer
         else:
             # Original path handling for other modes
-            experiment_config.model_save_path = f"{experiment_config.model_save_path}/{args.baseline}/{args.variation}" if args.baseline == 'effi_cot' else f"{experiment_config.model_save_path}/{args.baseline}"
-            experiment_config.checkpoint_path = f"{experiment_config.checkpoint_path}/{args.baseline}/{args.variation}" if args.baseline == 'effi_cot' else f"{experiment_config.checkpoint_path}/{args.baseline}"
-            experiment_config.result_path = f"{experiment_config.result_path}/{args.baseline}/{args.variation}" if args.baseline == 'effi_cot' else f"{experiment_config.result_path}/{args.baseline}"
-            experiment_config.experiment_name = f"{args.baseline}_{args.variation}_{args.seed}"
+            experiment_config.model_save_path = f"{experiment_config.model_save_path}/{args.baseline}/{args.variation}/{args.dataset}" if args.baseline == 'effi_cot' else f"{experiment_config.model_save_path}/{args.baseline}/{args.dataset}"
+            experiment_config.checkpoint_path = f"{experiment_config.checkpoint_path}/{args.baseline}/{args.variation}/{args.dataset}" if args.baseline == 'effi_cot' else f"{experiment_config.checkpoint_path}/{args.baseline}/{args.dataset}"
+            experiment_config.result_path = f"{experiment_config.result_path}/{args.baseline}/{args.variation}/{args.dataset}" if args.baseline == 'effi_cot' else f"{experiment_config.result_path}/{args.baseline}/{args.dataset}"
+            experiment_config.experiment_name = f"{args.baseline}_{args.variation}_{args.seed}_{args.dataset}"
 
         # Create necessary directories
         if not os.path.exists(experiment_config.model_save_path):
@@ -305,7 +305,7 @@ def main():
             os.makedirs(experiment_config.result_path)
 
         reasoning_pairs_path = os.path.join(experiment_config.reasoning_pairs_path,
-                                                f"{model_config.teacher_model_name}/reasoning_pairs_{args.seed}.json")
+                                                f"{model_config.teacher_model_name}/{args.dataset}/reasoning_pairs_{args.seed}.json")
 
         # Load dataset
         if args.dataset == 'gsm8k':
@@ -316,6 +316,7 @@ def main():
             model_config.data_path = 'ChilleD/MultiArith'
 
         train_dataset, eval_dataset = load_raw_dataset(model_config.data_path)
+
 
         # Process different modes
         if args.mode == "train_sentence_transformer" and args.variation == "vanilla":

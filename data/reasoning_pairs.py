@@ -6,8 +6,8 @@ from transformers import pipeline
 class ReasoningPairsGenerator:
     def __init__(self, model_name, device):
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model = AutoModelForCausalLM.from_pretrained(model_name, device_map='auto',  # Automatically distribute across GPUs
-                        max_memory={0: "75GiB", 1: "6GiB", 2: "75GiB", 3: "75GiB"}  # Memory limits per GPU
+        self.model = AutoModelForCausalLM.from_pretrained(model_name, device_map='auto' # Automatically distribute across GPUs
+                         # Memory limits per GPU
                         )
         self.device = device
 

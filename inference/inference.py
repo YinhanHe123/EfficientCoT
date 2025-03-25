@@ -25,7 +25,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
     contemp_time_list = []
     with torch.no_grad():
         for sample in tqdm(dataset, desc="Running inference"):
-            config.max_contemp_tokens = 0
+            # config.max_contemp_tokens = 0
             query = sample["query"]
 
             # Generate contemplation tokens hidden states (now acting as input embeddings)
@@ -130,7 +130,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
 
 
             # Replace the prepare_inputs_for_generation method temporarily
-            # teacher_model.prepare_inputs_for_generation = modified_prepare_inputs
+            teacher_model.prepare_inputs_for_generation = modified_prepare_inputs
 
             # Generate answer with the modified approach
             gen_start = time.time()
@@ -138,7 +138,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
                 input_ids,
                 # max_length=120 + input_ids.size(1),  # Account for the input length
                 max_length = 30+input_ids.size(1)+contemp_len,
-                temperature=0.3,
+                temperature=0.1,
                 top_p=0.9,
                 do_sample=True
             )

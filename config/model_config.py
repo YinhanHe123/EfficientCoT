@@ -3,7 +3,7 @@ class ModelConfig:
         self.config_name = config_name
 
         # Model names
-        self.teacher_model_name = "meta-llama/Llama-2-7b-hf"
+        self.teacher_model_name = "meta-llama/Llama-2-7b-chat-hf"
         self.student_model_name = "princeton-nlp/Sheared-LLaMA-1.3B"
 
         # Model paths for loading/saving
