@@ -277,7 +277,7 @@ def main():
         experiment_config = ExperimentConfig(args.config)
         experiment_config.device = args.device
         experiment_config.ccot_stage = args.ccot_stage
-        experiment_config.max_contemp_tokens = args.max_contemp_tokens if args.max_contemp_tokens is not None else experiment_config.max_contemp_tokens # SHOULD BE REMOVED, JUST DEBUG FOR DIFFERENT CONTEMP FOR CCOT
+        # experiment_config.max_contemp_tokens = args.max_contemp_tokens if args.max_contemp_tokens is not None else experiment_config.max_contemp_tokens # SHOULD BE REMOVED, JUST DEBUG FOR DIFFERENT CONTEMP FOR CCOT
 
         # Special handling for CCoT mode
         if args.mode == "train_ccot" or (args.mode == "baseline" and args.baseline == "ccot"):

@@ -138,7 +138,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
                 input_ids,
                 # max_length=120 + input_ids.size(1),  # Account for the input length
                 max_length = 30+input_ids.size(1)+contemp_len,
-                temperature=0.1,
+                temperature=0.3,
                 top_p=0.9,
                 do_sample=True
             )

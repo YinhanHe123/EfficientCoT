@@ -34,3 +34,4 @@ class ModelConfig:
             self.student_model_name = "princeton-nlp/Sheared-LLaMA-1.3B"
             self.teacher_hidden_dim = 2000
             self.contemp_seq_length = 32
+            

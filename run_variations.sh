@@ -1,11 +1,12 @@
 #!/bin/bash
 MODES=("train_sentence_transformer" "train_contemp_generator" "evaluate")
-VARIATIONS=("vanilla" "no_sentence_transformer" "no_l_reason")
+# VARIATIONS=("vanilla" "no_sentence_transformer" "no_l_reason")
+VARIATIONS=("vanilla")
 
 for mode in "${MODES[@]}"; do
     for variation in "${VARIATIONS[@]}"; do
-        echo "Running: python main.py --mode $mode --variation $variation --config small --device 3"
-        python main.py --mode $mode --variation $variation --config small --device 3
+        echo "Running: python main.py --mode $mode --variation $variation --config small --device 2"
+        python main.py --mode $mode --variation $variation --config small --device 2
 
         # Force CUDA cleanup between runs
         python -c "import torch; torch.cuda.empty_cache()"

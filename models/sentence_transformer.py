@@ -197,7 +197,18 @@ class CustomizedSentenceTransformer(nn.Module):
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"Model file not found at {model_path}")
 
+        params_before = {}
+        for name, param in model.named_parameters():
+            params_before[name] = param.clone().detach().cpu()
+
         model.load_state_dict(torch.load(model_path))
+
+        for name, param in model.named_parameters():
+            # Check if parameter has changed
+            if not torch.allclose(params_before[name], param.cpu()):
+                print(f"Parameter {name} has changed")
+            else:
+                print(f"Parameter {name} is unchanged")
 
         return model
 
