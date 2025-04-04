@@ -6,9 +6,7 @@ from transformers import pipeline
 class ReasoningPairsGenerator:
     def __init__(self, model_name, device):
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model = AutoModelForCausalLM.from_pretrained(model_name, device_map='auto' # Automatically distribute across GPUs
-                         # Memory limits per GPU
-                        )
+        self.model = AutoModelForCausalLM.from_pretrained(model_name, device_map='auto')
         self.device = device
 
     def generate_reasoning(self, query, max_length=1024):
@@ -21,7 +19,7 @@ class ReasoningPairsGenerator:
             outputs = self.model.generate(
                 inputs.input_ids,
                 max_length=max_length,
-                temperature=0.7,
+                temperature=0.6,
                 top_p=0.9,
                 do_sample=True
             )
@@ -35,7 +33,7 @@ class ReasoningPairsGenerator:
 
     def generate_condensed_reasoning(self, original_reasoning, max_length=1024):
         """Generate condensed version of the original reasoning"""
-        prompt = f"Original reasoning: {original_reasoning}\n\nCondense the above reasoning into a VERY VERY concise version:"
+        prompt = f"Original reasoning: {original_reasoning}\n\nCondense the above reasoning into a VERY VERY concise version (within 15 words):"
 
         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
 
@@ -43,7 +41,7 @@ class ReasoningPairsGenerator:
             outputs = self.model.generate(
                 inputs.input_ids,
                 max_length=max_length,
-                temperature=0.7,
+                temperature=0.6,
                 top_p=0.9,
                 do_sample=True
             )

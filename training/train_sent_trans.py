@@ -7,7 +7,8 @@ from transformers import AutoModel, AutoTokenizer
 from data.reasoning_pairs import ReasoningPairsGenerator
 from utils.logging import Logger
 import utils.utils as utils
-
+import numpy as np
+import os # DEBUG
 def train_sentence_transformer(
     base_model_name,
     start_layer_idx,
@@ -44,7 +45,17 @@ def train_sentence_transformer(
         config.embedding_dim
     )
     sentence_transformer = sentence_transformer.to(device)
+    # ---------------DEBUG START--------------------
+    # sentence_transformer_old = CustomizedSentenceTransformer(
+    #     base_model_name,
+    #     start_layer_idx,
+    #     end_layer_idx,
+    #     config.embedding_dim
+    # )
 
+    # sentence_transformer_old.load_state_dict(torch.load('/data/nee7ne/effi_cot/saved_models/effi_cot/old_vanilla/sentence_transformer/model.pt', map_location='cpu'))
+    # sentence_transformer_old = sentence_transformer_old.to(device)
+    # ---------------DEBUG END--------------------
     # Define optimizer
     optimizer = optim.AdamW(
         sentence_transformer.parameters(),
@@ -63,15 +74,18 @@ def train_sentence_transformer(
     logger.log_hyperparams(config.__dict__)
 
     # Split dataset into train and validation
+    generator = torch.Generator().manual_seed(config.seed)
     train_size = int(0.8 * len(dataset))
     val_size = len(dataset) - train_size
-    train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_size, val_size])
+    train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_size, val_size], generator=generator)
 
     # Create data loaders
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=config.batch_size,
-        shuffle=True
+        shuffle=True,
+        worker_init_fn=lambda worker_id: np.random.seed(config.seed + worker_id),
+        generator=generator
     )
 
     val_loader = torch.utils.data.DataLoader(
@@ -160,6 +174,8 @@ def train_sentence_transformer(
         sentence_transformer.eval()
         val_loss = 0
 
+
+
         with torch.no_grad():
             for batch in tqdm(val_loader, desc=f"Epoch {epoch+1}/{config.num_epochs} - Validation"):
                 # Get original and condensed reasoning pairs
@@ -226,8 +242,12 @@ def train_sentence_transformer(
         }, epoch)
 
         print(f"Epoch {epoch+1}/{config.num_epochs} - Train Loss: {avg_train_loss:.4f}, Val Loss: {avg_val_loss:.4f}")
-
+        # -------------------DEBUG START--------------------
         # Save best model
+        # os.makedirs(f"{config.model_save_path}/sentence_transformer_ckpts", exist_ok=True)
+        # # Save model weights
+        # torch.save(sentence_transformer.state_dict(), os.path.join(f"{config.model_save_path}/sentence_transformer_ckpts", f"model_epoch_{epoch}.pt"))
+        # ----------------DEBUG END--------------------
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
             model_path = f"{config.model_save_path}/sentence_transformer"
@@ -235,9 +255,44 @@ def train_sentence_transformer(
             sentence_transformer.save_pretrained(model_path)
 
             print(f"Saved best model with validation loss: {best_val_loss:.4f}")
-
+        # ----------------DEBUG START--------------------
+        # compare with old model
+        # with torch.no_grad():
+        #     gap = compare_model_parameters(sentence_transformer, sentence_transformer_old)
+        #     print(f"Max parameter gap: {gap:.6f}")
+        # -----------------DEBUG END--------------------
     logger.close()
     return sentence_transformer
+
+
+# -----------------DEBUG START--------------------
+def compare_model_parameters(model_a, model_b):
+    """Compares the parameters of two PyTorch models."""
+
+    # Check if the models have the same parameters
+    # Load the models
+
+    if set(model_a.keys()) != set(model_b.keys()):
+        return False
+    gap = 0
+    # Iterate through the parameters and compare them
+    for param_name in model_a.keys():
+        param_a = model_a[param_name]
+        param_b = model_b[param_name]
+
+        # Check if the parameters are equal
+        print("model_a device", param_a.device)
+        print("model_b device", param_b.device)
+        param_a = param_a.cpu()
+        param_b = param_b.cpu()
+
+        gap += torch.abs(param_a - param_b).max()
+
+    return gap
+# -----------------DEBUG END--------------------
+
+
+
 
 def prepare_reasoning_pairs_dataset(model_name, device, queries, max_pairs=1000):
     """
@@ -253,48 +308,11 @@ def prepare_reasoning_pairs_dataset(model_name, device, queries, max_pairs=1000)
     """
     # Initialize reasoning pairs generator
     pairs_generator = ReasoningPairsGenerator(model_name, device)
-
     # Limit number of queries to process
     queries = queries[:max_pairs]
-
     # Generate reasoning pairs
     print(f"Generating {len(queries)} reasoning pairs...")
     dataset = pairs_generator.create_dataset(queries)
     torch.cuda.empty_cache()
     return dataset
 
-if __name__ == "__main__":
-    # This allows running the script directly for testing
-    import argparse
-    from config.model_config import ModelConfig
-    from config.experiment_config import ExperimentConfig
-
-    parser = argparse.ArgumentParser(description="Train Sentence Transformer")
-    parser.add_argument("--config", type=str, default="default", help="Configuration name")
-    args = parser.parse_args()
-
-    model_config = ModelConfig(args.config)
-    experiment_config = ExperimentConfig(args.config)
-
-    # Load raw dataset for queries
-    from data.cot_datasets import load_raw_dataset
-    train_dataset, _ = load_raw_dataset(model_config.data_path)
-
-    # Extract queries from the dataset
-    queries = [item["query"] for item in train_dataset][:100]  # Limit for testing
-
-    # Prepare reasoning pairs dataset
-    pairs_dataset = prepare_reasoning_pairs_dataset(
-        model_config.teacher_model_name,
-        queries,
-        max_pairs=experiment_config.max_reasoning_pairs
-    )
-
-    # Train sentence transformer
-    sentence_transformer = train_sentence_transformer(
-        model_config.teacher_model_name,
-        experiment_config.start_layer_idx,
-        experiment_config.end_layer_idx,
-        pairs_dataset,
-        experiment_config
-    )

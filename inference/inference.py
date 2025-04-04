@@ -25,7 +25,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
     contemp_time_list = []
     with torch.no_grad():
         for sample in tqdm(dataset, desc="Running inference"):
-            # config.max_contemp_tokens = 0
+            config.max_contemp_tokens = 0
             query = sample["query"]
 
             # Generate contemplation tokens hidden states (now acting as input embeddings)
@@ -130,7 +130,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
 
 
             # Replace the prepare_inputs_for_generation method temporarily
-            teacher_model.prepare_inputs_for_generation = modified_prepare_inputs
+            # teacher_model.prepare_inputs_for_generation = modified_prepare_inputs
 
             # Generate answer with the modified approach
             gen_start = time.time()
@@ -138,17 +138,17 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
                 input_ids,
                 # max_length=120 + input_ids.size(1),  # Account for the input length
                 max_length = 30+input_ids.size(1)+contemp_len,
-                temperature=0.3,
+                temperature=config.eval_temp,
                 top_p=0.9,
                 do_sample=True
             )
             gen_end = time.time()
             gen_time = gen_end - gen_start
-            print('Time taken for teacher generation:', gen_time)
+            # print('Time taken for teacher generation:', gen_time)
             # Decode only the generated part
             answer = teacher_tokenizer.decode(outputs[0][input_ids.size(1):], skip_special_tokens=True)
             # print(f"Query: {query}\nAnswer: {answer}\n")
-            print('Answer', answer)
+            # print('Answer', answer)
 
             result = {
                 "query": query,
@@ -159,7 +159,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
             results.append(result)
             teacher_model.prepare_inputs_for_generation = original_prepare_inputs # change it back to original for the next sample in the loop
 
-    print(f"Average time taken for each sample: {sum(time_list)/len(time_list)}, Average time taken for contemplation: {sum(contemp_time_list)/len(contemp_time_list)}")
+    # print(f"Average time taken for each sample: {sum(time_list)/len(time_list)}, Average time taken for contemplation: {sum(contemp_time_list)/len(contemp_time_list)}")
     # if path not exist, create it
     if not os.path.exists(result_dir):
         os.makedirs(result_dir)

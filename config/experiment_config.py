@@ -22,6 +22,7 @@ class ExperimentConfig:
         self.save_interval = 1  # Save model every N epochs
         self.max_seq_length = 120
         self.embedding_dim = 768  # Dimension for embeddings
+        self.seed=42
         # self.max_reasoning_pairs = 1000  # Maximum reasoning pairs to generate
         # self.max_reasoning_pairs = 7473
         self.max_reasoning_pairs = 400

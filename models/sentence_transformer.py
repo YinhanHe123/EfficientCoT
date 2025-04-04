@@ -201,7 +201,8 @@ class CustomizedSentenceTransformer(nn.Module):
         for name, param in model.named_parameters():
             params_before[name] = param.clone().detach().cpu()
 
-        model.load_state_dict(torch.load(model_path))
+        model.load_state_dict(torch.load(model_path, map_location='cpu'))
+        # model.load_state_dict(torch.load('/data/nee7ne/effi_cot/saved_models/effi_cot/old_vanilla/sentence_transformer/model.pt', map_location='cpu'))
 
         for name, param in model.named_parameters():
             # Check if parameter has changed
