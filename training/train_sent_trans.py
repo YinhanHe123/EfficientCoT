@@ -4,11 +4,37 @@ import torch.optim as optim
 from tqdm import tqdm
 from models.sentence_transformer import CustomizedSentenceTransformer
 from transformers import AutoModel, AutoTokenizer
-from data.reasoning_pairs import ReasoningPairsGenerator
+from data.gpt4pair import ReasoningPairsGenerator
 from utils.logging import Logger
 import utils.utils as utils
 import numpy as np
 import os # DEBUG
+
+def contrastive_loss(original_embeddings, condensed_embeddings):
+    """
+    Compute contrastive loss between original and condensed embeddings
+
+    Args:
+        original_embeddings: Embeddings for original reasoning
+        condensed_embeddings: Embeddings for condensed reasoning
+
+    Returns:
+        Contrastive loss value
+    """
+    # Compute similarity matrix
+    norm_original = torch.norm(original_embeddings, dim=1, keepdim=True)
+    norm_condensed = torch.norm(condensed_embeddings, dim=1, keepdim=True)
+    norm_mat = torch.matmul(norm_original, norm_condensed.T)
+    sim_mat = torch.matmul(original_embeddings, condensed_embeddings.T)/ norm_mat
+    # Contrastive loss calculation
+
+    loss = -torch.mean(
+        torch.log(
+            torch.exp(torch.diag(sim_mat)) / torch.sum(torch.exp(sim_mat), dim=1, keepdim=False)
+        )
+    )
+    return loss
+
 def train_sentence_transformer(
     base_model_name,
     start_layer_idx,
@@ -35,7 +61,13 @@ def train_sentence_transformer(
     base_model.eval()  # Keep it in eval mode as we only use it for features
 
     tokenizer = AutoTokenizer.from_pretrained(base_model_name)
-    tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.add_special_tokens({"pad_token": '[PAD]'})
+    # tokenizer.pad_token = tokenizer.eos_token
+
+    # Freeze the base model parameters
+    for name, param in base_model.named_parameters():
+        param.requires_grad = False
+
 
     # Initialize sentence transformer
     sentence_transformer = CustomizedSentenceTransformer(
@@ -64,7 +96,6 @@ def train_sentence_transformer(
     )
 
     # Define contrastive loss
-    contrastive_loss = nn.CosineEmbeddingLoss(margin=0.2)
 
     # Setup logger
     logger = Logger(
@@ -155,13 +186,7 @@ def train_sentence_transformer(
                 attention_mask=condensed_inputs.attention_mask
             )
 
-            # Create targets: 1 means similar, -1 means dissimilar
-            # For reasoning pairs, we expect them to be similar
-            targets = torch.ones(original_embeddings.size(0), device=device)
-
-            # Compute loss
-            loss = contrastive_loss(original_embeddings, condensed_embeddings, targets)
-
+            loss = contrastive_loss(original_embeddings, condensed_embeddings)
             # Backpropagation
             loss.backward()
             optimizer.step()
@@ -225,11 +250,8 @@ def train_sentence_transformer(
                     attention_mask=condensed_inputs.attention_mask
                 )
 
-                # Create targets: 1 means similar
-                targets = torch.ones(original_embeddings.size(0), device=device)
-
                 # Compute loss
-                loss = contrastive_loss(original_embeddings, condensed_embeddings, targets)
+                loss = contrastive_loss(original_embeddings, condensed_embeddings)
 
                 val_loss += loss.item()
 
@@ -291,10 +313,7 @@ def compare_model_parameters(model_a, model_b):
     return gap
 # -----------------DEBUG END--------------------
 
-
-
-
-def prepare_reasoning_pairs_dataset(model_name, device, queries, max_pairs=1000):
+def prepare_reasoning_pairs_dataset(queries, reasonings, answers, output_path, max_pairs=1000):
     """
     Prepare a dataset of original and condensed reasoning pairs
 
@@ -307,12 +326,14 @@ def prepare_reasoning_pairs_dataset(model_name, device, queries, max_pairs=1000)
         Dataset of reasoning pairs
     """
     # Initialize reasoning pairs generator
-    pairs_generator = ReasoningPairsGenerator(model_name, device)
+    pairs_generator = ReasoningPairsGenerator()
     # Limit number of queries to process
     queries = queries[:max_pairs]
+    reasonings = reasonings[:max_pairs] if reasonings else None
+    answers = answers[:max_pairs]
     # Generate reasoning pairs
     print(f"Generating {len(queries)} reasoning pairs...")
-    dataset = pairs_generator.create_dataset(queries)
+    dataset = pairs_generator.create_dataset(queries, reasonings, answers, output_path)
     torch.cuda.empty_cache()
     return dataset
 

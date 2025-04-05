@@ -105,22 +105,24 @@ def main():
     if args.mode == "train_sentence_transformer" and args.variation == "vanilla":
         # Extract queries from the dataset
         queries = [item["query"] for item in train_dataset][:experiment_config.max_reasoning_pairs]
-
+        if "full_answer" in train_dataset[0].keys() and train_dataset[0]["full_answer"] != "":
+            reasonings = [item["full_answer"] for item in train_dataset][:experiment_config.max_reasoning_pairs]
+        else:
+            reasonings = None
+        answers = [item["answer"] for item in train_dataset][:experiment_config.max_reasoning_pairs]
         # Prepare reasoning pairs dataset
         from training.train_sent_trans import prepare_reasoning_pairs_dataset
         if os.path.exists(reasoning_pairs_path):
             pairs_dataset = utils.load_json(reasoning_pairs_path)
         else:
             pairs_dataset = prepare_reasoning_pairs_dataset(
-                model_config.teacher_model_name,
-                args.device,
                 queries,
+                reasonings,
+                answers,
+                reasoning_pairs_path,
                 max_pairs=experiment_config.max_reasoning_pairs
             )
-            # create directory
-            utils.create_directory(reasoning_pairs_path)
-            # save to gen_datasets folder
-            utils.save_json(pairs_dataset, reasoning_pairs_path)
+           
 
         # Train sentence transformer
         from training.train_sent_trans import train_sentence_transformer

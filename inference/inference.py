@@ -12,6 +12,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
 
     # Load teacher LLM for generating answers
     teacher_tokenizer = AutoTokenizer.from_pretrained(teacher_model_name)
+    teacher_tokenizer.add_special_tokens({"pad_token": '[PAD]'})
     teacher_model = AutoModelForCausalLM.from_pretrained(teacher_model_name)
     teacher_model = teacher_model.to(device)
     teacher_model.eval()
@@ -25,7 +26,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
     contemp_time_list = []
     with torch.no_grad():
         for sample in tqdm(dataset, desc="Running inference"):
-            config.max_contemp_tokens = 0
+            # config.max_contemp_tokens = 0
             query = sample["query"]
 
             # Generate contemplation tokens hidden states (now acting as input embeddings)
@@ -47,7 +48,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
 
             # Prepare prompt with query
             prompt = f"Question: {query}\n Generate the answer directly. Answer:"
-            # prompt = f"Question: {query}\n Think step by step. Answer:"
+            # prompt = f"Question: {query}\n Generate the answer directly with one numerical number. Answer:"
 
             # for debugging
             # prompt = [
@@ -130,7 +131,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
 
 
             # Replace the prepare_inputs_for_generation method temporarily
-            # teacher_model.prepare_inputs_for_generation = modified_prepare_inputs
+            teacher_model.prepare_inputs_for_generation = modified_prepare_inputs
 
             # Generate answer with the modified approach
             gen_start = time.time()
@@ -148,7 +149,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
             # Decode only the generated part
             answer = teacher_tokenizer.decode(outputs[0][input_ids.size(1):], skip_special_tokens=True)
             # print(f"Query: {query}\nAnswer: {answer}\n")
-            # print('Answer', answer)
+            print('Answer', answer)
 
             result = {
                 "query": query,
@@ -159,7 +160,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
             results.append(result)
             teacher_model.prepare_inputs_for_generation = original_prepare_inputs # change it back to original for the next sample in the loop
 
-    # print(f"Average time taken for each sample: {sum(time_list)/len(time_list)}, Average time taken for contemplation: {sum(contemp_time_list)/len(contemp_time_list)}")
+    print(f"Average time taken for each sample: {sum(time_list)/len(time_list)}, Average time taken for contemplation: {sum(contemp_time_list)/len(contemp_time_list)}")
     # if path not exist, create it
     if not os.path.exists(result_dir):
         os.makedirs(result_dir)

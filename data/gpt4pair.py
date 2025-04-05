@@ -13,7 +13,7 @@ class ReasoningPairsGenerator:
     Generate detailed and condensed reasoning pairs for raw problems using ChatGPT-4o-mini.
     """
 
-    def __init__(self, api_key: str, model: str = "gpt-4o-mini"):
+    def __init__(self, model_name: str = "gpt-4o-mini", api_key: str = "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"):
         """
         Initialize the generator with API credentials.
 
@@ -22,7 +22,7 @@ class ReasoningPairsGenerator:
             model: Model to use (default: gpt-4o-mini)
         """
         self.api_key = api_key
-        self.model = model
+        self.model = model_name
         self.headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {api_key}"
@@ -76,8 +76,9 @@ class ReasoningPairsGenerator:
         """
         messages = [
             {"role": "system", "content": "You are an AI that creates concise summaries of mathematical reasoning."},
-            {"role": "user", "content": f"Problem: {query}\n\nDetailed Solution: {original_reasoning}\n\nPlease condense the above solution into a brief but complete chain of reasoning. Be concise but maintain accuracy."}
+            {"role": "user", "content": f"Problem: {query}\n\nDetailed Solution: {original_reasoning}\n\nPlease condense the above solution into a brief but complete chain of reasoning. Be concise but maintain accuracy within 10 words."}
         ]
+
 
         try:
             response = requests.post(
@@ -135,7 +136,7 @@ class ReasoningPairsGenerator:
                 print(f"API response: {response.text}")
             return ""
 
-    def create_reasoning_pair(self, query: str) -> Dict[str, Any]:
+    def create_reasoning_pair(self, query: str, given_reasoning:str, given_answer:str) -> Dict[str, Any]:
         """
         Generate a pair of original and condensed reasoning for a query.
 
@@ -145,13 +146,19 @@ class ReasoningPairsGenerator:
         Returns:
             Dictionary with query, original reasoning, condensed reasoning, and answer
         """
-        original_reasoning = self.generate_reasoning(query)
-        time.sleep(1)  # Rate limiting
+        if given_reasoning:
+            original_reasoning = given_reasoning
+        else:
+            original_reasoning = self.generate_reasoning(query)
+            time.sleep(0.5)  # Rate limiting
 
         condensed_reasoning = self.generate_condensed_reasoning(query, original_reasoning)
-        time.sleep(1)  # Rate limiting
+        time.sleep(0.5)  # Rate limiting
 
-        answer = self.generate_answer(query, original_reasoning)
+        if given_answer:
+            answer = given_answer
+        else:
+            answer = self.generate_answer(query, original_reasoning)
 
         return {
             "query": query,
@@ -160,7 +167,7 @@ class ReasoningPairsGenerator:
             "answer": answer
         }
 
-    def create_dataset(self, queries: List[str], output_file: str = "reasoning_pairs.json"):
+    def create_dataset(self, queries: List[str], reasonings: List[str], answers: List[str], output_file: str = "reasoning_pairs.json"):
         """
         Create a dataset of reasoning pairs from a list of queries and save to JSON.
         Appends to existing file if it exists to avoid losing previous work.
@@ -190,15 +197,19 @@ class ReasoningPairsGenerator:
                 print(f"Error loading existing dataset: {e}")
                 print("Starting with an empty dataset")
 
-        for i, query in enumerate(tqdm(queries, desc="Generating reasoning pairs")):
+        for i in tqdm(range(len(queries)), desc="Generating reasoning pairs"):
             try:
-                pair = self.create_reasoning_pair(query)
+                pair = self.create_reasoning_pair(queries[i], reasonings[i] if reasonings else None, answers[i] if answers else None)
                 dataset.append(pair)
 
                 # Save progress after every 5 examples or at the last one
                 if (i + 1) % 5 == 0 or i == len(queries) - 1:
                     # Write to a temporary file first, then rename to avoid corruption
                     temp_file = f"{output_file}.temp"
+                    if not os.path.exists(temp_file):
+                        # enforce creating the new file and nonexist folders
+                        os.makedirs(os.path.dirname(temp_file), exist_ok=True)
+
                     with open(temp_file, 'w', encoding='utf-8') as f:
                         json.dump(dataset, f, indent=2, ensure_ascii=False)
 
@@ -208,7 +219,7 @@ class ReasoningPairsGenerator:
                     print(f"Saved progress: {len(dataset)} total examples ({i+1}/{len(queries)} new examples)")
 
                 # Rate limiting to avoid hitting API limits
-                time.sleep(2)
+                time.sleep(1)
 
             except Exception as e:
                 print(f"Error processing query {i}: {e}")
@@ -221,86 +232,3 @@ class ReasoningPairsGenerator:
         return dataset
 
 
-def load_raw_dataset(limit: int = None):
-    """
-    Load raw dataset directly from Hugging Face datasets.
-
-    Args:
-        limit: Maximum number of examples to load
-
-    Returns:
-        List of questions from the raw dataset
-    """
-    # Load raw dataset from Hugging Face
-    dataset = load_dataset("raw", "main")
-
-    # Extract questions from the training set
-    train_data = dataset["train"]
-
-    # Format the queries
-    queries = []
-    for i, item in enumerate(train_data):
-        queries.append(item["question"])
-
-    # Return all queries (the slicing will be handled in main())
-    return queries
-
-
-def main():
-    parser = argparse.ArgumentParser(description="Generate reasoning pairs for raw dataset using ChatGPT")
-    parser.add_argument("--output_file", type=str, default="reasoning_pairs.json", help="Output JSON file path")
-    parser.add_argument("--limit", type=int, default=500, help="Limit number of examples to process")
-    parser.add_argument("--model", type=str, default="gpt-4o-mini", help="OpenAI model to use")
-    parser.add_argument("--start_index", type=int, default=0, help="Starting index in the raw dataset")
-    parser.add_argument("--retry_failed", action="store_true", help="Try to reprocess examples that failed before")
-
-    args = parser.parse_args()
-
-    # Hardcoded API key directly in the code
-    api_key = "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"  # Replace with your actual OpenAI API key
-
-    # Load raw dataset directly from Hugging Face
-    try:
-        # Load all queries within the range [start_index, start_index + limit)
-        all_queries = load_raw_dataset()
-        if args.limit:
-            end_index = min(args.start_index + args.limit, len(all_queries))
-            queries = all_queries[args.start_index:end_index]
-        else:
-            queries = all_queries[args.start_index:]
-
-        print(f"Loaded {len(queries)} problems from raw dataset (starting at index {args.start_index})")
-    except Exception as e:
-        print(f"Error loading raw dataset: {e}")
-        return
-
-    # Check for existing output file and handle failed examples
-    if args.retry_failed and os.path.exists(args.output_file):
-        try:
-            with open(args.output_file, 'r', encoding='utf-8') as f:
-                existing_data = json.load(f)
-
-            # Find failed examples (those with empty fields)
-            failed_examples = []
-            for item in existing_data:
-                if (not item.get('original_reasoning') or
-                    not item.get('condensed_reasoning') or
-                    not item.get('answer')):
-                    failed_examples.append(item['query'])
-
-            if failed_examples:
-                print(f"Found {len(failed_examples)} failed examples to retry")
-                queries = failed_examples
-        except Exception as e:
-            print(f"Error checking for failed examples: {e}")
-
-    # Generate reasoning pairs
-    generator = ReasoningPairsGenerator(api_key, model=args.model)
-    generator.create_dataset(queries, args.output_file)
-
-    print(f"Completed generation of reasoning pairs")
-    print(f"Results saved to {args.output_file}")
-
-
-if __name__ == "__main__":
-    main()

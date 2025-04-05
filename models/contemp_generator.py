@@ -11,7 +11,8 @@ class ContemplationGenerator(nn.Module):
         self.student_model = AutoModel.from_pretrained(student_model_name)
         # self.tokenizer = AutoTokenizer.from_pretrained(teacher_model_name)
         self.tokenizer = AutoTokenizer.from_pretrained(student_model_name)
-        self.tokenizer.pad_token = self.tokenizer.eos_token  # Set pad token to end of sequence token
+        self.tokenizer.add_special_tokens({"pad_token": '[PAD]'})
+        self.tokenizer.pad_token = self.tokenizer.pad_token  # Set pad token to end of sequence token
 
         # Add a projection layer to match teacher's hidden dimension
         self.student_hidden_dim = self.student_model.config.hidden_size

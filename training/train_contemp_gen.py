@@ -81,76 +81,6 @@ def compute_loss_ans(contemp_states, teacher_model, teacher_tokenizer, answer_lo
         l_ans = answer_loss_fn(answer_logits_flat, answer_labels_flat)
 
     return l_ans
-# def compute_loss_ans(contemp_states, teacher_model, teacher_tokenizer, answer_loss_fn, combined_inputs, answer_inputs, exp_config, device, mode="train"):
-#     # Determine whether to compute gradients based on mode
-#     # In 'train' mode, we'll allow gradients to flow back to contemp_states
-#     # In 'eval' mode, we'll ensure no gradients are computed
-#     context_manager = torch.enable_grad() if mode == "train" else torch.no_grad()
-
-#     with context_manager:
-#         # Get the total sequence length and limit contemp states to max_contemp_tokens
-#         contemp_len = min(contemp_states.size(1), exp_config.max_contemp_tokens)
-
-#         # With torch.no_grad for teacher model operations
-#         with torch.no_grad():
-#             # Get the embeddings from the model's embedding layer
-#             inputs_embeds = teacher_model.get_input_embeddings()(combined_inputs.input_ids)
-#             answer_embeds = teacher_model.get_input_embeddings()(answer_inputs.input_ids)
-
-#             # Create a new inputs_embeds by concatenating with contemp_states
-#             # In train mode, we need to preserve the computation graph
-#             # In eval mode, we can detach to save memory
-#             contemp_states_to_use = contemp_states if mode == "train" else contemp_states.detach()
-
-#             combined_embeds = torch.cat([
-#                 inputs_embeds,
-#                 contemp_states_to_use[:, -contemp_len:, :],
-#                 answer_embeds
-#             ], dim=1)
-
-#             # Create a proper attention mask that covers both parts
-#             attention_mask = torch.ones(
-#                 (combined_inputs.input_ids.size(0), combined_embeds.shape[1]),
-#                 dtype=torch.long,
-#                 device=device
-#             )
-
-#             # Create position ids that account for both parts
-#             position_ids = torch.arange(
-#                 combined_embeds.shape[1],
-#                 dtype=torch.long,
-#                 device=device
-#             ).unsqueeze(0).expand(combined_inputs.input_ids.size(0), -1)
-
-#             # Forward pass with combined embeddings
-#             teacher_outputs = teacher_model(
-#                 inputs_embeds=combined_embeds,
-#                 attention_mask=attention_mask,
-#                 position_ids=position_ids,
-#                 output_hidden_states=True
-#             )
-
-#             # Get logits from the teacher model
-#             logits = teacher_outputs.logits
-
-#         # Get answer labels (shifted by one token)
-#         answer_labels = answer_inputs.input_ids[:, 1:]  # Shifted by one token
-
-#         # Get the index to start predictions from (where the answer begins)
-#         # This is where the original input ends plus the contemplation tokens
-#         start_idx = combined_inputs.input_ids.size(1) + contemp_len - 1
-#         seq_length = answer_labels.size(1)
-
-#         # Get all relevant logits at once
-#         answer_logits = logits[:, start_idx:start_idx+seq_length, :]
-#         # Reshape for the loss function
-#         answer_logits_flat = answer_logits.reshape(-1, answer_logits.size(-1))
-#         answer_labels_flat = answer_labels.reshape(-1)
-
-#         # Calculate loss for all positions at once
-#         l_ans = answer_loss_fn(answer_logits_flat, answer_labels_flat)
-
-#     return l_ans
 
 
 def train_contemplation_generator(
@@ -181,7 +111,8 @@ def train_contemplation_generator(
 
     # Initialize teacher tokenizer for answer generation
     teacher_tokenizer = AutoTokenizer.from_pretrained(model_config.teacher_model_name)
-    teacher_tokenizer.pad_token = teacher_tokenizer.eos_token
+    teacher_tokenizer.add_special_tokens({"pad_token": '[PAD]'})
+    # teacher_tokenizer.pad_token = teacher_tokenizer.eos_token
 
     # Initialize answer loss function
     answer_loss_fn = nn.CrossEntropyLoss(ignore_index=teacher_tokenizer.pad_token_id)
@@ -386,6 +317,7 @@ def evaluate(contemp_generator, sentence_transformer, eval_dataset, model_config
     teacher_model.eval()
 
     teacher_tokenizer = AutoTokenizer.from_pretrained(model_config.teacher_model_name)
+    teacher_tokenizer.add_special_tokens({"pad_token": '[PAD]'})
     teacher_tokenizer.pad_token = teacher_tokenizer.eos_token
 
     # Initialize answer loss function
