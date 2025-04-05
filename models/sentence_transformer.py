@@ -12,7 +12,7 @@ class CustomizedSentenceTransformer(nn.Module):
         # Load the base model, tokenizer and config
         base_model = AutoModel.from_pretrained(base_model_name)
         self.tokenizer = AutoTokenizer.from_pretrained(base_model_name)
-        self.tokenizer.add_special_tokens({"pad_token": '[PAD]'})
+        self.tokenizer.pad_token = self.tokenizer.eos_token  # Set pad token to end of sequence token
         # self.tokenizer.pad_token = self.tokenizer.eos_token  # Set pad token to end of sequence token
         self.config = AutoConfig.from_pretrained(base_model_name)
 

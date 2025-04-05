@@ -61,7 +61,7 @@ def train_sentence_transformer(
     base_model.eval()  # Keep it in eval mode as we only use it for features
 
     tokenizer = AutoTokenizer.from_pretrained(base_model_name)
-    tokenizer.add_special_tokens({"pad_token": '[PAD]'})
+    tokenizer.pad_token = tokenizer.eos_token  # Set pad token to end of sequence token
     # tokenizer.pad_token = tokenizer.eos_token
 
     # Freeze the base model parameters

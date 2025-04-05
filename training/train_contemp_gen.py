@@ -111,8 +111,7 @@ def train_contemplation_generator(
 
     # Initialize teacher tokenizer for answer generation
     teacher_tokenizer = AutoTokenizer.from_pretrained(model_config.teacher_model_name)
-    teacher_tokenizer.add_special_tokens({"pad_token": '[PAD]'})
-    # teacher_tokenizer.pad_token = teacher_tokenizer.eos_token
+    teacher_tokenizer.pad_token = teacher_tokenizer.eos_token
 
     # Initialize answer loss function
     answer_loss_fn = nn.CrossEntropyLoss(ignore_index=teacher_tokenizer.pad_token_id)
@@ -317,7 +316,6 @@ def evaluate(contemp_generator, sentence_transformer, eval_dataset, model_config
     teacher_model.eval()
 
     teacher_tokenizer = AutoTokenizer.from_pretrained(model_config.teacher_model_name)
-    teacher_tokenizer.add_special_tokens({"pad_token": '[PAD]'})
     teacher_tokenizer.pad_token = teacher_tokenizer.eos_token
 
     # Initialize answer loss function

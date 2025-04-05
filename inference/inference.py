@@ -12,7 +12,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
 
     # Load teacher LLM for generating answers
     teacher_tokenizer = AutoTokenizer.from_pretrained(teacher_model_name)
-    teacher_tokenizer.add_special_tokens({"pad_token": '[PAD]'})
+    teacher_tokenizer.pad_token = teacher_tokenizer.eos_token  # Set pad token to end of sequence token
     teacher_model = AutoModelForCausalLM.from_pretrained(teacher_model_name)
     teacher_model = teacher_model.to(device)
     teacher_model.eval()
