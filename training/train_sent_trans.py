@@ -133,7 +133,7 @@ def train_sentence_transformer(
         sentence_transformer.train()
         train_loss = 0
 
-        for batch in tqdm(train_loader, desc=f"Epoch {epoch+1}/{config.num_epochs} - Training"):
+        for batch in tqdm(train_loader, desc=f"Epoch {epoch+1}/{config.train_sen_trans_epochs} - Training"):
             optimizer.zero_grad()
 
             # Get original and condensed reasoning pairs

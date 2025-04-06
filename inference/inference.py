@@ -28,8 +28,10 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
         for sample in tqdm(dataset, desc="Running inference"):
             # config.max_contemp_tokens = 0
             query = sample["query"]
-            query_condensed_reasoning = f"Question: {query}\n Please generate the most concise reasoning for the question. It may not be complete sentence, just very informative logical words within 10 words. Answer:"
-            query_condensed_reasoning += contemp_generator.tokenizer.eos_token * config.max_contemp_tokens
+            # query_condensed_reasoning = f"Question: {query}\n Please generate the most concise reasoning for the question. It may not be complete sentence, just very informative logical words within 10 words. Answer: "
+            query_condensed_reasoning = f"Question: {query}\n Answer: "
+            query_condensed_reasoning += f"{contemp_generator.tokenizer.eos_token} " * config.max_contemp_tokens
+            query_condensed_reasoning = query_condensed_reasoning.strip()
             # Generate contemplation tokens hidden states (now acting as input embeddings)
             query_inputs = contemp_generator.tokenizer(
                 query_condensed_reasoning,

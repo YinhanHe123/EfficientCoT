@@ -122,7 +122,7 @@ def main():
                 reasoning_pairs_path,
                 max_pairs=experiment_config.max_reasoning_pairs
             )
-           
+
 
         # Train sentence transformer
         from training.train_sent_trans import train_sentence_transformer
@@ -168,6 +168,7 @@ def main():
             experiment_config,
             args.variation
         )
+
     elif args.mode == "evaluate":
         # Load trained models and run inference
         contemp_generator = ContemplationGenerator.from_pretrained(

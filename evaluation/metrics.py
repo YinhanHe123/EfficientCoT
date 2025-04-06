@@ -65,3 +65,6 @@ def extract_all_numbers(text):
     import re
     numbers = re.findall(r'-?\d+\.?\d*', text)
     return [float(num) for num in numbers]
+
+
+
