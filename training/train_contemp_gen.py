@@ -121,10 +121,23 @@ def train_contemplation_generator(
     answer_loss_fn = nn.CrossEntropyLoss(ignore_index=teacher_tokenizer.pad_token_id)
 
     # Define optimizers
-    optimizer = optim.AdamW(
+    # optimizer_both = optim.AdamW(
+    #     contemp_generator.parameters(),
+    #     lr=exp_config.learning_rate,
+    #     weight_decay=exp_config.learning_rate
+    # )
+
+    # Define optimizers
+    optimizer_both = optim.AdamW(
         contemp_generator.parameters(),
-        lr=exp_config.learning_rate,
-        weight_decay=exp_config.weight_decay
+        lr=1e-7,
+        weight_decay=1e-5
+    )
+
+    optimizer_linear = optim.AdamW(
+        contemp_generator.parameters(),
+        lr=0.001,
+        weight_decay=0.001
     )
 
     # Setup logger
@@ -140,9 +153,16 @@ def train_contemplation_generator(
     for epoch in (range(exp_config.num_epochs)):
         # Set contemp_generator to train mode only during training
         contemp_generator.train()
-        for name, param in contemp_generator.student_model.named_parameters():
-            param.requires_grad = False
 
+        if epoch <= 10:
+            for name, param in contemp_generator.student_model.named_parameters():
+                param.requires_grad = False
+            optimizer = optimizer_linear
+        elif epoch == 11:
+            for name, param in contemp_generator.student_model.named_parameters():
+                param.requires_grad = True
+            optimizer = optimizer_both
+            contemp_generator.load_state_dict(best_state_dict)
 
         total_loss = 0
         reason_loss = 0
@@ -206,7 +226,7 @@ def train_contemplation_generator(
                 best_val_loss = eval_loss
                 best_state_dict = contemp_generator.state_dict()
 
-    contemp_generator.load_state_dict(best_state_dict)
+    # contemp_generator.load_state_dict(best_state_dict)
     model_path = f"{exp_config.model_save_path}/contemp_generator"
     utils.create_directory(model_path)
     contemp_generator.save_pretrained(model_path)
@@ -257,7 +277,7 @@ def process_item(mode, item, contemp_generator, teacher_model, teacher_tokenizer
 
 
     # query_condensed_reasoning = f"Question: {query}\n Please generate the most concise reasoning for the question. It may not be complete sentence, just very informative logical words within 10 words. Answer: "
-    query_condensed_reasoning = f"Question: {query}\n Answer: "
+    query_condensed_reasoning = f"<<SYS>>You are an expert in math word problems<</SYS>>\nQuestion: {query}\n Answer: "
     underscore_tokens = (contemp_generator.tokenizer.eos_token+' ')*exp_config.max_contemp_tokens
     underscore_tokens = underscore_tokens.strip()
     query_condensed_reasoning += underscore_tokens

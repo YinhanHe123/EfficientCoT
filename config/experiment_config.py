@@ -15,7 +15,7 @@ class ExperimentConfig:
         # Training parameters
         self.learning_rate = 1e-5
         self.weight_decay = 0.01
-        self.num_epochs = 5
+        self.num_epochs = 12
         self.train_sen_trans_epochs = 15
         self.batch_size = 4
         self.alpha = 0.25  # Weight for Lreason in total loss

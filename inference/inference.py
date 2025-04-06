@@ -29,7 +29,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
             # config.max_contemp_tokens = 0
             query = sample["query"]
             # query_condensed_reasoning = f"Question: {query}\n Please generate the most concise reasoning for the question. It may not be complete sentence, just very informative logical words within 10 words. Answer: "
-            query_condensed_reasoning = f"Question: {query}\n Answer: "
+            query_condensed_reasoning = f"<<SYS>>You are an expert in math word problems<</SYS>>\nQuestion: {query}\n Answer: "
             query_condensed_reasoning += f"{contemp_generator.tokenizer.eos_token} " * config.max_contemp_tokens
             query_condensed_reasoning = query_condensed_reasoning.strip()
             # Generate contemplation tokens hidden states (now acting as input embeddings)
