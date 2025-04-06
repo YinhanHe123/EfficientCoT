@@ -105,7 +105,7 @@ def run_cot_baseline(dataset, model_config, experiment_config, num_shots):
         # Use the pipeline with explicit truncation parameter
         response = pipe(
             prompt,
-            max_length=120,
+            max_length=150,
             temperature=0.7,
             top_p=0.9,
             do_sample=True,
@@ -160,7 +160,7 @@ def run_pause_baseline(dataset, model_config, experiment_config):
 
             outputs = model.generate(
                 inputs.input_ids,
-                max_length=120,
+                max_length=150,
                 temperature=0.7,
                 top_p=0.9,
                 do_sample=True
@@ -206,7 +206,7 @@ def run_implicit_cot_baseline(dataset, model_config, experiment_config):
 
             outputs = model.generate(
                 inputs.input_ids,
-                max_length=120,
+                max_length=150,
                 temperature=0.7,
                 top_p=0.9,
                 do_sample=True

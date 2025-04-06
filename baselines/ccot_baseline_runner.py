@@ -10,7 +10,7 @@ from datasets import Dataset as HFDataset
 import gc
 import sys
 
-def prepare_ccot_decode_dataset(queries, answers, ccot_model, tokenizer, device, max_length=120, cotrain_mode=False):
+def prepare_ccot_decode_dataset(queries, answers, ccot_model, tokenizer, device, max_length=150, cotrain_mode=False):
     """
     Prepare a dataset for training the decode model with HuggingFace Dataset
     """

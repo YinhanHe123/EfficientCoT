@@ -5,7 +5,7 @@ VARIATIONS=("vanilla")
 
 for mode in "${MODES[@]}"; do
     for variation in "${VARIATIONS[@]}"; do
-        echo "Running: python main.py --mode $mode --variation $variation --config small --device 2"
+        echo "Running: python main.py --mode $mode --variation $variation --config small"
         python main.py --mode $mode --variation $variation --config small --device 2
 
         # Force CUDA cleanup between runs

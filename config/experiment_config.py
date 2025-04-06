@@ -15,12 +15,12 @@ class ExperimentConfig:
         # Training parameters
         self.learning_rate = 1e-5
         self.weight_decay = 0.01
-        self.num_epochs = 100
+        self.num_epochs = 30
         self.train_sen_trans_epochs = 15
         self.batch_size = 4
         self.alpha = 0.5  # Weight for Lreason in total loss
         self.save_interval = 1  # Save model every N epochs
-        self.max_seq_length = 120
+        self.max_seq_length = 150
         self.embedding_dim = 768  # Dimension for embeddings
         self.seed=42
         # self.max_reasoning_pairs = 1000  # Maximum reasoning pairs to generate

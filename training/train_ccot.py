@@ -15,7 +15,7 @@ import gc
 from torch.utils.data import DataLoader
 from baselines.ccot_baseline_runner import prepare_ccot_decode_dataset
 
-def prepare_ccot_layer_dataset(queries, reasonings, tokenizer, device, layer_idx, compression_ratio=0.1, max_length=120):
+def prepare_ccot_layer_dataset(queries, reasonings, tokenizer, device, layer_idx, compression_ratio=0.1, max_length=150):
     """
     Prepare a dataset for training a specific layer of the CCOT model using HuggingFace Dataset
     """
@@ -749,7 +749,7 @@ def train_end_predictor(
     for query, reasoning in tqdm(zip(queries, reasonings), total=len(queries), desc="Preparing END_psi training data"):
         # Tokenize query
         query_inputs = tokenizer(query, return_tensors="pt", truncation=True, padding="max_length",
-                                max_length=120).to(device)
+                                max_length=150).to(device)
 
         # Tokenize reasoning to determine target sequence length
         reasoning_inputs = tokenizer(reasoning, return_tensors="pt").to(device)

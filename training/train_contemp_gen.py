@@ -17,7 +17,9 @@ def compute_loss_ans(contemp_states, teacher_model, teacher_tokenizer, answer_lo
         # Get the embeddings from the model's embedding layer (no gradients needed)
         with torch.no_grad():
             inputs_embeds = teacher_model.get_input_embeddings()(combined_inputs.input_ids)
-            answer_embeds = teacher_model.get_input_embeddings()(answer_inputs.input_ids)
+            # answer_embeds = teacher_model.get_input_embeddings()(answer_inputs.input_ids)
+            answer_underscore = teacher_model.get_input_embeddings()(teacher_tokenizer.encode(teacher_tokenizer.eos_token*answer_inputs.input_ids.shape[1], return_tensors="pt").to(device))
+
 
         # Keep contemp_states gradients in train mode
         contemp_states_to_use = contemp_states if mode == "train" else contemp_states.detach()
@@ -26,7 +28,7 @@ def compute_loss_ans(contemp_states, teacher_model, teacher_tokenizer, answer_lo
         combined_embeds = torch.cat([
             inputs_embeds,
             contemp_states_to_use[:, -contemp_len:, :],
-            answer_embeds
+            answer_underscore[:,1:,:]
         ], dim=1)
 
         # Create proper attention mask and position ids
@@ -64,11 +66,11 @@ def compute_loss_ans(contemp_states, teacher_model, teacher_tokenizer, answer_lo
         logits = teacher_outputs.logits
 
         # Get answer labels (shifted by one token)
-        answer_labels = answer_inputs.input_ids[:, 1:]  # Shifted by one token
+        answer_labels = answer_inputs.input_ids[:, 1:]  # Shifted by one token to get rid of <\s>
 
         # Get the index to start predictions from (where the answer begins)
         # This is where the original input ends plus the contemplation tokens
-        start_idx = combined_inputs.input_ids.size(1) + contemp_len - 1
+        start_idx = combined_inputs.input_ids.size(1)+1 + contemp_len - 1 # +1 is for <\s>
         seq_length = answer_labels.size(1)
 
         # Get all relevant logits at once
@@ -132,8 +134,8 @@ def train_contemplation_generator(
 
     # Training loop
     best_val_loss = float('inf')
-
-    for epoch in range(exp_config.num_epochs):
+    print("Starting training contemplation generator...")
+    for epoch in (range(exp_config.num_epochs)):
         # Set contemp_generator to train mode only during training
         contemp_generator.train()
 
@@ -141,14 +143,14 @@ def train_contemplation_generator(
         reason_loss = 0
         ans_loss = 0
 
-        for batch in tqdm(train_dataset, desc=f"Epoch {epoch+1}/{exp_config.num_epochs} - Training"):
+        for item in tqdm(train_dataset, desc=f"Epoch {epoch+1}/{exp_config.num_epochs}"):
             optimizer.zero_grad()
 
             # Process batch
-            query = batch["query"]
-            ground_truth_reasoning = batch["reasoning"]
-            condensed_reasoning = batch["condensed_reasoning"]
-            ground_truth_answer = batch["answer"]
+            query = item["query"]
+            ground_truth_reasoning = item["reasoning"]
+            condensed_reasoning = item["condensed_reasoning"]
+            ground_truth_answer = item["answer"]
 
             # Get teacher model's ground-truth reasoning hidden states
             with torch.no_grad():
@@ -182,7 +184,12 @@ def train_contemplation_generator(
                     )
 
             # Generate contemplation tokens from student model
-            query_condensed_reasoning = f"Question: {query[0]}\nAnswer: {condensed_reasoning[0]}"
+            # query_condensed_reasoning = f"Question: {query[0]}\nAnswer: {condensed_reasoning[0]}"
+            query_condensed_reasoning = f"Question: {query}\n Please generate the most concise reasoning for the question. It may not be complete sentence, just very informative logical words within 10 words. Answer:"
+            query_condensed_reasoning +=contemp_generator.tokenizer.eos_token*exp_config.max_contemp_tokens
+            # --------debug start--------
+            # print('query_condensed_reasoning:', query_condensed_reasoning)
+            # --------debug end----------
             contemp_inputs = contemp_generator.tokenizer(
                 query_condensed_reasoning,
                 return_tensors="pt",
@@ -218,7 +225,10 @@ def train_contemplation_generator(
 
             # Implement answer loss with teacher forcing
             # Create combined input: [query + contemplation tokens]
-            combined_input = f"Question: {query[0]}\nAnswer:"
+            combined_input = f"Question: {query}\nAnswer:"
+            # --------debug start--------
+            # print('combined_input:', combined_input)
+            # --------debug end----------
             combined_inputs = teacher_tokenizer(
                 combined_input,
                 return_tensors="pt",
@@ -272,8 +282,10 @@ def train_contemplation_generator(
         print(f"Epoch {epoch+1} - Loss: {avg_total_loss:.4f} (Reason: {avg_reason_loss:.4f}, Ans: {avg_ans_loss:.4f})")
 
         # Evaluate on validation set
-        if (epoch +5) % 1 == 0:
+        if (epoch) % 1 == 0:
             eval_loss = evaluate(
+                teacher_model,
+                teacher_tokenizer,
                 contemp_generator,
                 sentence_transformer,
                 eval_dataset,
@@ -299,24 +311,25 @@ def train_contemplation_generator(
     model_path = f"{exp_config.model_save_path}/contemp_generator"
     utils.create_directory(model_path)
     contemp_generator.save_pretrained(model_path)
+    logger.info('Saved Best Model')
     print(f"Saved best model with validation loss: {best_val_loss:.4f}")
     logger.close()
     return contemp_generator
 
 
-def evaluate(contemp_generator, sentence_transformer, eval_dataset, model_config, exp_config, variation='vanilla'):
+def evaluate(teacher_model, teacher_tokenizer, contemp_generator, sentence_transformer, eval_dataset, model_config, exp_config, variation='vanilla'):
     device = contemp_generator.device
 
     # Ensure the contemp_generator is in evaluation mode during evaluation
     contemp_generator.eval()
 
     # Initialize teacher model and tokenizer for evaluation
-    teacher_model = LlamaForCausalLM.from_pretrained(model_config.teacher_model_name)
-    teacher_model = teacher_model.to(device)
+    # teacher_model = LlamaForCausalLM.from_pretrained(model_config.teacher_model_name)
+    # teacher_model = teacher_model.to(device)
     teacher_model.eval()
 
-    teacher_tokenizer = AutoTokenizer.from_pretrained(model_config.teacher_model_name)
-    teacher_tokenizer.pad_token = teacher_tokenizer.eos_token
+    # teacher_tokenizer = AutoTokenizer.from_pretrained(model_config.teacher_model_name)
+    # teacher_tokenizer.pad_token = teacher_tokenizer.eos_token
 
     # Initialize answer loss function
     answer_loss_fn = nn.CrossEntropyLoss(ignore_index=teacher_tokenizer.pad_token_id)
@@ -326,11 +339,12 @@ def evaluate(contemp_generator, sentence_transformer, eval_dataset, model_config
     ans_loss_sum = 0
 
     with torch.no_grad():  # No gradients for evaluation
-        for batch in tqdm(eval_dataset, desc="Evaluating"):
+        for item in tqdm(eval_dataset, desc="Evaluating"):
             # Process batch
-            query = batch["query"]
-            ground_truth_reasoning = batch["reasoning"]
-            ground_truth_answer = batch["answer"]
+            # query = batch["query"]
+            query = f"Question: {item['query']}\n Please generate the most concise reasoning for the question. It may not be complete sentence, just very informative logical words within 10 words. Answer:"
+            ground_truth_reasoning = item["reasoning"]
+            ground_truth_answer = item["answer"]
 
             # Tokenize ground truth reasoning
             reason_inputs = teacher_tokenizer(
@@ -366,17 +380,13 @@ def evaluate(contemp_generator, sentence_transformer, eval_dataset, model_config
             contemp_states = contemp_generator(
                 query_inputs.input_ids,
                 attention_mask=query_inputs.attention_mask
-            )
+            )[:, -min(exp_config.max_contemp_tokens,query_inputs.input_ids.size(1)):, :]
             if variation == 'vanilla':
                 # Get contemplation embeddings
-                contemp_embeddings = sentence_transformer(
-                    contemp_states
-                )
+                contemp_embeddings = sentence_transformer(contemp_states)
 
                 # Get reasoning embeddings
-                gt_reason_embeddings = sentence_transformer(
-                gt_reason_hidden_states
-                )
+                gt_reason_embeddings = sentence_transformer(gt_reason_hidden_states)
 
                 # Compute similarity for reasoning loss
                 similarity = sentence_transformer.compute_similarity(
@@ -394,7 +404,7 @@ def evaluate(contemp_generator, sentence_transformer, eval_dataset, model_config
 
             # Implement answer loss - using the same teacher forcing approach
             # Create combined input: [query + contemplation tokens]
-            combined_input = f"Question: {query[0]}\nAnswer:"
+            combined_input = f"Question: {query}\nAnswer:"
             combined_inputs = teacher_tokenizer(
                 combined_input,
                 return_tensors="pt",

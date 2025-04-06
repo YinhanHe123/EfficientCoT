@@ -28,10 +28,11 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
         for sample in tqdm(dataset, desc="Running inference"):
             # config.max_contemp_tokens = 0
             query = sample["query"]
-
+            query_condensed_reasoning = f"Question: {query}\n Please generate the most concise reasoning for the question. It may not be complete sentence, just very informative logical words within 10 words. Answer:"
+            query_condensed_reasoning += contemp_generator.tokenizer.eos_token * config.max_contemp_tokens
             # Generate contemplation tokens hidden states (now acting as input embeddings)
             query_inputs = contemp_generator.tokenizer(
-                query,
+                query_condensed_reasoning,
                 return_tensors="pt",
                 padding=True,
                 truncation=True,
@@ -41,7 +42,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
             contemp_states = contemp_generator(
                 query_inputs.input_ids,
                 attention_mask=query_inputs.attention_mask
-            )
+            )[:, -config.max_contemp_tokens:, :]
             contemp_end = time.time()
             contemp_time = contemp_end - contemp_start
             contemp_time_list.append(contemp_time)
@@ -137,7 +138,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
             gen_start = time.time()
             outputs = teacher_model.generate(
                 input_ids,
-                # max_length=120 + input_ids.size(1),  # Account for the input length
+                # max_length=150 + input_ids.size(1),  # Account for the input length
                 max_length = 30+input_ids.size(1)+contemp_len,
                 temperature=config.eval_temp,
                 top_p=0.9,
@@ -149,7 +150,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
             # Decode only the generated part
             answer = teacher_tokenizer.decode(outputs[0][input_ids.size(1):], skip_special_tokens=True)
             # print(f"Query: {query}\nAnswer: {answer}\n")
-            print('Answer', answer)
+            # print('Answer', answer)
 
             result = {
                 "query": query,

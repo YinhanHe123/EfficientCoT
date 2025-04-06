@@ -137,7 +137,7 @@ class CustomizedSentenceTransformer(nn.Module):
             sent1_embedding, sent2_embedding, dim=-1
         )
 
-    def encode_text(self, texts, max_length=120):
+    def encode_text(self, texts, max_length=150):
         """
         Encode text inputs to get hidden states that can be passed to forward
         """

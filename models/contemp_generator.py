@@ -32,6 +32,36 @@ class ContemplationGenerator(nn.Module):
             attention_mask=attention_mask,
             output_hidden_states=True
         )
+        #----- debug start -----
+
+        # # For base models, we need to look at the last hidden state
+        # last_hidden_state = outputs.last_hidden_state
+        # # To get token predictions, we need the embedding weights to project back to vocabulary space
+        # # This assumes you have access to the embedding layer weights
+        # if hasattr(self.student_model, 'get_input_embeddings'):
+        #     # Get the embedding matrix
+        #     embedding_matrix = self.student_model.get_input_embeddings().weight
+
+        #     # Project hidden states to vocabulary space (this is essentially what the LM head would do)
+        #     logits = torch.matmul(last_hidden_state, embedding_matrix.transpose(0, 1))
+
+        #     # Get the most likely token IDs
+        #     predicted_token_ids = torch.argmax(logits, dim=-1)
+
+        #     # Get the last 5 token IDs
+        #     last_five_token_ids = predicted_token_ids[:, -5:]
+
+        #     # Decode the token IDs
+        #     last_five_tokens = self.tokenizer.batch_decode(last_five_token_ids)
+
+        #     print("Last five tokens:", last_five_tokens)
+        # else:
+        #     # Alternative: Just get the last 5 input tokens (not predictions)
+        #     last_five_input_ids = input_ids[:, -5:]
+        #     last_five_inputs = self.tokenizer.batch_decode(last_five_input_ids)
+        #     print("Last five input tokens:", last_five_inputs)
+
+        #----- debug end -----
         stud_end = time.time()
         stud_time = stud_end - stud_start
         # print(f"Contemplation generation time: {stud_time}")
