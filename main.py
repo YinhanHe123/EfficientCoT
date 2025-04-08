@@ -75,10 +75,14 @@ def main():
         experiment_config.autoregressive_layer = args.autoregressive_layer
     else:
         # Original path handling for other modes
-        experiment_config.model_save_path = f"{experiment_config.model_save_path}/{args.baseline}/{args.variation}/{args.dataset}" if args.baseline == 'effi_cot' else f"{experiment_config.model_save_path}/{args.baseline}/{args.dataset}"
-        experiment_config.checkpoint_path = f"{experiment_config.checkpoint_path}/{args.baseline}/{args.variation}/{args.dataset}" if args.baseline == 'effi_cot' else f"{experiment_config.checkpoint_path}/{args.baseline}/{args.dataset}"
-        experiment_config.result_path = f"{experiment_config.result_path}/{args.baseline}/{args.variation}/{args.dataset}" if args.baseline == 'effi_cot' else f"{experiment_config.result_path}/{args.baseline}/{args.dataset}"
-        experiment_config.experiment_name = f"{args.baseline}_{args.variation}_{args.seed}_{args.dataset}"
+        # experiment_config.model_save_path = f"{experiment_config.model_save_path}/{args.baseline}/{args.variation}/{args.dataset}" if args.baseline == 'effi_cot' else f"{experiment_config.model_save_path}/{args.baseline}/{args.dataset}"
+        # experiment_config.checkpoint_path = f"{experiment_config.checkpoint_path}/{args.baseline}/{args.variation}/{args.dataset}" if args.baseline == 'effi_cot' else f"{experiment_config.checkpoint_path}/{args.baseline}/{args.dataset}"
+        # experiment_config.result_path = f"{experiment_config.result_path}/{args.baseline}/{args.variation}/{args.dataset}" if args.baseline == 'effi_cot' else f"{experiment_config.result_path}/{args.baseline}/{args.dataset}"
+        # experiment_config.experiment_name = f"{args.baseline}_{args.variation}_{args.seed}_{args.dataset}"
+        experiment_config.model_save_path = f"{experiment_config.model_save_path}/{args.baseline}/{args.variation}/{args.config}/{args.dataset}" if args.baseline == 'effi_cot' else f"{experiment_config.model_save_path}/{args.baseline}/{args.config}/{args.dataset}"
+        experiment_config.checkpoint_path = f"{experiment_config.checkpoint_path}/{args.baseline}/{args.variation}/{args.config}/{args.dataset}" if args.baseline == 'effi_cot' else f"{experiment_config.checkpoint_path}/{args.baseline}/{args.config}/{args.dataset}"
+        experiment_config.result_path = f"{experiment_config.result_path}/{args.baseline}/{args.variation}/{args.config}/{args.dataset}" if args.baseline == 'effi_cot' else f"{experiment_config.result_path}/{args.baseline}/{args.config}/{args.dataset}"
+        experiment_config.experiment_name = f"{args.baseline}_{args.variation}_{args.seed}_{args.dataset}_{args.config}"
 
     # Create necessary directories
     if not os.path.exists(experiment_config.model_save_path):

@@ -5,6 +5,19 @@ from tqdm import tqdm
 import os
 import time
 
+def get_formatted_prompt(query, teacher_model_name):
+    """
+    Format the prompt based on the teacher model used
+    """
+    if "mistral" in teacher_model_name.lower():
+        # Mistral prompt format
+        prompt = f"<s>[INST] Question: {query}\n Note that you are NOT allowed to write anything other than a number. Answer: [/INST]"
+    else:
+        # Llama prompt format
+        prompt = f"Question: {query}\n Generate the answer directly. Answer:"
+
+    return prompt
+
 def run_inference(contemp_generator, dataset, teacher_model_name, config):
     device = config.device
     contemp_generator = contemp_generator.to(device)
@@ -26,12 +39,18 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
     contemp_time_list = []
     with torch.no_grad():
         for sample in tqdm(dataset, desc="Running inference"):
-            # config.max_contemp_tokens = 0
+            config.max_contemp_tokens = 0
             query = sample["query"]
-            # query_condensed_reasoning = f"Question: {query}\n Please generate the most concise reasoning for the question. It may not be complete sentence, just very informative logical words within 10 words. Answer: "
-            query_condensed_reasoning = f"<<SYS>>You are an expert in math word problems<</SYS>>\nQuestion: {query}\n Answer: "
+
+            # Format the prompt based on the model
+            if "mistral" in teacher_model_name.lower():
+                query_condensed_reasoning = f"<s>[INST] You are an expert in math word problems. Question: {query}\nAnswer: [/INST]"
+            else:
+                query_condensed_reasoning = f"<<SYS>>You are an expert in math word problems<</SYS>>\nQuestion: {query}\nAnswer: "
+
             query_condensed_reasoning += f"{contemp_generator.tokenizer.eos_token} " * config.max_contemp_tokens
             query_condensed_reasoning = query_condensed_reasoning.strip()
+
             # Generate contemplation tokens hidden states (now acting as input embeddings)
             query_inputs = contemp_generator.tokenizer(
                 query_condensed_reasoning,
@@ -40,6 +59,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
                 truncation=True,
                 max_length=config.max_seq_length   # Leave room for the answer
             ).to(device)
+
             contemp_start = time.time()
             contemp_states = contemp_generator(
                 query_inputs.input_ids,
@@ -49,16 +69,8 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
             contemp_time = contemp_end - contemp_start
             contemp_time_list.append(contemp_time)
 
-            # Prepare prompt with query
-            prompt = f"Question: {query}\n Generate the answer directly. Answer:"
-            # prompt = f"Question: {query}\n Generate the answer directly with one numerical number. Answer:"
-
-            # for debugging
-            # prompt = [
-            #     {'role':"user", "content": prompt}
-            # ]
-            # teacher_tokenizer.chat_template = "{% for message in messages %}{% if message['role'] == 'system' %}{{ message['content'] }}{% elif message['role'] == 'user' %}{{ '\n\nHuman: ' + message['content'] +  eos_token }}{% elif message['role'] == 'assistant' %}{{ '\n\nAssistant: '  + message['content'] +  eos_token  }}{% endif %}{% endfor %}{% if add_generation_prompt %}{{ '\n\nAssistant: ' }}{% endif %}"
-            # prompt=teacher_tokenizer.apply_chat_template(prompt, tokenize=False)
+            # Prepare prompt with query based on model
+            prompt = get_formatted_prompt(query, teacher_model_name)
 
             # Tokenize the prompt
             prompt_tokens = teacher_tokenizer(
@@ -90,8 +102,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
 
             # Remove the first_call mechanism and modify the prepare_inputs function
             def modified_prepare_inputs(input_ids, past_key_values=None, **kwargs):
-                # If this is the first call (no past_key_values)
-                if len(past_key_values.key_cache) == 0:
+                if past_key_values is None or len(past_key_values) == 0:
                     # Get the embeddings from the model's embedding layer
                     inputs_embeds = teacher_model.get_input_embeddings()(input_ids)
 
@@ -134,25 +145,24 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
 
 
             # Replace the prepare_inputs_for_generation method temporarily
-            teacher_model.prepare_inputs_for_generation = modified_prepare_inputs
+            # teacher_model.prepare_inputs_for_generation = modified_prepare_inputs
 
             # Generate answer with the modified approach
             gen_start = time.time()
             outputs = teacher_model.generate(
                 input_ids,
-                # max_length=150 + input_ids.size(1),  # Account for the input length
                 max_length = 30+input_ids.size(1)+contemp_len,
                 temperature=config.eval_temp,
                 top_p=0.9,
-                do_sample=True
+                do_sample=True,
+                pad_token_id=teacher_tokenizer.eos_token_id,
             )
             gen_end = time.time()
             gen_time = gen_end - gen_start
-            # print('Time taken for teacher generation:', gen_time)
+
             # Decode only the generated part
             answer = teacher_tokenizer.decode(outputs[0][input_ids.size(1):], skip_special_tokens=True)
-            # print(f"Query: {query}\nAnswer: {answer}\n")
-            # print('Answer', answer)
+            # print(f"Answer: {answer}")
 
             result = {
                 "query": query,

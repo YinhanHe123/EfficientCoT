@@ -13,18 +13,31 @@ class CustomizedSentenceTransformer(nn.Module):
         base_model = AutoModel.from_pretrained(base_model_name)
         self.tokenizer = AutoTokenizer.from_pretrained(base_model_name)
         self.tokenizer.pad_token = self.tokenizer.eos_token  # Set pad token to end of sequence token
-        # self.tokenizer.pad_token = self.tokenizer.eos_token  # Set pad token to end of sequence token
         self.config = AutoConfig.from_pretrained(base_model_name)
 
         # Extract layer indices
         self.start_layer_idx = start_layer_idx
         self.end_layer_idx = end_layer_idx
 
+        # Store model name for architecture identification
+        self.base_model_name = base_model_name
+
         # Get input dimension from the base model
         self.input_dim = base_model.config.hidden_size
 
-        # For LLaMA models, we need to extract specific components
-        if hasattr(base_model, 'layers'):  # LLaMA models have this structure
+        # Check which model architecture we're dealing with
+        if "mistral" in base_model_name.lower():
+            # Extract components for Mistral
+            self.norm = copy.deepcopy(base_model.norm)
+            # Mistral uses rope_scaling instead of rotary_emb
+            self.rotary_emb = copy.deepcopy(base_model.rotary_emb)
+
+            # Extract the required transformer layers
+            self.layers = nn.ModuleList()
+            for i in range(start_layer_idx, end_layer_idx + 1):
+                if i < len(base_model.layers):
+                    self.layers.append(copy.deepcopy(base_model.layers[i]))
+        elif hasattr(base_model, 'layers'):  # LLaMA models have this structure
             # Extract the RMS normalization layer and rotary embeddings
             self.norm = copy.deepcopy(base_model.norm)
             self.rotary_emb = copy.deepcopy(base_model.rotary_emb)
@@ -35,7 +48,7 @@ class CustomizedSentenceTransformer(nn.Module):
                 if i < len(base_model.layers):
                     self.layers.append(copy.deepcopy(base_model.layers[i]))
         else:
-            raise ValueError(f"Unsupported model architecture: {base_model_name}. Expected LLaMA-style model.")
+            raise ValueError(f"Unsupported model architecture: {base_model_name}. Expected LLaMA-style or Mistral-style model.")
 
         # Add embedding projection layer for sentence embeddings
         self.embedding_projection = nn.Linear(self.input_dim, embedding_dim)
@@ -45,7 +58,7 @@ class CustomizedSentenceTransformer(nn.Module):
 
     def _prepare_decoder_attention_mask(self, attention_mask, input_shape, device):
         """
-        Prepare attention mask similar to LLaMA implementation
+        Prepare attention mask similar to LLaMA/Mistral implementation
         """
         # Create causal mask
         if attention_mask is not None:
@@ -59,7 +72,7 @@ class CustomizedSentenceTransformer(nn.Module):
 
     def forward(self, hidden_states, attention_mask=None, position_ids=None):
         """
-        Process hidden states through the extracted LLaMA layers
+        Process hidden states through the extracted layers
 
         Args:
             hidden_states: Input hidden states (batch_size, seq_len, hidden_dim)
@@ -71,7 +84,6 @@ class CustomizedSentenceTransformer(nn.Module):
         """
         device = hidden_states.device
         batch_size, seq_length, _ = hidden_states.shape
-        # batch_size, seq_length = hidden_states.shape
 
         # Create position IDs if not provided
         if position_ids is None:
@@ -83,20 +95,23 @@ class CustomizedSentenceTransformer(nn.Module):
         )
         attention_mask = None
 
-        # Generate position embeddings - similar to LLaMA
-        position_embeddings = self.rotary_emb(hidden_states, position_ids)
+        # Generate position embeddings - handled differently depending on model
+        position_embeddings = None
+        if self.rotary_emb is not None:  # LLaMA
+            position_embeddings = self.rotary_emb(hidden_states, position_ids)
 
         # Pass through the extracted layers
         for layer in self.layers:
-            # Process through LLaMA layer
+            # Process through LLaMA/Mistral layer
+
+           
             layer_outputs = layer(
                 hidden_states,
                 attention_mask=attention_mask,
                 position_ids=position_ids,
                 position_embeddings=position_embeddings
             )
-
-            # LLaMA layers return a tuple; first element is the hidden states
+                        # LLaMA/Mistral layers return a tuple; first element is the hidden states
             if isinstance(layer_outputs, tuple):
                 hidden_states = layer_outputs[0]
             else:
@@ -198,19 +213,7 @@ class CustomizedSentenceTransformer(nn.Module):
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"Model file not found at {model_path}")
 
-        params_before = {}
-        for name, param in model.named_parameters():
-            params_before[name] = param.clone().detach().cpu()
-
         model.load_state_dict(torch.load(model_path, map_location='cpu'))
-        # model.load_state_dict(torch.load('/data/nee7ne/effi_cot/saved_models/effi_cot/old_vanilla/sentence_transformer/model.pt', map_location='cpu'))
-
-        for name, param in model.named_parameters():
-            # Check if parameter has changed
-            if not torch.allclose(params_before[name], param.cpu()):
-                print(f"Parameter {name} has changed")
-            else:
-                print(f"Parameter {name} is unchanged")
 
         return model
 
@@ -222,7 +225,7 @@ class CustomizedSentenceTransformer(nn.Module):
 
         # Save configuration
         config = {
-            "base_model_name": self.tokenizer.name_or_path,
+            "base_model_name": self.base_model_name,
             "start_layer_idx": self.start_layer_idx,
             "end_layer_idx": self.end_layer_idx,
             "embedding_dim": self.embedding_projection.out_features

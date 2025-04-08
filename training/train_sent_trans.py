@@ -263,7 +263,7 @@ def train_sentence_transformer(
             "val_loss": avg_val_loss
         }, epoch)
 
-        print(f"Epoch {epoch+1}/{config.num_epochs} - Train Loss: {avg_train_loss:.4f}, Val Loss: {avg_val_loss:.4f}")
+        print(f"Epoch {epoch+1}/{config.train_sen_trans_epochs} - Train Loss: {avg_train_loss:.4f}, Val Loss: {avg_val_loss:.4f}")
         # -------------------DEBUG START--------------------
         # Save best model
         # os.makedirs(f"{config.model_save_path}/sentence_transformer_ckpts", exist_ok=True)

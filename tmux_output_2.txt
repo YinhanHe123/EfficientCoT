@@ -1,0 +1,1186 @@
+|
++-----------------------------------------+----------------------+----------------------+
+|   1  NVIDIA A100 80GB PCIe          Off | 00000000:41:00.0 Off |                    0 |
+| N/A   70C    P0             297W / 300W |  48940MiB / 81920MiB |    100%      Default |
+|                                         |                      |             Disabled |
++-----------------------------------------+----------------------+----------------------+
+|   2  NVIDIA A100 80GB PCIe          Off | 00000000:81:00.0 Off |                    0 |
+| N/A   32C    P0              54W / 300W |      3MiB / 81920MiB |      0%      Default |
+|                                         |                      |             Disabled |
++-----------------------------------------+----------------------+----------------------+
+|   3  NVIDIA A100 80GB PCIe          Off | 00000000:C1:00.0 Off |                    0 |
+| N/A   36C    P0              78W / 300W |  15982MiB / 81920MiB |      0%      Default |
+|                                         |                      |             Disabled |
++-----------------------------------------+----------------------+----------------------+
+
++---------------------------------------------------------------------------------------+
+| Processes:                                                                            |
+|  GPU   GI   CI        PID   Type   Process name                            GPU Memory |
+|        ID   ID                                                             Usage      |
+|=======================================================================================|
+|    0   N/A  N/A   1064932      C   python                                    49048MiB |
+|    0   N/A  N/A   1820723      C   python                                      796MiB |
+|    1   N/A  N/A   1062681      C   python                                    48932MiB |
+|    3   N/A  N/A    586997      C   python                                    15974MiB |
++---------------------------------------------------------------------------------------+
+(effi_cot) nee7ne@uvavast:~/EfficientCoT$ clear
+(effi_cot) nee7ne@uvavast:~/EfficientCoT$ bash run_para_search.sh
+Starting evaluation runs with 45 combinations...
+[1/45] Running with max_contemp_tokens=1, eval_temp=0.1, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.02it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:15<00:00,  1.33it/s]
+Average time taken for each sample: 0.7466664814949036, Average time taken for contemplation: 0.031087074279785156
+Evaluation results: {'numerical_accuracy': 0.14, 'close_match_rate': 0.14, 'mean_relative_error': np.float64(0.601553889730756), 'median_relative_error': np.float64(0.373214285
+7142857)}
+[2/45] Running with max_contemp_tokens=1, eval_temp=0.2, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.07it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:14<00:00,  1.34it/s]
+Average time taken for each sample: 0.7389621210098266, Average time taken for contemplation: 0.020167813301086426
+Evaluation results: {'numerical_accuracy': 0.16, 'close_match_rate': 0.16, 'mean_relative_error': np.float64(0.7374366736135398), 'median_relative_error': np.float64(0.375)}
+[3/45] Running with max_contemp_tokens=1, eval_temp=0.3, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.06it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:13<00:00,  1.35it/s]
+Average time taken for each sample: 0.7316375279426575, Average time taken for contemplation: 0.01984870195388794
+Evaluation results: {'numerical_accuracy': 0.16, 'close_match_rate': 0.16, 'mean_relative_error': np.float64(0.8265657132845609), 'median_relative_error': np.float64(0.33333333
+33333333)}
+[4/45] Running with max_contemp_tokens=1, eval_temp=0.4, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.08it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:15<00:00,  1.33it/s]
+Average time taken for each sample: 0.7465597200393677, Average time taken for contemplation: 0.019636998176574706
+Evaluation results: {'numerical_accuracy': 0.17, 'close_match_rate': 0.17, 'mean_relative_error': np.float64(0.6775941006022775), 'median_relative_error': np.float64(0.37321428
+57142857)}
+[5/45] Running with max_contemp_tokens=1, eval_temp=0.5, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.06it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:13<00:00,  1.37it/s]
+Average time taken for each sample: 0.7245591139793396, Average time taken for contemplation: 0.019613258838653565
+Evaluation results: {'numerical_accuracy': 0.14, 'close_match_rate': 0.14, 'mean_relative_error': np.float64(0.7324561245809481), 'median_relative_error': np.float64(0.48015873
+01587301)}
+[6/45] Running with max_contemp_tokens=1, eval_temp=0.6, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.05it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:14<00:00,  1.34it/s]
+Average time taken for each sample: 0.7367254137992859, Average time taken for contemplation: 0.019704222679138184
+Evaluation results: {'numerical_accuracy': 0.14, 'close_match_rate': 0.14, 'mean_relative_error': np.float64(0.7259945526686745), 'median_relative_error': np.float64(0.4)}
+[7/45] Running with max_contemp_tokens=1, eval_temp=0.7, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.07it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:13<00:00,  1.36it/s]
+Average time taken for each sample: 0.7277797555923462, Average time taken for contemplation: 0.019722931385040283
+Evaluation results: {'numerical_accuracy': 0.15, 'close_match_rate': 0.15, 'mean_relative_error': np.float64(0.8386870832704411), 'median_relative_error': np.float64(0.33333333
+33333333)}
+[8/45] Running with max_contemp_tokens=1, eval_temp=0.8, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.06it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:13<00:00,  1.36it/s]
+Average time taken for each sample: 0.7299124598503113, Average time taken for contemplation: 0.02024838447570801
+Evaluation results: {'numerical_accuracy': 0.1, 'close_match_rate': 0.1, 'mean_relative_error': np.float64(0.9220841907315238), 'median_relative_error': np.float64(0.4201680672
+268907)}
+[9/45] Running with max_contemp_tokens=1, eval_temp=0.9, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.04it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:14<00:00,  1.34it/s]
+Average time taken for each sample: 0.7407013297080993, Average time taken for contemplation: 0.02029247522354126
+Evaluation results: {'numerical_accuracy': 0.12, 'close_match_rate': 0.12, 'mean_relative_error': np.float64(0.896659143119604), 'median_relative_error': np.float64(0.309523809
+52380953)}
+[10/45] Running with max_contemp_tokens=2, eval_temp=0.1, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.07it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:20<00:00,  1.24it/s]
+Average time taken for each sample: 0.8010912466049195, Average time taken for contemplation: 0.020829334259033203
+Evaluation results: {'numerical_accuracy': 0.06, 'close_match_rate': 0.07, 'mean_relative_error': np.float64(3.310743746119379), 'median_relative_error': np.float64(0.524801587
+3015872)}
+[11/45] Running with max_contemp_tokens=2, eval_temp=0.2, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.08it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:20<00:00,  1.24it/s]
+Average time taken for each sample: 0.8019115209579468, Average time taken for contemplation: 0.02022568941116333
+Evaluation results: {'numerical_accuracy': 0.03, 'close_match_rate': 0.03, 'mean_relative_error': np.float64(2.343852858191841), 'median_relative_error': np.float64(0.514705882
+3529411)}
+[12/45] Running with max_contemp_tokens=2, eval_temp=0.3, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.06it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:20<00:00,  1.24it/s]
+Average time taken for each sample: 0.79695481300354, Average time taken for contemplation: 0.021336822509765624
+Evaluation results: {'numerical_accuracy': 0.0, 'close_match_rate': 0.0, 'mean_relative_error': np.float64(4.704545454545455e+27), 'median_relative_error': np.float64(0.5178571
+428571428)}
+[13/45] Running with max_contemp_tokens=2, eval_temp=0.4, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.06it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:20<00:00,  1.24it/s]
+Average time taken for each sample: 0.7993138837814331, Average time taken for contemplation: 0.020390496253967286
+Evaluation results: {'numerical_accuracy': 0.04, 'close_match_rate': 0.04, 'mean_relative_error': np.float64(2.444176299623874), 'median_relative_error': np.float64(0.536149825
+7839721)}
+[14/45] Running with max_contemp_tokens=2, eval_temp=0.5, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:02<00:00,  1.23s/it]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:19<00:00,  1.26it/s]
+Average time taken for each sample: 0.7867994189262391, Average time taken for contemplation: 0.020572762489318847
+Evaluation results: {'numerical_accuracy': 0.01, 'close_match_rate': 0.01, 'mean_relative_error': np.float64(2.7848480598629988), 'median_relative_error': np.float64(0.56725146
+19883041)}
+[15/45] Running with max_contemp_tokens=2, eval_temp=0.6, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.06it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:20<00:00,  1.24it/s]
+Average time taken for each sample: 0.7998800110816956, Average time taken for contemplation: 0.01999356746673584
+Evaluation results: {'numerical_accuracy': 0.03, 'close_match_rate': 0.03, 'mean_relative_error': np.float64(59.86909567891062), 'median_relative_error': np.float64(0.559027777
+7777778)}
+[16/45] Running with max_contemp_tokens=2, eval_temp=0.7, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.04it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:20<00:00,  1.25it/s]
+Average time taken for each sample: 0.7952361512184143, Average time taken for contemplation: 0.03111896514892578
+Evaluation results: {'numerical_accuracy': 0.0, 'close_match_rate': 0.0, 'mean_relative_error': np.float64(60.448455016215796), 'median_relative_error': np.float64(0.5555555555
+555556)}
+[17/45] Running with max_contemp_tokens=2, eval_temp=0.8, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.05it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:19<00:00,  1.26it/s]
+Average time taken for each sample: 0.7901383185386658, Average time taken for contemplation: 0.02017160415649414
+Evaluation results: {'numerical_accuracy': 0.05, 'close_match_rate': 0.05, 'mean_relative_error': np.float64(58.618247987725226), 'median_relative_error': np.float64(0.55555555
+55555556)}
+[18/45] Running with max_contemp_tokens=2, eval_temp=0.9, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.05it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:18<00:00,  1.27it/s]
+Average time taken for each sample: 0.7788505792617798, Average time taken for contemplation: 0.020731580257415772
+Evaluation results: {'numerical_accuracy': 0.05, 'close_match_rate': 0.05, 'mean_relative_error': np.float64(61.06449320247779), 'median_relative_error': np.float64(0.6125)}
+[19/45] Running with max_contemp_tokens=3, eval_temp=0.1, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.02it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:21<00:00,  1.22it/s]
+Average time taken for each sample: 0.8122676229476928, Average time taken for contemplation: 0.020479145050048827
+Evaluation results: {'numerical_accuracy': 0.02, 'close_match_rate': 0.03, 'mean_relative_error': np.float64(21.90122345153328), 'median_relative_error': np.float64(0.591666666
+6666667)}
+[20/45] Running with max_contemp_tokens=3, eval_temp=0.2, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.06it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:21<00:00,  1.22it/s]
+Average time taken for each sample: 0.8119096493721009, Average time taken for contemplation: 0.020006439685821532
+Evaluation results: {'numerical_accuracy': 0.04, 'close_match_rate': 0.05, 'mean_relative_error': np.float64(19.72622279577318), 'median_relative_error': np.float64(0.625)}
+[21/45] Running with max_contemp_tokens=3, eval_temp=0.3, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.06it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:21<00:00,  1.23it/s]
+Average time taken for each sample: 0.8029322624206543, Average time taken for contemplation: 0.02079890251159668
+Evaluation results: {'numerical_accuracy': 0.06, 'close_match_rate': 0.07, 'mean_relative_error': np.float64(7.879318012078166), 'median_relative_error': np.float64(0.5)}
+[22/45] Running with max_contemp_tokens=3, eval_temp=0.4, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.07it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:22<00:00,  1.21it/s]
+Average time taken for each sample: 0.8189419865608215, Average time taken for contemplation: 0.019766716957092284
+Evaluation results: {'numerical_accuracy': 0.08, 'close_match_rate': 0.08, 'mean_relative_error': np.float64(5.83300211321117), 'median_relative_error': np.float64(0.5)}
+[23/45] Running with max_contemp_tokens=3, eval_temp=0.5, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.07it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:21<00:00,  1.23it/s]
+Average time taken for each sample: 0.8059666895866394, Average time taken for contemplation: 0.0315158748626709
+Evaluation results: {'numerical_accuracy': 0.03, 'close_match_rate': 0.03, 'mean_relative_error': np.float64(1e+28), 'median_relative_error': np.float64(0.5495169082125604)}
+[24/45] Running with max_contemp_tokens=3, eval_temp=0.6, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.07it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:20<00:00,  1.23it/s]
+Average time taken for each sample: 0.8026560735702515, Average time taken for contemplation: 0.020421984195709227
+Evaluation results: {'numerical_accuracy': 0.06, 'close_match_rate': 0.07, 'mean_relative_error': np.float64(14.227335477429051), 'median_relative_error': np.float64(0.5125)}
+[25/45] Running with max_contemp_tokens=3, eval_temp=0.7, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.06it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:21<00:00,  1.23it/s]
+Average time taken for each sample: 0.8078319215774536, Average time taken for contemplation: 0.020612397193908692
+Evaluation results: {'numerical_accuracy': 0.05, 'close_match_rate': 0.05, 'mean_relative_error': np.float64(4.489469166648117), 'median_relative_error': np.float64(0.5)}
+[26/45] Running with max_contemp_tokens=3, eval_temp=0.8, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.08it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:19<00:00,  1.26it/s]
+Average time taken for each sample: 0.7880223965644837, Average time taken for contemplation: 0.01967574119567871
+Evaluation results: {'numerical_accuracy': 0.04, 'close_match_rate': 0.04, 'mean_relative_error': np.float64(4627.276312928665), 'median_relative_error': np.float64(0.571428571
+4285714)}
+[27/45] Running with max_contemp_tokens=3, eval_temp=0.9, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.08it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:19<00:00,  1.26it/s]
+Average time taken for each sample: 0.7873317313194275, Average time taken for contemplation: 0.01944859027862549
+Evaluation results: {'numerical_accuracy': 0.03, 'close_match_rate': 0.03, 'mean_relative_error': np.float64(15.709211363277204), 'median_relative_error': np.float64(0.54248366
+0130719)}
+[28/45] Running with max_contemp_tokens=4, eval_temp=0.1, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.07it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:23<00:00,  1.19it/s]
+Average time taken for each sample: 0.8318482708930969, Average time taken for contemplation: 0.02188879728317261
+Evaluation results: {'numerical_accuracy': 0.04, 'close_match_rate': 0.04, 'mean_relative_error': np.float64(10.754435794451062), 'median_relative_error': np.float64(0.43274853
+80116959)}
+[29/45] Running with max_contemp_tokens=4, eval_temp=0.2, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.05it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:24<00:00,  1.18it/s]
+Average time taken for each sample: 0.8392918467521667, Average time taken for contemplation: 0.02061845064163208
+Evaluation results: {'numerical_accuracy': 0.02, 'close_match_rate': 0.02, 'mean_relative_error': np.float64(8.200051683012282), 'median_relative_error': np.float64(0.572807017
+5438597)}
+[30/45] Running with max_contemp_tokens=4, eval_temp=0.3, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.05it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:23<00:00,  1.19it/s]
+Average time taken for each sample: 0.8318541097640991, Average time taken for contemplation: 0.020605547428131102
+Evaluation results: {'numerical_accuracy': 0.01, 'close_match_rate': 0.01, 'mean_relative_error': np.float64(744.7917079593046), 'median_relative_error': np.float64(0.6)}
+[31/45] Running with max_contemp_tokens=4, eval_temp=0.4, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.06it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:24<00:00,  1.18it/s]
+Average time taken for each sample: 0.836479799747467, Average time taken for contemplation: 0.030187859535217285
+Evaluation results: {'numerical_accuracy': 0.09, 'close_match_rate': 0.09, 'mean_relative_error': np.float64(14.499974816801753), 'median_relative_error': np.float64(0.51470588
+23529411)}
+[32/45] Running with max_contemp_tokens=4, eval_temp=0.5, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.04it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:25<00:00,  1.17it/s]
+Average time taken for each sample: 0.8447489547729492, Average time taken for contemplation: 0.020393266677856445
+Evaluation results: {'numerical_accuracy': 0.03, 'close_match_rate': 0.03, 'mean_relative_error': np.float64(22.980647101679708), 'median_relative_error': np.float64(0.5)}
+[33/45] Running with max_contemp_tokens=4, eval_temp=0.6, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.04it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:23<00:00,  1.20it/s]
+Average time taken for each sample: 0.8289375185966492, Average time taken for contemplation: 0.01980847358703613
+Evaluation results: {'numerical_accuracy': 0.05, 'close_match_rate': 0.05, 'mean_relative_error': np.float64(73.09801411313404), 'median_relative_error': np.float64(0.577777777
+7777777)}
+[34/45] Running with max_contemp_tokens=4, eval_temp=0.7, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.06it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:24<00:00,  1.18it/s]
+Average time taken for each sample: 0.8403743839263916, Average time taken for contemplation: 0.020692224502563476
+Evaluation results: {'numerical_accuracy': 0.01, 'close_match_rate': 0.01, 'mean_relative_error': np.float64(2.6555554721108576), 'median_relative_error': np.float64(0.625)}
+[35/45] Running with max_contemp_tokens=4, eval_temp=0.8, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.05it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:24<00:00,  1.19it/s]
+Average time taken for each sample: 0.8350048565864563, Average time taken for contemplation: 0.020652520656585693
+Evaluation results: {'numerical_accuracy': 0.05, 'close_match_rate': 0.05, 'mean_relative_error': np.float64(7391.588130645189), 'median_relative_error': np.float64(0.625)}
+[36/45] Running with max_contemp_tokens=4, eval_temp=0.9, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.09it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:22<00:00,  1.21it/s]
+Average time taken for each sample: 0.8205526518821716, Average time taken for contemplation: 0.01960951566696167
+Evaluation results: {'numerical_accuracy': 0.06, 'close_match_rate': 0.06, 'mean_relative_error': np.float64(38.62461430626223), 'median_relative_error': np.float64(0.575187969
+924812)}
+[37/45] Running with max_contemp_tokens=5, eval_temp=0.1, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.06it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:27<00:00,  1.15it/s]
+Average time taken for each sample: 0.8626207518577576, Average time taken for contemplation: 0.020489504337310793
+Evaluation results: {'numerical_accuracy': 0.08, 'close_match_rate': 0.08, 'mean_relative_error': np.float64(1.4285714285714286e+30), 'median_relative_error': np.float64(0.5125
+)}
+[38/45] Running with max_contemp_tokens=5, eval_temp=0.2, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.06it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:27<00:00,  1.14it/s]
+Average time taken for each sample: 0.8719712567329406, Average time taken for contemplation: 0.019413983821868895
+Evaluation results: {'numerical_accuracy': 0.06, 'close_match_rate': 0.06, 'mean_relative_error': np.float64(1.4287857142857142e+30), 'median_relative_error': np.float64(0.5611
+111111111111)}
+[39/45] Running with max_contemp_tokens=5, eval_temp=0.3, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.10it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:25<00:00,  1.17it/s]
+Average time taken for each sample: 0.8506592655181885, Average time taken for contemplation: 0.01967619180679321
+Evaluation results: {'numerical_accuracy': 0.05, 'close_match_rate': 0.05, 'mean_relative_error': np.float64(1.4285714285714286e+30), 'median_relative_error': np.float64(0.5147
+058823529411)}
+[40/45] Running with max_contemp_tokens=5, eval_temp=0.4, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.09it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:25<00:00,  1.17it/s]
+Average time taken for each sample: 0.8444393181800842, Average time taken for contemplation: 0.019749083518981934
+Evaluation results: {'numerical_accuracy': 0.04, 'close_match_rate': 0.04, 'mean_relative_error': np.float64(9.102286131133429), 'median_relative_error': np.float64(0.59375)}
+[41/45] Running with max_contemp_tokens=5, eval_temp=0.5, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.05it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference:  60%|████████████████████████████████████████████████████▊                                   | 60/100 [00:52<00:34,  1.17it/s]Running inference:  61%|███████
+██████████████████████████████████████████████▋                                  | 61/100 [00:52<00:31,  1.23it/s]Running inference: 100%|██████████████████████████████████████
+█████████████████████████████████████████████████| 100/100 [01:25<00:00,  1.17it/s]
+Average time taken for each sample: 0.8479111385345459, Average time taken for contemplation: 0.021078424453735353
+Evaluation results: {'numerical_accuracy': 0.09, 'close_match_rate': 0.09, 'mean_relative_error': np.float64(8.733746476989262), 'median_relative_error': np.float64(0.5)}
+[42/45] Running with max_contemp_tokens=5, eval_temp=0.6, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.09it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:25<00:00,  1.17it/s]
+Average time taken for each sample: 0.8498043990135193, Average time taken for contemplation: 0.020052926540374758
+Evaluation results: {'numerical_accuracy': 0.07, 'close_match_rate': 0.07, 'mean_relative_error': np.float64(63016.96921919093), 'median_relative_error': np.float64(0.427083333
+33333337)}
+[43/45] Running with max_contemp_tokens=5, eval_temp=0.7, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.07it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:26<00:00,  1.15it/s]
+Average time taken for each sample: 0.8592858147621155, Average time taken for contemplation: 0.020457561016082763
+Evaluation results: {'numerical_accuracy': 0.04, 'close_match_rate': 0.04, 'mean_relative_error': np.float64(63.46708093727855), 'median_relative_error': np.float64(0.581140350
+8771931)}
+[44/45] Running with max_contemp_tokens=5, eval_temp=0.8, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.08it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:28<00:00,  1.13it/s]
+Average time taken for each sample: 0.8737170767784118, Average time taken for contemplation: 0.03254405736923218
+Evaluation results: {'numerical_accuracy': 0.06, 'close_match_rate': 0.06, 'mean_relative_error': np.float64(17.575794648871874), 'median_relative_error': np.float64(0.5)}
+[45/45] Running with max_contemp_tokens=5, eval_temp=0.9, dataset=multiarith
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.02it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:26<00:00,  1.16it/s]
+Average time taken for each sample: 0.8572569561004638, Average time taken for contemplation: 0.02052095651626587
+Evaluation results: {'numerical_accuracy': 0.06, 'close_match_rate': 0.06, 'mean_relative_error': np.float64(8.386636143603047), 'median_relative_error': np.float64(0.5)}
+[46/45] Running with max_contemp_tokens=1, eval_temp=0.1, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.06it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:10<00:00,  1.43it/s]
+Average time taken for each sample: 0.6944509792327881, Average time taken for contemplation: 0.03298805475234985
+Evaluation results: {'numerical_accuracy': 0.41, 'close_match_rate': 0.43, 'mean_relative_error': np.float64(0.9002301086546636), 'median_relative_error': np.float64(0.08548750
+012961293)}
+[47/45] Running with max_contemp_tokens=1, eval_temp=0.2, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.09it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:08<00:00,  1.45it/s]
+Average time taken for each sample: 0.6831877875328064, Average time taken for contemplation: 0.01979039192199707
+Evaluation results: {'numerical_accuracy': 0.4, 'close_match_rate': 0.42, 'mean_relative_error': np.float64(0.8684326649131074), 'median_relative_error': np.float64(0.094065931
+50216194)}
+[48/45] Running with max_contemp_tokens=1, eval_temp=0.3, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.08it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:10<00:00,  1.43it/s]
+Average time taken for each sample: 0.6941528224945068, Average time taken for contemplation: 0.029742715358734132
+Evaluation results: {'numerical_accuracy': 0.39, 'close_match_rate': 0.42, 'mean_relative_error': np.float64(0.9337624356517423), 'median_relative_error': np.float64(0.08627181
+385510313)}
+[49/45] Running with max_contemp_tokens=1, eval_temp=0.4, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.06it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:08<00:00,  1.46it/s]
+Average time taken for each sample: 0.6784896898269653, Average time taken for contemplation: 0.019611091613769532
+Evaluation results: {'numerical_accuracy': 0.4, 'close_match_rate': 0.41, 'mean_relative_error': np.float64(0.9813098978952491), 'median_relative_error': np.float64(0.103349673
+20261437)}
+[50/45] Running with max_contemp_tokens=1, eval_temp=0.5, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.06it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:09<00:00,  1.44it/s]
+Average time taken for each sample: 0.690071952342987, Average time taken for contemplation: 0.0202518630027771
+Evaluation results: {'numerical_accuracy': 0.38, 'close_match_rate': 0.39, 'mean_relative_error': np.float64(0.9097992597652016), 'median_relative_error': np.float64(0.11050061
+05006105)}
+[51/45] Running with max_contemp_tokens=1, eval_temp=0.6, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.06it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:08<00:00,  1.46it/s]
+Average time taken for each sample: 0.6773639750480652, Average time taken for contemplation: 0.019769489765167236
+Evaluation results: {'numerical_accuracy': 0.39, 'close_match_rate': 0.4, 'mean_relative_error': np.float64(0.9540997271562318), 'median_relative_error': np.float64(0.084949762
+0306716)}
+[52/45] Running with max_contemp_tokens=1, eval_temp=0.7, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.06it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:09<00:00,  1.44it/s]
+Average time taken for each sample: 0.6905052423477173, Average time taken for contemplation: 0.031982762813568114
+Evaluation results: {'numerical_accuracy': 0.36, 'close_match_rate': 0.38, 'mean_relative_error': np.float64(1.0876680980127806), 'median_relative_error': np.float64(0.16666666
+666666666)}
+[53/45] Running with max_contemp_tokens=1, eval_temp=0.8, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.07it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:05<00:00,  1.52it/s]
+Average time taken for each sample: 0.6507956218719483, Average time taken for contemplation: 0.020518879890441894
+Evaluation results: {'numerical_accuracy': 0.42, 'close_match_rate': 0.45, 'mean_relative_error': np.float64(0.4267466576506837), 'median_relative_error': np.float64(0.07366013
+071895425)}
+[54/45] Running with max_contemp_tokens=1, eval_temp=0.9, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.07it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:05<00:00,  1.52it/s]
+Average time taken for each sample: 0.6502545166015625, Average time taken for contemplation: 0.02050253391265869
+Evaluation results: {'numerical_accuracy': 0.41, 'close_match_rate': 0.41, 'mean_relative_error': np.float64(0.6068891090082379), 'median_relative_error': np.float64(0.08416544
+830518141)}
+[55/45] Running with max_contemp_tokens=2, eval_temp=0.1, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.07it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:09<00:00,  1.43it/s]
+Average time taken for each sample: 0.6916471815109253, Average time taken for contemplation: 0.02127257823944092
+Evaluation results: {'numerical_accuracy': 0.39, 'close_match_rate': 0.39, 'mean_relative_error': np.float64(0.5998520852290466), 'median_relative_error': np.float64(0.10334967
+320261437)}
+[56/45] Running with max_contemp_tokens=2, eval_temp=0.2, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:02<00:00,  1.16s/it]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:11<00:00,  1.39it/s]
+Average time taken for each sample: 0.7114781594276428, Average time taken for contemplation: 0.020465829372406007
+Evaluation results: {'numerical_accuracy': 0.39, 'close_match_rate': 0.39, 'mean_relative_error': np.float64(0.6329513510773171), 'median_relative_error': np.float64(0.09779411
+764705882)}
+[57/45] Running with max_contemp_tokens=2, eval_temp=0.3, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.05it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:11<00:00,  1.41it/s]
+Average time taken for each sample: 0.7048994326591491, Average time taken for contemplation: 0.01996262788772583
+Evaluation results: {'numerical_accuracy': 0.41, 'close_match_rate': 0.41, 'mean_relative_error': np.float64(0.6044901607218721), 'median_relative_error': np.float64(0.08333333
+333333334)}
+[58/45] Running with max_contemp_tokens=2, eval_temp=0.4, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.07it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:08<00:00,  1.46it/s]
+Average time taken for each sample: 0.6772275400161744, Average time taken for contemplation: 0.02931504726409912
+Evaluation results: {'numerical_accuracy': 0.42, 'close_match_rate': 0.42, 'mean_relative_error': np.float64(0.6012700671124385), 'median_relative_error': np.float64(0.07625272
+331154684)}
+[59/45] Running with max_contemp_tokens=2, eval_temp=0.5, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.07it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:09<00:00,  1.44it/s]
+Average time taken for each sample: 0.688390851020813, Average time taken for contemplation: 0.02969358682632446
+Evaluation results: {'numerical_accuracy': 0.4, 'close_match_rate': 0.41, 'mean_relative_error': np.float64(0.5069430899782107), 'median_relative_error': np.float64(0.086090686
+2745098)}
+[60/45] Running with max_contemp_tokens=2, eval_temp=0.6, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.08it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:08<00:00,  1.46it/s]
+Average time taken for each sample: 0.6771616601943969, Average time taken for contemplation: 0.020798072814941407
+Evaluation results: {'numerical_accuracy': 0.4, 'close_match_rate': 0.41, 'mean_relative_error': np.float64(0.45883035751625445), 'median_relative_error': np.float64(0.07148148
+148148148)}
+[61/45] Running with max_contemp_tokens=2, eval_temp=0.7, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.07it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:09<00:00,  1.43it/s]
+Average time taken for each sample: 0.6929772663116455, Average time taken for contemplation: 0.021476564407348634
+Evaluation results: {'numerical_accuracy': 0.38, 'close_match_rate': 0.39, 'mean_relative_error': np.float64(0.473726475519278), 'median_relative_error': np.float64(0.114046121
+5932914)}
+[62/45] Running with max_contemp_tokens=2, eval_temp=0.8, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:02<00:00,  1.15s/it]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:10<00:00,  1.42it/s]
+Average time taken for each sample: 0.6967681694030762, Average time taken for contemplation: 0.01965686559677124
+Evaluation results: {'numerical_accuracy': 0.37, 'close_match_rate': 0.37, 'mean_relative_error': np.float64(0.7750568423591204), 'median_relative_error': np.float64(0.15604618
+36770668)}
+[63/45] Running with max_contemp_tokens=2, eval_temp=0.9, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.08it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:06<00:00,  1.50it/s]
+Average time taken for each sample: 0.6596441197395325, Average time taken for contemplation: 0.019761123657226563
+Evaluation results: {'numerical_accuracy': 0.38, 'close_match_rate': 0.38, 'mean_relative_error': np.float64(2.370955272513225e+26), 'median_relative_error': np.float64(0.13120
+341638146932)}
+[64/45] Running with max_contemp_tokens=3, eval_temp=0.1, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.06it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:04<00:00,  1.55it/s]
+Average time taken for each sample: 0.639548544883728, Average time taken for contemplation: 0.021405868530273438
+Evaluation results: {'numerical_accuracy': 0.35, 'close_match_rate': 0.35, 'mean_relative_error': np.float64(1.0237758401970183), 'median_relative_error': np.float64(0.26648550
+72463768)}
+[65/45] Running with max_contemp_tokens=3, eval_temp=0.2, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.11it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:09<00:00,  1.44it/s]
+Average time taken for each sample: 0.6868538212776184, Average time taken for contemplation: 0.031516313552856445
+Evaluation results: {'numerical_accuracy': 0.34, 'close_match_rate': 0.34, 'mean_relative_error': np.float64(5.410567572639748e+27), 'median_relative_error': np.float64(0.26218
+44319775596)}
+[66/45] Running with max_contemp_tokens=3, eval_temp=0.3, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.11it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference: 100%|███████████████████████████████████████████████████████████████████████████████████████| 100/100 [01:07<00:00,  1.49it/s]
+Average time taken for each sample: 0.6666609287261963, Average time taken for contemplation: 0.02948606252670288
+Evaluation results: {'numerical_accuracy': 0.34, 'close_match_rate': 0.34, 'mean_relative_error': np.float64(1.1394229009630643), 'median_relative_error': np.float64(0.24892550
+143266476)}
+[67/45] Running with max_contemp_tokens=3, eval_temp=0.4, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████| 2/2 [00:01<00:00,  1.09it/s]
+Running inference:   0%|                                                                                                 | 0/100 [00:00<?, ?it/s]The attention mask is not set a
+nd cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obt
+ain reliable results.
+Running inference:  54%|███████████████████████████████████████████████▌                Running inference:  55%|████████████████████████████████████████████████▍
+Running inference:  56%|█████████████████████████████████████████████████▎              Running inference:  57%|██████████████████████████████████████████████████▏
+Running inference:  58%|███████████████████████████████████████████████████             Running inference:  59%|███████████████████████████████████████████████████▉
+Running inference:  60%|████████████████████████████████████████████████████▊           Running inference:  61%|█████████████████████████████████████████████████████▋
+Running inference:  62%|██████████████████████████████████████████████████████▌         Running inference:  63%|███████████████████████████████████████████████████████▍
+Running inference:  64%|████████████████████████████████████████████████████████▎       Running inference:  65%|█████████████████████████████████████████████████████████▏
+Running inference:  66%|██████████████████████████████████████████████████████████      Running inference:  67%|██████████████████████████████████████████████████████████▉
+Running inference:  68%|███████████████████████████████████████████████████████████▊    Running inference:  69%|████████████████████████████████████████████████████████████▋
+Running inference:  70%|█████████████████████████████████████████████████████████████▌  Running inference:  71%|██████████████████████████████████████████████████████████████▍
+Running inference:  72%|███████████████████████████████████████████████████████████████▎Running inference:  73%|████████████████████████████████████████████████████████████████
+Running inference:  74%|████████████████████████████████████████████████████████████████Running inference:  75%|████████████████████████████████████████████████████████████████
+Running inference:  76%|████████████████████████████████████████████████████████████████Running inference:  77%|████████████████████████████████████████████████████████████████
+Running inference:  78%|████████████████████████████████████████████████████████████████Running inference:  79%|████████████████████████████████████████████████████████████████
+Running inference:  80%|████████████████████████████████████████████████████████████████Running inference:  81%|████████████████████████████████████████████████████████████████
+Running inference:  82%|████████████████████████████████████████████████████████████████Running inference:  83%|████████████████████████████████████████████████████████████████
+Running inference:  84%|████████████████████████████████████████████████████████████████Running inference:  85%|████████████████████████████████████████████████████████████████
+Running inference:  86%|████████████████████████████████████████████████████████████████Running inference:  87%|████████████████████████████████████████████████████████████████
+Running inference:  88%|████████████████████████████████████████████████████████████████Running inference:  89%|████████████████████████████████████████████████████████████████
+Running inference:  90%|████████████████████████████████████████████████████████████████Running inference:  91%|████████████████████████████████████████████████████████████████
+Running inference:  92%|████████████████████████████████████████████████████████████████Running inference:  93%|████████████████████████████████████████████████████████████████
+Running inference:  94%|████████████████████████████████████████████████████████████████Running inference:  95%|████████████████████████████████████████████████████████████████
+Running inference:  96%|████████████████████████████████████████████████████████████████Running inference:  97%|████████████████████████████████████████████████████████████████
+Running inference:  98%|████████████████████████████████████████████████████████████████Running inference:  99%|████████████████████████████████████████████████████████████████
+Running inference: 100%|████████████████████████████████████████████████████████████████Running inference: 100%|████████████████████████████████████████████████████████████████
+███████████████████████| 100/100 [01:05<00:00,  1.54it/s]
+Average time taken for each sample: 0.6449928784370422, Average time taken for contemplation: 0.019808838367462157
+Evaluation results: {'numerical_accuracy': 0.34, 'close_match_rate': 0.34, 'mean_relative_error': np.float64(1.4280738418669455e+20), 'median_relative_error': np.float64(0.245)
+}
+[68/45] Running with max_contemp_tokens=3, eval_temp=0.5, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|██████████████████████████| 2/2 [00:01<00:00,  1.08it/s]
+Running inference:   0%|                                        | 0/100 [00:00<?, ?it/s]The attention mask is not set and cannot be inferred from input because pad token is sam
+e as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
+Running inference: 100%|██████████████████████████████| 100/100 [01:05<00:00,  1.52it/s]
+Average time taken for each sample: 0.6491079902648926, Average time taken for contemplation: 0.01955038070678711
+Evaluation results: {'numerical_accuracy': 0.35, 'close_match_rate': 0.36, 'mean_relative_error': np.float64(5.387208970431595e+27), 'median_relative_error': np.float64(0.16397
+84946236559)}
+[69/45] Running with max_contemp_tokens=3, eval_temp=0.6, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|██████████████████████████| 2/2 [00:01<00:00,  1.07it/s]
+Running inference:   0%|                                        | 0/100 [00:00<?, ?it/s]The attention mask is not set and cannot be inferred from input because pad token is sam
+e as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
+Running inference: 100%|██████████████████████████████| 100/100 [01:06<00:00,  1.50it/s]
+Average time taken for each sample: 0.6607211136817932, Average time taken for contemplation: 0.02076689004898071
+Evaluation results: {'numerical_accuracy': 0.32, 'close_match_rate': 0.32, 'mean_relative_error': np.float64(1.6554565120615472), 'median_relative_error': np.float64(0.26883468
+834688345)}
+[70/45] Running with max_contemp_tokens=3, eval_temp=0.7, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|██████████████████████████| 2/2 [00:01<00:00,  1.07it/s]
+Running inference:   0%|                                        | 0/100 [00:00<?, ?it/s]The attention mask is not set and cannot be inferred from input because pad token is sam
+e as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
+Running inference: 100%|██████████████████████████████| 100/100 [01:02<00:00,  1.59it/s]
+Average time taken for each sample: 0.622669427394867, Average time taken for contemplation: 0.019328107833862306
+Evaluation results: {'numerical_accuracy': 0.31, 'close_match_rate': 0.31, 'mean_relative_error': np.float64(5.387210857578347e+27), 'median_relative_error': np.float64(0.25403
+22580645161)}
+[71/45] Running with max_contemp_tokens=3, eval_temp=0.8, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|██████████████████████████| 2/2 [00:01<00:00,  1.09it/s]
+Running inference:   0%|                                        | 0/100 [00:00<?, ?it/s]The attention mask is not set and cannot be inferred from input because pad token is sam
+e as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
+Running inference: 100%|██████████████████████████████| 100/100 [01:03<00:00,  1.58it/s]
+Average time taken for each sample: 0.6272953343391419, Average time taken for contemplation: 0.019654762744903565
+Evaluation results: {'numerical_accuracy': 0.3, 'close_match_rate': 0.3, 'mean_relative_error': np.float64(4.923907969160288e+26), 'median_relative_error': np.float64(0.2727272
+727272727)}
+[72/45] Running with max_contemp_tokens=3, eval_temp=0.9, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|██████████████████████████| 2/2 [00:01<00:00,  1.05it/s]
+Running inference:   0%|                                        | 0/100 [00:00<?, ?it/s]The attention mask is not set and cannot be inferred from input because pad token is sam
+e as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
+Running inference: 100%|██████████████████████████████| 100/100 [01:01<00:00,  1.63it/s]
+Average time taken for each sample: 0.6080379891395569, Average time taken for contemplation: 0.020896477699279783
+Evaluation results: {'numerical_accuracy': 0.34, 'close_match_rate': 0.34, 'mean_relative_error': np.float64(1.0059260346309617e+27), 'median_relative_error': np.float64(0.1339
+2857142857142)}
+[73/45] Running with max_contemp_tokens=4, eval_temp=0.1, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|██████████████████████████| 2/2 [00:01<00:00,  1.09it/s]
+Running inference:   0%|                                        | 0/100 [00:00<?, ?it/s]The attention mask is not set and cannot be inferred from input because pad token is sam
+e as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
+Running inference: 100%|██████████████████████████████| 100/100 [01:16<00:00,  1.31it/s]
+Average time taken for each sample: 0.7581847953796387, Average time taken for contemplation: 0.02066140413284302
+Evaluation results: {'numerical_accuracy': 0.26, 'close_match_rate': 0.26, 'mean_relative_error': np.float64(1.3040365497165427e+29), 'median_relative_error': np.float64(0.4049
+2978435865795)}
+[74/45] Running with max_contemp_tokens=4, eval_temp=0.2, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|██████████████████████████| 2/2 [00:01<00:00,  1.06it/s]
+Running inference:   0%|                                        | 0/100 [00:00<?, ?it/s]The attention mask is not set and cannot be inferred from input because pad token is sam
+e as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
+Running inference: 100%|██████████████████████████████| 100/100 [01:15<00:00,  1.32it/s]
+Average time taken for each sample: 0.7513775062561036, Average time taken for contemplation: 0.020548737049102782
+Evaluation results: {'numerical_accuracy': 0.27, 'close_match_rate': 0.27, 'mean_relative_error': np.float64(2.977941389933387e+28), 'median_relative_error': np.float64(0.36931
+81818181818)}
+[75/45] Running with max_contemp_tokens=4, eval_temp=0.3, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|██████████████████████████| 2/2 [00:02<00:00,  1.11s/it]
+Running inference:   0%|                                        | 0/100 [00:00<?, ?it/s]The attention mask is not set and cannot be inferred from input because pad token is sam
+e as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
+Running inference: 100%|██████████████████████████████| 100/100 [01:14<00:00,  1.35it/s]
+Average time taken for each sample: 0.7356679105758667, Average time taken for contemplation: 0.020950267314910887
+Evaluation results: {'numerical_accuracy': 0.27, 'close_match_rate': 0.27, 'mean_relative_error': np.float64(2.3711108016898052e+30), 'median_relative_error': np.float64(0.2546
+2962962962965)}
+[76/45] Running with max_contemp_tokens=4, eval_temp=0.4, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|██████████████████████████| 2/2 [00:01<00:00,  1.06it/s]
+Running inference:   0%|                                        | 0/100 [00:00<?, ?it/s]The attention mask is not set and cannot be inferred from input because pad token is sam
+e as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
+Running inference: 100%|██████████████████████████████| 100/100 [01:13<00:00,  1.36it/s]
+Average time taken for each sample: 0.7289392805099487, Average time taken for contemplation: 0.020241868495941163
+Evaluation results: {'numerical_accuracy': 0.27, 'close_match_rate': 0.27, 'mean_relative_error': np.float64(1.0805230611354175e+29), 'median_relative_error': np.float64(0.25)}
+[77/45] Running with max_contemp_tokens=4, eval_temp=0.5, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|██████████████████████████| 2/2 [00:01<00:00,  1.05it/s]
+Running inference:   0%|                                        | 0/100 [00:00<?, ?it/s]The attention mask is not set and cannot be inferred from input because pad token is sam
+e as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
+Running inference: 100%|██████████████████████████████| 100/100 [01:13<00:00,  1.36it/s]
+Average time taken for each sample: 0.7295404291152954, Average time taken for contemplation: 0.02195350408554077
+Evaluation results: {'numerical_accuracy': 0.28, 'close_match_rate': 0.28, 'mean_relative_error': np.float64(3.9111657984012317e+27), 'median_relative_error': np.float64(0.2576
+5306122448983)}
+[78/45] Running with max_contemp_tokens=4, eval_temp=0.6, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|██████████████████████████| 2/2 [00:01<00:00,  1.02it/s]
+Running inference:   0%|                                        | 0/100 [00:00<?, ?it/s]The attention mask is not set and cannot be inferred from input because pad token is sam
+e as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
+Running inference: 100%|██████████████████████████████| 100/100 [01:15<00:00,  1.33it/s]
+Average time taken for each sample: 0.7460060048103333, Average time taken for contemplation: 0.020824756622314453
+Evaluation results: {'numerical_accuracy': 0.31, 'close_match_rate': 0.32, 'mean_relative_error': np.float64(6.744645268878411e+28), 'median_relative_error': np.float64(0.30292
+792792792794)}
+[79/45] Running with max_contemp_tokens=4, eval_temp=0.7, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|██████████████████████████| 2/2 [00:01<00:00,  1.06it/s]
+Running inference:   0%|                                        | 0/100 [00:00<?, ?it/s]The attention mask is not set and cannot be inferred from input because pad token is sam
+e as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
+Running inference: 100%|██████████████████████████████| 100/100 [01:13<00:00,  1.35it/s]
+Average time taken for each sample: 0.732804000377655, Average time taken for contemplation: 0.02029575824737549
+Evaluation results: {'numerical_accuracy': 0.29, 'close_match_rate': 0.29, 'mean_relative_error': np.float64(2.374649342427572e+30), 'median_relative_error': np.float64(0.32777
+77777777778)}
+[80/45] Running with max_contemp_tokens=4, eval_temp=0.8, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|██████████████████████████| 2/2 [00:01<00:00,  1.04it/s]
+Running inference:   0%|                                        | 0/100 [00:00<?, ?it/s]The attention mask is not set and cannot be inferred from input because pad token is sam
+e as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
+Running inference: 100%|██████████████████████████████| 100/100 [01:13<00:00,  1.35it/s]
+Average time taken for each sample: 0.7324228596687317, Average time taken for contemplation: 0.020241551399230957
+Evaluation results: {'numerical_accuracy': 0.25, 'close_match_rate': 0.25, 'mean_relative_error': np.float64(2.2758932861311953e+30), 'median_relative_error': np.float64(0.3693
+181818181818)}
+[81/45] Running with max_contemp_tokens=4, eval_temp=0.9, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|██████████████████████████| 2/2 [00:01<00:00,  1.07it/s]
+Running inference:   0%|                                        | 0/100 [00:00<?, ?it/s]The attention mask is not set and cannot be inferred from input because pad token is sam
+e as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
+Running inference: 100%|██████████████████████████████| 100/100 [01:14<00:00,  1.35it/s]
+Average time taken for each sample: 0.73383629322052, Average time taken for contemplation: 0.020485706329345703
+Evaluation results: {'numerical_accuracy': 0.26, 'close_match_rate': 0.26, 'mean_relative_error': np.float64(2.2848806582401935e+30), 'median_relative_error': np.float64(0.3383
+5341365461846)}
+[82/45] Running with max_contemp_tokens=5, eval_temp=0.1, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|██████████████████████████| 2/2 [00:01<00:00,  1.08it/s]
+Running inference:   0%|                                        | 0/100 [00:00<?, ?it/s]The attention mask is not set and cannot be inferred from input because pad token is sam
+e as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
+Running inference: 100%|██████████████████████████████| 100/100 [01:22<00:00,  1.21it/s]
+Average time taken for each sample: 0.8191100764274597, Average time taken for contemplation: 0.020358514785766602
+Evaluation results: {'numerical_accuracy': 0.19, 'close_match_rate': 0.19, 'mean_relative_error': np.float64(1.4144239706626699e+29), 'median_relative_error': np.float64(0.6411
+007025761124)}
+[83/45] Running with max_contemp_tokens=5, eval_temp=0.2, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|██████████████████████████| 2/2 [00:01<00:00,  1.07it/s]
+Running inference:   0%|                                        | 0/100 [00:00<?, ?it/s]The attention mask is not set and cannot be inferred from input because pad token is sam
+e as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
+Running inference: 100%|██████████████████████████████| 100/100 [01:20<00:00,  1.24it/s]
+Average time taken for each sample: 0.7960949921607972, Average time taken for contemplation: 0.02034379482269287
+Evaluation results: {'numerical_accuracy': 0.18, 'close_match_rate': 0.18, 'mean_relative_error': np.float64(1.4068202238786587e+29), 'median_relative_error': np.float64(0.7008
+928571428572)}
+[84/45] Running with max_contemp_tokens=5, eval_temp=0.3, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|██████████████████████████| 2/2 [00:01<00:00,  1.05it/s]
+Running inference:   0%|                                        | 0/100 [00:00<?, ?it/s]The attention mask is not set and cannot be inferred from input because pad token is sam
+e as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
+Running inference: 100%|██████████████████████████████| 100/100 [01:20<00:00,  1.24it/s]
+Average time taken for each sample: 0.8019426965713501, Average time taken for contemplation: 0.019463770389556885
+Evaluation results: {'numerical_accuracy': 0.19, 'close_match_rate': 0.19, 'mean_relative_error': np.float64(2.4129275831263264e+29), 'median_relative_error': np.float64(0.6093
+75)}
+[85/45] Running with max_contemp_tokens=5, eval_temp=0.4, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|██████████████████████████| 2/2 [00:01<00:00,  1.05it/s]
+Running inference:   0%|                                        | 0/100 [00:00<?, ?it/s]The attention mask is not set and cannot be inferred from input because pad token is sam
+e as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
+Running inference: 100%|██████████████████████████████| 100/100 [01:21<00:00,  1.23it/s]
+Average time taken for each sample: 0.8082806420326233, Average time taken for contemplation: 0.02038451433181763
+Evaluation results: {'numerical_accuracy': 0.2, 'close_match_rate': 0.2, 'mean_relative_error': np.float64(1.1251145910321175e+31), 'median_relative_error': np.float64(0.682118
+580060423)}
+[86/45] Running with max_contemp_tokens=5, eval_temp=0.5, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|██████████████████████████| 2/2 [00:01<00:00,  1.09it/s]
+Running inference:   0%|                                        | 0/100 [00:00<?, ?it/s]The attention mask is not set and cannot be inferred from input because pad token is sam
+e as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
+Running inference: 100%|██████████████████████████████| 100/100 [01:21<00:00,  1.22it/s]
+Average time taken for each sample: 0.8101697373390198, Average time taken for contemplation: 0.019614248275756835
+Evaluation results: {'numerical_accuracy': 0.17, 'close_match_rate': 0.17, 'mean_relative_error': np.float64(1.6496201277449518e+29), 'median_relative_error': np.float64(0.8084
+239130434783)}
+[87/45] Running with max_contemp_tokens=5, eval_temp=0.6, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|██████████████████████████| 2/2 [00:01<00:00,  1.07it/s]
+Running inference:   0%|                                        | 0/100 [00:00<?, ?it/s]The attention mask is not set and cannot be inferred from input because pad token is sam
+e as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
+Running inference: 100%|██████████████████████████████| 100/100 [01:22<00:00,  1.22it/s]
+Average time taken for each sample: 0.8159197497367859, Average time taken for contemplation: 0.020281057357788086
+Evaluation results: {'numerical_accuracy': 0.19, 'close_match_rate': 0.19, 'mean_relative_error': np.float64(2.2195548568261716e+31), 'median_relative_error': np.float64(0.9897
+787259762008)}
+[88/45] Running with max_contemp_tokens=5, eval_temp=0.7, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|██████████████████████████| 2/2 [00:01<00:00,  1.08it/s]
+Running inference:   0%|                                        | 0/100 [00:00<?, ?it/s]The attention mask is not set and cannot be inferred from input because pad token is sam
+e as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
+Running inference: 100%|██████████████████████████████| 100/100 [01:22<00:00,  1.21it/s]
+Average time taken for each sample: 0.8171100974082947, Average time taken for contemplation: 0.01965470552444458
+Evaluation results: {'numerical_accuracy': 0.2, 'close_match_rate': 0.2, 'mean_relative_error': np.float64(1.3724894266000164e+31), 'median_relative_error': np.float64(0.710084
+0336134454)}
+[89/45] Running with max_contemp_tokens=5, eval_temp=0.8, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|██████████████████████████| 2/2 [00:01<00:00,  1.06it/s]
+Running inference:   0%|                                        | 0/100 [00:00<?, ?it/s]The attention mask is not set and cannot be inferred from input because pad token is sam
+e as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
+Running inference: 100%|██████████████████████████████| 100/100 [01:22<00:00,  1.22it/s]
+Average time taken for each sample: 0.8140828204154968, Average time taken for contemplation: 0.020745999813079834
+Evaluation results: {'numerical_accuracy': 0.14, 'close_match_rate': 0.15, 'mean_relative_error': np.float64(8.937209164437085e+31), 'median_relative_error': np.float64(0.83527
+96052631579)}
+[90/45] Running with max_contemp_tokens=5, eval_temp=0.9, dataset=svamp
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama_fast.LlamaTokenizerFast'>. This is expected, and simply means that the `l
+egacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it
+means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565 - if you loaded a llama tokenizer from a GGUF fi
+le you can ignore this message.
+Loading checkpoint shards: 100%|██████████████████████████| 2/2 [00:01<00:00,  1.08it/s]
+Running inference:   0%|                                        | 0/100 [00:00<?, ?it/s]The attention mask is not set and cannot be inferred from input because pad token is sam
+e as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
+Running inference: 100%|██████████████████████████████| 100/100 [01:22<00:00,  1.21it/s]
+Average time taken for each sample: 0.8176174187660217, Average time taken for contemplation: 0.020362460613250734
+Evaluation results: {'numerical_accuracy': 0.17, 'close_match_rate': 0.17, 'mean_relative_error': np.float64(9.044472456776464e+31), 'median_relative_error': np.float64(0.64331
+57099697886)}
+All evaluation runs completed!
+(effi_cot) nee7ne@uvavast:~/EfficientCoT$ tmux capture-pane -p -S - > /home/nee7ne/EfficientCoT/tmux_output_2.txt
+

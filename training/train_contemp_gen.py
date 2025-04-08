@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from tqdm import tqdm
-from transformers import AutoModel, AutoTokenizer, LlamaForCausalLM
+from transformers import AutoModel, AutoTokenizer, AutoModelForCausalLM
 import utils.utils as utils
 from utils.logging import Logger
 
@@ -70,11 +70,6 @@ def compute_loss_ans(contemp_states, teacher_model, teacher_tokenizer, answer_lo
         # Get answer labels (shifted by one token)
         answer_labels = answer_inputs.input_ids[:, 1:]  # Shifted by one token to get rid of <\s>
 
-        # Get the index to start predictions from (where the answer begins)
-        # This is where the original input ends plus the contemplation tokens
-        # start_idx = combined_inputs.input_ids.size(1)+1 + contemp_len - 1 # +1 is for <\s>
-        # seq_length = answer_labels.size(1)
-
         # Get all relevant logits at once
         answer_logits = logits[:, -answer_inputs.input_ids.shape[1]+1:, :]
         # Reshape for the loss function
@@ -86,6 +81,26 @@ def compute_loss_ans(contemp_states, teacher_model, teacher_tokenizer, answer_lo
 
     return l_ans
 
+def format_query_for_model(query, teacher_model_name):
+    """
+    Format query based on the model type
+    """
+    if "mistral" in teacher_model_name.lower():
+        # Mistral format
+        return f"<s>[INST] Question: {query}\n Answer: [/INST]"
+    else:
+        # Llama format
+        return f"<<SYS>>You are an expert in math word problems<</SYS>>\nQuestion: {query}\n Answer: "
+
+def format_combined_input(query, teacher_model_name):
+    """
+    Format combined input based on the model type
+    """
+    if "mistral" in teacher_model_name.lower():
+        # return f"<s>[INST] Question: {query}\n Generate the answer directly: [/INST]"
+        return f"<s>[INST] Question: {query}\n Note that you are NOT allowed to write anything other than a number. Answer: [/INST]"
+    else:
+        return f"Question: {query}\n Generate the answer directly: "
 
 def train_contemplation_generator(
     contemp_generator,
@@ -106,8 +121,8 @@ def train_contemplation_generator(
         for param in sentence_transformer.parameters():
             param.requires_grad = False
 
-    # Initialize teacher model
-    teacher_model = LlamaForCausalLM.from_pretrained(model_config.teacher_model_name)
+    # Initialize teacher model - use AutoModelForCausalLM to handle different model types
+    teacher_model = AutoModelForCausalLM.from_pretrained(model_config.teacher_model_name)
     teacher_model = teacher_model.to(device)
     teacher_model.eval()  # Set to evaluation mode
     for param in teacher_model.parameters():
@@ -119,13 +134,6 @@ def train_contemplation_generator(
 
     # Initialize answer loss function
     answer_loss_fn = nn.CrossEntropyLoss(ignore_index=teacher_tokenizer.pad_token_id)
-
-    # Define optimizers
-    # optimizer_both = optim.AdamW(
-    #     contemp_generator.parameters(),
-    #     lr=exp_config.learning_rate,
-    #     weight_decay=exp_config.learning_rate
-    # )
 
     # Define optimizers
     optimizer_both = optim.AdamW(
@@ -149,6 +157,7 @@ def train_contemplation_generator(
 
     # Training loop
     best_val_loss = float('inf')
+    best_state_dict = None
     print("Starting training contemplation generator...")
     for epoch in (range(exp_config.num_epochs)):
         # Set contemp_generator to train mode only during training
@@ -162,7 +171,8 @@ def train_contemplation_generator(
             for name, param in contemp_generator.student_model.named_parameters():
                 param.requires_grad = True
             optimizer = optimizer_both
-            contemp_generator.load_state_dict(best_state_dict)
+            if best_state_dict is not None:
+                contemp_generator.load_state_dict(best_state_dict)
 
         total_loss = 0
         reason_loss = 0
@@ -226,12 +236,10 @@ def train_contemplation_generator(
                 best_val_loss = eval_loss
                 best_state_dict = contemp_generator.state_dict()
 
-    # contemp_generator.load_state_dict(best_state_dict)
+    contemp_generator.load_state_dict(best_state_dict)
     model_path = f"{exp_config.model_save_path}/contemp_generator"
     utils.create_directory(model_path)
     contemp_generator.save_pretrained(model_path)
-    # print in log that we saced the best model
-    # logger.log(f"Saved best contemp generator model to {model_path}")
     print(f"Saved best model with validation loss: {best_val_loss:.4f}")
     logger.close()
     return contemp_generator
@@ -275,15 +283,13 @@ def process_item(mode, item, contemp_generator, teacher_model, teacher_tokenizer
                 gt_reason_hidden_states
             )
 
+    # Format query based on model type
+    query_condensed_reasoning = format_query_for_model(query, teacher_model.config._name_or_path)
 
-    # query_condensed_reasoning = f"Question: {query}\n Please generate the most concise reasoning for the question. It may not be complete sentence, just very informative logical words within 10 words. Answer: "
-    query_condensed_reasoning = f"<<SYS>>You are an expert in math word problems<</SYS>>\nQuestion: {query}\n Answer: "
     underscore_tokens = (contemp_generator.tokenizer.eos_token+' ')*exp_config.max_contemp_tokens
     underscore_tokens = underscore_tokens.strip()
     query_condensed_reasoning += underscore_tokens
-    # --------debug start--------
-    # print('query_condensed_reasoning:', query_condensed_reasoning)
-    # --------debug end----------
+
     contemp_inputs = contemp_generator.tokenizer(
         query_condensed_reasoning,
         return_tensors="pt",
@@ -297,7 +303,6 @@ def process_item(mode, item, contemp_generator, teacher_model, teacher_tokenizer
         contemp_inputs.input_ids,
         attention_mask=contemp_inputs.attention_mask
     )[:, -min(exp_config.max_contemp_tokens,contemp_inputs.input_ids.size(1)):, :]  # Get last N tokens
-
 
     # Get contemplation embeddings using sentence transformer
     if variation == 'vanilla':
@@ -314,15 +319,12 @@ def process_item(mode, item, contemp_generator, teacher_model, teacher_tokenizer
     elif variation == 'no_sentence_transformer':
         # cosine similarity of the hidden states
         similarity = torch.nn.functional.cosine_similarity(torch.mean(contemp_states, 1).squeeze(),
-                                                            torch.mean(gt_reason_hidden_states, 1).squeeze(), dim=-1)
+                                                          torch.mean(gt_reason_hidden_states, 1).squeeze(), dim=-1)
         l_reason = 1 - similarity
 
-    # Implement answer loss with teacher forcing
-    # Create combined input: [query + contemplation tokens]
-    combined_input = f"Question: {query}\n Generate the answer directly: "
-    # --------debug start--------
-    # print('combined_input:', combined_input)
-    # --------debug end----------
+    # Format combined input based on model type
+    combined_input = format_combined_input(query, teacher_model.config._name_or_path)
+
     combined_inputs = teacher_tokenizer(
         combined_input,
         return_tensors="pt",
@@ -342,8 +344,8 @@ def process_item(mode, item, contemp_generator, teacher_model, teacher_tokenizer
 
     # Compute loss using the modified function with mode="train"
     l_ans = compute_loss_ans(contemp_states, teacher_model, teacher_tokenizer,
-                        answer_loss_fn, combined_inputs, answer_inputs,
-                        exp_config, device, mode)
+                       answer_loss_fn, combined_inputs, answer_inputs,
+                       exp_config, device, mode)
 
     # Combined loss
     if variation == 'no_l_reason':
@@ -374,7 +376,6 @@ def evaluate(teacher_model, teacher_tokenizer, contemp_generator, sentence_trans
     with torch.no_grad():  # No gradients for evaluation
         for item in tqdm(eval_dataset, desc="Evaluating"):
             # Process batch
-            # query = batch["query"]
             _, total_loss, reason_loss_sum, ans_loss_sum = process_item(
                 mode,
                 item,

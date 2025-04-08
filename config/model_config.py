@@ -34,4 +34,11 @@ class ModelConfig:
             self.student_model_name = "princeton-nlp/Sheared-LLaMA-1.3B"
             self.teacher_hidden_dim = 2000
             self.contemp_seq_length = 32
-            
+        elif self.config_name == 'mistral':
+            self.teacher_model_name = "mistralai/Mistral-7B-Instruct-v0.2"
+            # self.student_model_name = "princeton-nlp/Sheared-LLaMA-1.3B"
+            self.student_model_name = "optimum/mistral-1.1b-testing"
+            self.teacher_hidden_dim = 4096  # Mistral-7B hidden dimension
+            self.contemp_seq_length = 32
+            self.contemp_layer_index = 16  # Check Mistral archit
+
