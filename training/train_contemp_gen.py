@@ -200,6 +200,8 @@ def train_contemplation_generator(
             # Backpropagate
             loss.backward()
             optimizer.step()
+            # clean cache
+            torch.cuda.empty_cache()
 
 
         # Calculate average losses
@@ -237,7 +239,7 @@ def train_contemplation_generator(
                 best_state_dict = contemp_generator.state_dict()
 
     contemp_generator.load_state_dict(best_state_dict)
-    model_path = f"{exp_config.model_save_path}/contemp_generator"
+    model_path = f"{exp_config.model_save_path}/contemp_generator/{contemp_generator.student_model_name}"
     utils.create_directory(model_path)
     contemp_generator.save_pretrained(model_path)
     print(f"Saved best model with validation loss: {best_val_loss:.4f}")

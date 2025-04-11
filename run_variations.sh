@@ -2,11 +2,13 @@
 MODES=("train_sentence_transformer" "train_contemp_generator" "evaluate")
 # VARIATIONS=("vanilla" "no_sentence_transformer" "no_l_reason")
 VARIATIONS=("vanilla")
+config="mistral"
+dataset="multiarith"
 
 for mode in "${MODES[@]}"; do
     for variation in "${VARIATIONS[@]}"; do
-        echo "Running: python main.py --mode $mode --variation $variation --config small"
-        python main.py --mode $mode --variation $variation --config small --device 2
+        echo "Running: python main.py --mode $mode --variation $variation --config $config --device 0 --dataset $dataset"
+        python main.py --mode $mode --variation $variation --config $config --device 0 --dataset $dataset
 
         # Force CUDA cleanup between runs
         python -c "import torch; torch.cuda.empty_cache()"
@@ -37,14 +39,14 @@ for tokens in "${MAX_CONTEMP_TOKENS[@]}"; do
     CURRENT_RUN=$((CURRENT_RUN + 1))
 
     # Display progress
-    echo "[$CURRENT_RUN/$TOTAL_RUNS] Running with max_contemp_tokens=$tokens, eval_temp=$temp"
+    echo "[$CURRENT_RUN/$TOTAL_RUNS] Running with max_contemp_tokens=$tokens, eval_temp=$temp for dataset $dataset, config $config"
 
     # Run the Python command
-    python main.py --mode evaluate --device 0 --variation vanilla --max_contemp_tokens $tokens --eval_temp $temp
+    python main.py --mode evaluate --device 0 --variation vanilla --max_contemp_tokens $tokens --eval_temp $temp --dataset $dataset --config $config
 
     # Optional: Add a small delay between runs to avoid potential issues
     sleep 1
   done
 done
 
-echo "All combinations completed."
+echo "All combinations completed for dataset $dataset and config $config."

@@ -7,6 +7,7 @@ import time
 class ContemplationGenerator(nn.Module):
     def __init__(self, student_model_name, teacher_model_name, teacher_hidden_dim, device):
         super().__init__()
+        self.student_model_name = student_model_name
         self.device = device
         self.student_model = AutoModel.from_pretrained(student_model_name)
         # self.tokenizer = AutoTokenizer.from_pretrained(teacher_model_name)

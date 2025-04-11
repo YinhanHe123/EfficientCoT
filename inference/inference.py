@@ -151,7 +151,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
             gen_start = time.time()
             outputs = teacher_model.generate(
                 input_ids,
-                max_length = 30+input_ids.size(1)+contemp_len,
+                max_length = 512+input_ids.size(1)+contemp_len,
                 temperature=config.eval_temp,
                 top_p=0.9,
                 do_sample=True,

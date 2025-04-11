@@ -1,7 +1,7 @@
 #!/bin/bash
 # export CUDA_VISIBLE_DEVICES=0,2,3
 MODES=("train_sentence_transformer" "train_contemp_generator" "evaluate")
-DATASETS=("multiarith" "svamp")
+DATASETS=("gsm8k" "multiarith")
 
 for data in "${DATASETS[@]}"; do
     for mode in "${MODES[@]}"; do
@@ -33,7 +33,7 @@ for data in "${DATASETS[@]}"; do
             # Increment counter
             CURRENT_RUN=$((CURRENT_RUN + 1))
             # Display progress
-            echo "[$CURRENT_RUN/$TOTAL_RUNS] Running with max_contemp_tokens=$tokens, eval_temp=$temp"
+            echo "[$CURRENT_RUN/$TOTAL_RUNS] Running with max_contemp_tokens=$tokens, eval_temp=$temp, dataset=$data, config=mistral"
             # Run the Python command
             python main.py --config mistral --dataset $data --mode evaluate --device 0 --variation vanilla --max_contemp_tokens $tokens --eval_temp $temp
             # Optional: Add a small delay between runs to avoid potential issues

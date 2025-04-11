@@ -176,7 +176,7 @@ def main():
     elif args.mode == "evaluate":
         # Load trained models and run inference
         contemp_generator = ContemplationGenerator.from_pretrained(
-            experiment_config.model_save_path+"/contemp_generator"
+            experiment_config.model_save_path+"/contemp_generator/"+model_config.student_model_name+"/"
         )
         results = run_inference(
             contemp_generator,
