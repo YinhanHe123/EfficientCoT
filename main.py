@@ -39,15 +39,38 @@ def parse_args():
                         help="Variation of the effi_cot model to use")
     parser.add_argument("--compression_ratio", type=float, default=0.1,
                         help="Compression ratio for CCoT (ratio of compressed tokens to full chain)")
-    parser.add_argument("--max_contemp_tokens", type=int, default=None, help="Maximum number of contemplation tokens for CCoT (this conflicts with compression ratio, just for temporary debug, should be removed very soon)")
+    parser.add_argument("--max_contemp_tokens", type=int, default=1, help="Maximum number of contemplation tokens for CCoT (this conflicts with compression ratio, just for temporary debug, should be removed very soon)")
     parser.add_argument("--autoregressive_layer", type=int, default=15,
                         help="Layer to use for autoregressive generation in CCoT")
     parser.add_argument("--cot_bsl_shot", type=int, default=0,
                         help="Number of shots for cot baseline")
-    parser.add_argument("--eval_temp", type=float, default=0.3,
+    parser.add_argument("--eval_temp", type=float, default=0.7,
                         help="Temperature for evaluation")
 
+
+    parser.add_argument("--sent_trans_lr", type=float, default=1e-5,
+                    help="Learning rate for sentence transformer")
+    parser.add_argument("--sent_trans_weight_decay", type=float, default=0.01,
+                        help="Weight decay for sentence transformer")
+    parser.add_argument("--sent_trans_epochs", type=int, default=15,
+                        help="Number of epochs for sentence transformer training")
+
+    parser.add_argument("--contemp_gen_lr", type=float, default=1e-7,
+                        help="Learning rate for contemporary generator")
+    parser.add_argument("--contemp_gen_weight_decay", type=float, default=1e-5,
+                        help="Weight decay for contemporary generator")
+    parser.add_argument("--contemp_gen_epochs", type=int, default=2,
+                        help="Number of epochs for contemporary generator training")
+
+    parser.add_argument("--contemp_gen_lin_layer_lr", type=float, default=0.001,
+                        help="Learning rate for contemporary generator linear layer")
+    parser.add_argument("--contemp_gen_lin_layer_weight_decay", type=float, default=0.001,
+                        help="Weight decay for contemporary generator linear layer")
+    parser.add_argument("--contemp_gen_lin_layer_epochs", type=int, default=10,
+                        help="Number of epochs for contemporary generator linear layer training")
+
     return parser.parse_args()
+
 
 def main():
     os.environ['HF_HOME'] = '/data/nee7ne/huggingface'
@@ -63,6 +86,19 @@ def main():
     experiment_config.max_contemp_tokens = args.max_contemp_tokens if args.max_contemp_tokens is not None else experiment_config.max_contemp_tokens # SHOULD BE REMOVED, JUST DEBUG FOR DIFFERENT CONTEMP FOR CCOT
     experiment_config.eval_temp = args.eval_temp
 
+    # reset lr and wd and epochs of experiment config
+    experiment_config.sent_trans_lr = args.sent_trans_lr
+    experiment_config.sent_trans_weight_decay = args.sent_trans_weight_decay
+    experiment_config.sent_trans_epochs = args.sent_trans_epochs
+
+    experiment_config.contemp_gen_lr = args.contemp_gen_lr
+    experiment_config.contemp_gen_epochs = args.contemp_gen_epochs
+    experiment_config.contemp_gen_lin_layer_lr = args.contemp_gen_lin_layer_lr
+    experiment_config.contemp_gen_lin_layer_epochs = args.contemp_gen_lin_layer_epochs
+
+    experiment_config.contemp_gen_lin_layer_weight_decay = args.contemp_gen_lin_layer_weight_decay
+    experiment_config.contemp_gen_weight_decay = args.contemp_gen_weight_decay
+
     # Special handling for CCoT mode
     if args.mode == "train_ccot" or (args.mode == "baseline" and args.baseline == "ccot"):
         experiment_config.model_save_path = f"{experiment_config.model_save_path}/ccot/{args.dataset}"
@@ -75,10 +111,6 @@ def main():
         experiment_config.autoregressive_layer = args.autoregressive_layer
     else:
         # Original path handling for other modes
-        # experiment_config.model_save_path = f"{experiment_config.model_save_path}/{args.baseline}/{args.variation}/{args.dataset}" if args.baseline == 'effi_cot' else f"{experiment_config.model_save_path}/{args.baseline}/{args.dataset}"
-        # experiment_config.checkpoint_path = f"{experiment_config.checkpoint_path}/{args.baseline}/{args.variation}/{args.dataset}" if args.baseline == 'effi_cot' else f"{experiment_config.checkpoint_path}/{args.baseline}/{args.dataset}"
-        # experiment_config.result_path = f"{experiment_config.result_path}/{args.baseline}/{args.variation}/{args.dataset}" if args.baseline == 'effi_cot' else f"{experiment_config.result_path}/{args.baseline}/{args.dataset}"
-        # experiment_config.experiment_name = f"{args.baseline}_{args.variation}_{args.seed}_{args.dataset}"
         experiment_config.model_save_path = f"{experiment_config.model_save_path}/{args.baseline}/{args.variation}/{args.config}/{args.dataset}" if args.baseline == 'effi_cot' else f"{experiment_config.model_save_path}/{args.baseline}/{args.config}/{args.dataset}"
         experiment_config.checkpoint_path = f"{experiment_config.checkpoint_path}/{args.baseline}/{args.variation}/{args.config}/{args.dataset}" if args.baseline == 'effi_cot' else f"{experiment_config.checkpoint_path}/{args.baseline}/{args.config}/{args.dataset}"
         experiment_config.result_path = f"{experiment_config.result_path}/{args.baseline}/{args.variation}/{args.config}/{args.dataset}" if args.baseline == 'effi_cot' else f"{experiment_config.result_path}/{args.baseline}/{args.config}/{args.dataset}"
@@ -186,8 +218,22 @@ def main():
         )
         # Evaluate results
         metrics = evaluate_model(results, eval_dataset)
+
+        metrics.update({
+        'sent_trans_lr': experiment_config.sent_trans_lr,
+        'sent_trans_weight_decay': experiment_config.sent_trans_weight_decay,
+        'sent_trans_epochs': experiment_config.sent_trans_epochs,
+        'contemp_gen_lr': experiment_config.contemp_gen_lr,
+        'contemp_gen_epochs': experiment_config.contemp_gen_epochs,
+        'contemp_gen_lin_layer_lr': experiment_config.contemp_gen_lin_layer_lr,
+        'contemp_gen_lin_layer_epochs': experiment_config.contemp_gen_lin_layer_epochs,
+        'contemp_gen_lin_layer_weight_decay': experiment_config.contemp_gen_lin_layer_weight_decay,
+        'contemp_gen_weight_decay': experiment_config.contemp_gen_weight_decay
+        })
+
         # save results
-        utils.save_json(metrics, f"{experiment_config.result_path}/evaluation_results.json")
+        # utils.save_json(metrics, f"{experiment_config.result_path}/evaluation_results.json")
+        utils.append_to_jsonl_file(f"{experiment_config.result_path}/evaluation_results.jsonl", metrics)
         print(f"Evaluation results: {metrics}")
 
 

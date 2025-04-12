@@ -13,10 +13,19 @@ class ExperimentConfig:
         self.experiment_name = "default_experiment"
 
         # Training parameters
-        self.learning_rate = 1e-5
-        self.weight_decay = 0.01
-        self.num_epochs = 12
-        self.train_sen_trans_epochs = 15
+        self.sent_trans_lr = 1e-5
+        self.sent_trans_weight_decay = 0.01
+        self.sent_trans_epochs = 15
+
+        self.contemp_gen_lr = 1e-7
+        self.contemp_gen_weight_decay = 1e-5
+        self.contemp_gen_epochs = 2
+
+        self.contemp_gen_lin_layer_lr = 0.001
+        self.contemp_gen_lin_layer_weight_decay = 0.001
+        self.contemp_gen_lin_layer_epochs = 10
+
+
         self.batch_size = 4
         self.alpha = 0.25  # Weight for Lreason in total loss
         self.save_interval = 1  # Save model every N epochs

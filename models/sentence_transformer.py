@@ -104,7 +104,7 @@ class CustomizedSentenceTransformer(nn.Module):
         for layer in self.layers:
             # Process through LLaMA/Mistral layer
 
-           
+
             layer_outputs = layer(
                 hidden_states,
                 attention_mask=attention_mask,

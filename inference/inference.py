@@ -39,7 +39,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
     contemp_time_list = []
     with torch.no_grad():
         for sample in tqdm(dataset, desc="Running inference"):
-            config.max_contemp_tokens = 0
+            # config.max_contemp_tokens = 0
             query = sample["query"]
 
             # Format the prompt based on the model
@@ -145,13 +145,13 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
 
 
             # Replace the prepare_inputs_for_generation method temporarily
-            # teacher_model.prepare_inputs_for_generation = modified_prepare_inputs
+            teacher_model.prepare_inputs_for_generation = modified_prepare_inputs
 
             # Generate answer with the modified approach
             gen_start = time.time()
             outputs = teacher_model.generate(
                 input_ids,
-                max_length = 512+input_ids.size(1)+contemp_len,
+                max_length = 30+input_ids.size(1)+contemp_len,
                 temperature=config.eval_temp,
                 top_p=0.9,
                 do_sample=True,

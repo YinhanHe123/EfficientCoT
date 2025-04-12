@@ -73,3 +73,11 @@ def save_experiment_config(model_config, experiment_config, output_dir, experime
     save_json(combined_config, f"{output_dir}/config.json")
 
     return combined_config
+
+
+def append_to_jsonl_file(file_path, new_data):
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+    # Append the new data as a separate line
+    with open(file_path, 'a') as f:
+        f.write(json.dumps(new_data) + '\n')
