@@ -88,14 +88,6 @@ def train_sentence_transformer(
     # sentence_transformer_old.load_state_dict(torch.load('/data/nee7ne/effi_cot/saved_models/effi_cot/old_vanilla/sentence_transformer/model.pt', map_location='cpu'))
     # sentence_transformer_old = sentence_transformer_old.to(device)
     # ---------------DEBUG END--------------------
-    # Define optimizer
-    optimizer = optim.AdamW(
-        sentence_transformer.parameters(),
-        lr=config.learning_rate,
-        weight_decay=config.weight_decay
-    )
-
-    # Define contrastive loss
 
     # Setup logger
     logger = Logger(
@@ -125,84 +117,22 @@ def train_sentence_transformer(
         shuffle=False
     )
 
-    # Training loop
-    best_val_loss = float('inf')
+    for n, p in sentence_transformer.named_parameters():
+        if "embedding_projection" not in n:
+            p.requires_grad = False
+    # for (lr, wd, ne) in [(1e-3, 1e-2, 10), (1e-7, 1e-5, 5)]:
+    for (lr, wd, ne) in [(config.linear_lr, config.linear_wd, config.linear_epochs), (config.llm_lr, config.llm_wd, config.llm_epochs)]:
+        best_val_loss = float('inf')
+        optimizer = optim.AdamW(sentence_transformer.parameters(), lr=lr, weight_decay=wd)
 
-    for epoch in range(config.train_sen_trans_epochs):
-        # Training phase
-        sentence_transformer.train()
-        train_loss = 0
+        for epoch in range(ne):
+            # Training phase
+            sentence_transformer.train()
+            train_loss = 0
 
-        for batch in tqdm(train_loader, desc=f"Epoch {epoch+1}/{config.train_sen_trans_epochs} - Training"):
-            optimizer.zero_grad()
+            for batch in tqdm(train_loader, desc=f"Epoch {epoch+1}/{ne} - Training"):
+                optimizer.zero_grad()
 
-            # Get original and condensed reasoning pairs
-            original_reasoning = batch["original_reasoning"]
-            condensed_reasoning = batch["condensed_reasoning"]
-
-            # Tokenize both reasonings
-            original_inputs = tokenizer(
-                original_reasoning,
-                return_tensors="pt",
-                padding=True,
-                truncation=True,
-                max_length=config.max_seq_length
-            ).to(device)
-
-            condensed_inputs = tokenizer(
-                condensed_reasoning,
-                return_tensors="pt",
-                padding=True,
-                truncation=True,
-                max_length=config.max_seq_length
-            ).to(device)
-
-
-            # Get hidden states from base model
-            with torch.no_grad():
-                original_outputs = base_model(
-                    **original_inputs,
-                    output_hidden_states=True
-                )
-
-                condensed_outputs = base_model(
-                    **condensed_inputs,
-                    output_hidden_states=True
-                )
-
-                # Get the hidden states from the start_layer_idx
-                original_hidden_states = original_outputs.hidden_states[start_layer_idx]
-                condensed_hidden_states = condensed_outputs.hidden_states[start_layer_idx]
-
-
-            # Generate embeddings using the sentence transformer
-            original_embeddings = sentence_transformer(
-                original_hidden_states,
-                attention_mask=original_inputs.attention_mask
-            )
-
-            condensed_embeddings = sentence_transformer(
-                condensed_hidden_states,
-                attention_mask=condensed_inputs.attention_mask
-            )
-
-            loss = contrastive_loss(original_embeddings, condensed_embeddings)
-            # Backpropagation
-            loss.backward()
-            optimizer.step()
-
-            train_loss += loss.item()
-
-        avg_train_loss = train_loss / len(train_loader)
-
-        # Validation phase
-        sentence_transformer.eval()
-        val_loss = 0
-
-
-
-        with torch.no_grad():
-            for batch in tqdm(val_loader, desc=f"Epoch {epoch+1}/{config.num_epochs} - Validation"):
                 # Get original and condensed reasoning pairs
                 original_reasoning = batch["original_reasoning"]
                 condensed_reasoning = batch["condensed_reasoning"]
@@ -224,22 +154,25 @@ def train_sentence_transformer(
                     max_length=config.max_seq_length
                 ).to(device)
 
+
                 # Get hidden states from base model
-                original_outputs = base_model(
-                    **original_inputs,
-                    output_hidden_states=True
-                )
+                with torch.no_grad():
+                    original_outputs = base_model(
+                        **original_inputs,
+                        output_hidden_states=True
+                    )
 
-                condensed_outputs = base_model(
-                    **condensed_inputs,
-                    output_hidden_states=True
-                )
+                    condensed_outputs = base_model(
+                        **condensed_inputs,
+                        output_hidden_states=True
+                    )
 
-                # Get the hidden states from the start_layer_idx
-                original_hidden_states = original_outputs.hidden_states[start_layer_idx]
-                condensed_hidden_states = condensed_outputs.hidden_states[start_layer_idx]
+                    # Get the hidden states from the start_layer_idx
+                    original_hidden_states = original_outputs.hidden_states[start_layer_idx]
+                    condensed_hidden_states = condensed_outputs.hidden_states[start_layer_idx]
 
-                # Generate embeddings
+
+                # Generate embeddings using the sentence transformer
                 original_embeddings = sentence_transformer(
                     original_hidden_states,
                     attention_mask=original_inputs.attention_mask
@@ -250,39 +183,105 @@ def train_sentence_transformer(
                     attention_mask=condensed_inputs.attention_mask
                 )
 
-                # Compute loss
                 loss = contrastive_loss(original_embeddings, condensed_embeddings)
+                # Backpropagation
+                loss.backward()
+                optimizer.step()
 
-                val_loss += loss.item()
+                train_loss += loss.item()
 
-        avg_val_loss = val_loss / len(val_loader)
+            avg_train_loss = train_loss / len(train_loader)
 
-        # Log metrics
-        logger.log_metrics({
-            "train_loss": avg_train_loss,
-            "val_loss": avg_val_loss
-        }, epoch)
+            # Validation phase
+            sentence_transformer.eval()
+            val_loss = 0
 
-        print(f"Epoch {epoch+1}/{config.train_sen_trans_epochs} - Train Loss: {avg_train_loss:.4f}, Val Loss: {avg_val_loss:.4f}")
-        # -------------------DEBUG START--------------------
-        # Save best model
-        # os.makedirs(f"{config.model_save_path}/sentence_transformer_ckpts", exist_ok=True)
-        # # Save model weights
-        # torch.save(sentence_transformer.state_dict(), os.path.join(f"{config.model_save_path}/sentence_transformer_ckpts", f"model_epoch_{epoch}.pt"))
-        # ----------------DEBUG END--------------------
-        if avg_val_loss < best_val_loss:
-            best_val_loss = avg_val_loss
-            model_path = f"{config.model_save_path}/sentence_transformer"
-            utils.create_directory(model_path)
-            sentence_transformer.save_pretrained(model_path)
+            with torch.no_grad():
+                for batch in tqdm(val_loader, desc=f"Epoch {epoch+1}/{config.num_epochs} - Validation"):
+                    # Get original and condensed reasoning pairs
+                    original_reasoning = batch["original_reasoning"]
+                    condensed_reasoning = batch["condensed_reasoning"]
 
-            print(f"Saved best model with validation loss: {best_val_loss:.4f}")
-        # ----------------DEBUG START--------------------
-        # compare with old model
-        # with torch.no_grad():
-        #     gap = compare_model_parameters(sentence_transformer, sentence_transformer_old)
-        #     print(f"Max parameter gap: {gap:.6f}")
-        # -----------------DEBUG END--------------------
+                    # Tokenize both reasonings
+                    original_inputs = tokenizer(
+                        original_reasoning,
+                        return_tensors="pt",
+                        padding=True,
+                        truncation=True,
+                        max_length=config.max_seq_length
+                    ).to(device)
+
+                    condensed_inputs = tokenizer(
+                        condensed_reasoning,
+                        return_tensors="pt",
+                        padding=True,
+                        truncation=True,
+                        max_length=config.max_seq_length
+                    ).to(device)
+
+                    # Get hidden states from base model
+                    original_outputs = base_model(
+                        **original_inputs,
+                        output_hidden_states=True
+                    )
+
+                    condensed_outputs = base_model(
+                        **condensed_inputs,
+                        output_hidden_states=True
+                    )
+
+                    # Get the hidden states from the start_layer_idx
+                    original_hidden_states = original_outputs.hidden_states[start_layer_idx]
+                    condensed_hidden_states = condensed_outputs.hidden_states[start_layer_idx]
+
+                    # Generate embeddings
+                    original_embeddings = sentence_transformer(
+                        original_hidden_states,
+                        attention_mask=original_inputs.attention_mask
+                    )
+
+                    condensed_embeddings = sentence_transformer(
+                        condensed_hidden_states,
+                        attention_mask=condensed_inputs.attention_mask
+                    )
+
+                    # Compute loss
+                    loss = contrastive_loss(original_embeddings, condensed_embeddings)
+
+                    val_loss += loss.item()
+
+            avg_val_loss = val_loss / len(val_loader)
+
+            # Log metrics
+            logger.log_metrics({
+                "train_loss": avg_train_loss,
+                "val_loss": avg_val_loss
+            }, epoch)
+
+            print(f"Epoch {epoch+1}/{config.num_epochs} - Train Loss: {avg_train_loss:.4f}, Val Loss: {avg_val_loss:.4f}")
+            # -------------------DEBUG START--------------------
+            # Save best model
+            # os.makedirs(f"{config.model_save_path}/sentence_transformer_ckpts", exist_ok=True)
+            # # Save model weights
+            # torch.save(sentence_transformer.state_dict(), os.path.join(f"{config.model_save_path}/sentence_transformer_ckpts", f"model_epoch_{epoch}.pt"))
+            # ----------------DEBUG END--------------------
+            if avg_val_loss < best_val_loss:
+                best_val_loss = avg_val_loss
+                model_path = f"{config.model_save_path}/sentence_transformer"
+                utils.create_directory(model_path)
+                sentence_transformer.save_pretrained(model_path)
+
+                print(f"Saved best model with validation loss: {best_val_loss:.4f}")
+            # ----------------DEBUG START--------------------
+            # compare with old model
+            # with torch.no_grad():
+            #     gap = compare_model_parameters(sentence_transformer, sentence_transformer_old)
+            #     print(f"Max parameter gap: {gap:.6f}")
+            # -----------------DEBUG END--------------------
+        sentence_transformer = sentence_transformer.from_pretrained(model_path).to(device)
+        logger.logger.info(f"Loading best validation loss = {best_val_loss}")
+        for n, p in sentence_transformer.named_parameters():
+            p.requires_grad = True
     logger.close()
     return sentence_transformer
 
