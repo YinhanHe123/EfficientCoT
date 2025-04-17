@@ -93,7 +93,7 @@ class CustomizedSentenceTransformer(nn.Module):
         attention_mask = self._prepare_decoder_attention_mask(
             attention_mask, (batch_size, seq_length), device
         )
-        attention_mask = None
+        # attention_mask = None
 
         # Generate position embeddings - handled differently depending on model
         position_embeddings = None
@@ -104,10 +104,9 @@ class CustomizedSentenceTransformer(nn.Module):
         for layer in self.layers:
             # Process through LLaMA/Mistral layer
 
-
             layer_outputs = layer(
                 hidden_states,
-                attention_mask=attention_mask,
+                # attention_mask=attention_mask,
                 position_ids=position_ids,
                 position_embeddings=position_embeddings
             )

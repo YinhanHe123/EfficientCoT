@@ -93,7 +93,7 @@ def train_sentence_transformer(
 
     optimizer = optim.AdamW(
         sentence_transformer.parameters(),
-        lr=config.sent_trans_epochs,
+        lr=config.sent_trans_lr,
         weight_decay=config.sent_trans_weight_decay
     )
 
@@ -135,7 +135,7 @@ def train_sentence_transformer(
         sentence_transformer.train()
         train_loss = 0
 
-        for batch in tqdm(train_loader, desc=f"Epoch {epoch+1}/{config.train_sen_trans_epochs} - Training"):
+        for batch in tqdm(train_loader, desc=f"Epoch {epoch+1}/{config.sent_trans_epochs} - Training"):
             optimizer.zero_grad()
 
             # Get original and condensed reasoning pairs
@@ -204,7 +204,7 @@ def train_sentence_transformer(
 
 
         with torch.no_grad():
-            for batch in tqdm(val_loader, desc=f"Epoch {epoch+1}/{config.num_epochs} - Validation"):
+            for batch in tqdm(val_loader, desc=f"Epoch {epoch+1}/{config.sent_trans_epochs} - Validation"):
                 # Get original and condensed reasoning pairs
                 original_reasoning = batch["original_reasoning"]
                 condensed_reasoning = batch["condensed_reasoning"]
@@ -265,7 +265,7 @@ def train_sentence_transformer(
             "val_loss": avg_val_loss
         }, epoch)
 
-        print(f"Epoch {epoch+1}/{config.train_sen_trans_epochs} - Train Loss: {avg_train_loss:.4f}, Val Loss: {avg_val_loss:.4f}")
+        print(f"Epoch {epoch+1}/{config.sent_trans_epochs} - Train Loss: {avg_train_loss:.4f}, Val Loss: {avg_val_loss:.4f}")
         # -------------------DEBUG START--------------------
         # Save best model
         # os.makedirs(f"{config.model_save_path}/sentence_transformer_ckpts", exist_ok=True)

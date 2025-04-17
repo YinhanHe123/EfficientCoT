@@ -32,7 +32,11 @@ class CCoTModel(nn.Module):
         self.autoregressive_layer = autoregressive_layer
 
         # Load the base model and tokenizer
-        self.model = AutoModelForCausalLM.from_pretrained(base_model_name)
+        self.model = AutoModelForCausalLM.from_pretrained(base_model_name, torch_dtype=torch.bfloat16)
+
+
+        for name, param in self.model.named_parameters():
+            param.requires_grad = False
         self.tokenizer = AutoTokenizer.from_pretrained(base_model_name)
         self.tokenizer.pad_token = self.tokenizer.eos_token
 
@@ -49,7 +53,7 @@ class CCoTModel(nn.Module):
                 self.model.resize_token_embeddings(len(self.tokenizer))
 
         # End predictor - determines when to stop generating contemplation tokens
-        self.end_predictor = nn.Linear(self.model.config.hidden_size, 1)
+        self.end_predictor = nn.Linear(self.model.config.hidden_size, 1, dtype=torch.bfloat16)
 
         # Move model to the specified device
         self.model = self.model.to(device)
@@ -72,6 +76,9 @@ class CCoTModel(nn.Module):
         batch_size = input_ids.size(0)
 
         # Initial forward pass to get the hidden states for the query
+        # import pdb
+        # pdb.set_trace()
+
         outputs = self.model(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -83,11 +90,35 @@ class CCoTModel(nn.Module):
         last_token_idx = attention_mask.sum(dim=1) - 1
         hidden_states = outputs.hidden_states[self.autoregressive_layer]
 
-        # Extract the last token's hidden state for each item in the batch
+         # Extract the last token's hidden state for each item in the batch
         last_token_hidden = torch.stack([
             hidden_states[i, last_token_idx[i]]
             for i in range(batch_size)
         ])
+
+        # with torch.no_grad():
+        #     outputs = self.model(
+        #         input_ids=input_ids,
+        #         attention_mask=attention_mask,
+        #         output_hidden_states=True,
+        #         return_dict=True
+        #     )
+
+        #     # Get the hidden state of the last token at the specified layer
+        #     last_token_idx = attention_mask.sum(dim=1) - 1
+        #     hidden_states = outputs.hidden_states[self.autoregressive_layer]
+
+        #     # Extract the last token's hidden state for each item in the batch
+        #     last_token_hidden = torch.stack([
+        #         hidden_states[i, last_token_idx[i]]
+        #         for i in range(batch_size)
+        #     ])
+
+        # # This will detach the computation graph up to this point
+        # last_token_hidden = last_token_hidden.detach()
+
+
+
 
         # Prepare for autoregressive generation of contemplation tokens
         all_contemplation_tokens = [last_token_hidden.unsqueeze(1)]
@@ -132,11 +163,14 @@ class CCoTModel(nn.Module):
             # This is crucial for variable-length contemplation generation
             # When not training the end predictor, will only evaluate if its enabled
             final_hidden_state = layer_output.squeeze(1)
+            final_hidden_state = final_hidden_state.to(self.end_predictor.weight.dtype)
+
             end_pred = torch.sigmoid(self.end_predictor(final_hidden_state))
             if (end_pred > 0.5).all() and not self.training:  # Only apply during inference
                 break
 
         # Concatenate all generated contemplation tokens
+
         contemplation_states = torch.cat(all_contemplation_tokens, dim=1)
         contemplation_states = F.pad(contemplation_states,
                                 (0,0,0,max_contemplation_tokens-contemplation_states.shape[1],0,0))
@@ -172,6 +206,22 @@ class CCoTModel(nn.Module):
             lora_dropout=0.05,
             target_modules=target_modules,
         )
+
+        # Enable input require grads for LoRA to work
+        if hasattr(self.model, 'enable_input_require_grads'):
+            self.model.enable_input_require_grads()
+
+        lora_model = get_peft_model(self.model, peft_config)
+
+        # Verify only LoRA parameters are trainable
+        trainable_params = 0
+        all_param = 0
+        for _, param in lora_model.named_parameters():
+            all_param += param.numel()
+            if param.requires_grad:
+                trainable_params += param.numel()
+        print(f"trainable params: {trainable_params} || all params: {all_param} || trainable%: {100 * trainable_params / all_param}")
+
 
         return get_peft_model(self.model, peft_config)
 
@@ -255,19 +305,22 @@ class CCOTDecodeModel(nn.Module):
             Model outputs
         """
         # Get the embeddings from the model's embedding layer
-        inputs_embeds = self.model.get_input_embeddings()(input_ids).squeeze()
+        inputs_embeds = self.model.get_input_embeddings()(input_ids).squeeze(1)
 
         # If contemplation tokens are provided, concatenate them with the input embeddings
         if contemp_states is not None:
             # Limit contemplation states to a reasonable number
             # pdb.set_trace()
-            contemp_states = contemp_states.squeeze()
+
+            contemp_states = contemp_states.squeeze(1)
+
             max_contemp_tokens = min(contemp_states.size(1), 50)
             contemp_to_use = contemp_states[:, :max_contemp_tokens, :]
             # print('input_embes', inputs_embeds.size())
             # print('contemp_states', contemp_to_use.size())
 
             # Concatenate input embeddings and contemplation states
+
             combined_embeds = torch.cat([inputs_embeds, contemp_to_use], dim=1)
 
             # Create a new attention mask for the combined sequence
@@ -337,8 +390,7 @@ class CCOTDecodeModel(nn.Module):
 
         self.model.enable_input_require_grads()
         self.model = get_peft_model(self.model, peft_config)
-        # self.model.config.use_cache = False
-        # self.model.gradient_checkpointing_enable()
+        self.model.config.use_cache = False
 
         # Optional: Add this debugging code to verify only LoRA params are trainable
         trainable_params = 0

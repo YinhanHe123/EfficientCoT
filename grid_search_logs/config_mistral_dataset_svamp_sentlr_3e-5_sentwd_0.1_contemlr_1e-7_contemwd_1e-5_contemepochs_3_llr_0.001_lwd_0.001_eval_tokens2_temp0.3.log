@@ -1,0 +1,4 @@
+  File "/home/nee7ne/EfficientCoT/main.py", line 203
+    
+    ^
+SyntaxError: '(' was never closed

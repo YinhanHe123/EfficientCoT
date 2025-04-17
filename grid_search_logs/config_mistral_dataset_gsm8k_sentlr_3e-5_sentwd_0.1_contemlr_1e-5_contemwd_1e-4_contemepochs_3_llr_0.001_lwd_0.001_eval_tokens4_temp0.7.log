@@ -1,0 +1,4 @@
+  File "/home/nee7ne/EfficientCoT/main.py", line 265
+    '
+    ^
+SyntaxError: unterminated string literal (detected at line 265)

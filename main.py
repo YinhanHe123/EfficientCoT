@@ -37,9 +37,10 @@ def parse_args():
                         help="Random seed for reproducibility")
     parser.add_argument("--variation", type=str, default="vanilla", choices=["vanilla", "no_sentence_transformer", "no_l_reason"],
                         help="Variation of the effi_cot model to use")
-    parser.add_argument("--compression_ratio", type=float, default=0.1,
+    parser.add_argument("--compression_ratio", type=float, default=0.05,
                         help="Compression ratio for CCoT (ratio of compressed tokens to full chain)")
-    parser.add_argument("--max_contemp_tokens", type=int, default=1, help="Maximum number of contemplation tokens for CCoT (this conflicts with compression ratio, just for temporary debug, should be removed very soon)")
+    parser.add_argument("--train_max_contemp_tokens", type=int, default=5, help="max number of contemp tokens for training efficot, also served as maximum number of contemplation tokens for CCoT (this conflicts with compression ratio, just for temporary debug, should be removed very soon)")
+    parser.add_argument("--eval_max_contemp_tokens", type=int, default=1, help="max number of contemp tokens for evaluating efficot, also served as maximum number of contemplation tokens for CCoT (this conflicts with compression ratio, just for temporary debug, should be removed very soon)")
     parser.add_argument("--autoregressive_layer", type=int, default=15,
                         help="Layer to use for autoregressive generation in CCoT")
     parser.add_argument("--cot_bsl_shot", type=int, default=0,
@@ -74,7 +75,7 @@ def parse_args():
 
 def main():
     os.environ['HF_HOME'] = '/data/nee7ne/huggingface'
-    login(token='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')
+    # login(token='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')
     args = parse_args()
     # Set random seed
     utils.set_seed(args.seed)
@@ -83,7 +84,8 @@ def main():
     experiment_config = ExperimentConfig(args.config)
     experiment_config.device = args.device
     experiment_config.ccot_stage = args.ccot_stage
-    experiment_config.max_contemp_tokens = args.max_contemp_tokens if args.max_contemp_tokens is not None else experiment_config.max_contemp_tokens # SHOULD BE REMOVED, JUST DEBUG FOR DIFFERENT CONTEMP FOR CCOT
+    experiment_config.train_max_contemp_tokens = args.train_max_contemp_tokens if args.train_max_contemp_tokens is not None else experiment_config.train_max_contemp_tokens # SHOULD BE REMOVED, JUST DEBUG FOR DIFFERENT CONTEMP FOR CCOT
+    experiment_config.eval_max_contemp_tokens = args.eval_max_contemp_tokens if args.eval_max_contemp_tokens is not None else experiment_config.eval_max_contemp_tokens # SHOULD BE REMOVED, JUST DEBUG FOR DIFFERENT CONTEMP FOR CCOT
     experiment_config.eval_temp = args.eval_temp
 
     # reset lr and wd and epochs of experiment config
@@ -99,12 +101,15 @@ def main():
     experiment_config.contemp_gen_lin_layer_weight_decay = args.contemp_gen_lin_layer_weight_decay
     experiment_config.contemp_gen_weight_decay = args.contemp_gen_weight_decay
 
+    experiment_config.train_max_contemp_tokens = args.train_max_contemp_tokens
+    experiment_config.eval_max_contemp_tokens = args.eval_max_contemp_tokens
+
     # Special handling for CCoT mode
     if args.mode == "train_ccot" or (args.mode == "baseline" and args.baseline == "ccot"):
-        experiment_config.model_save_path = f"{experiment_config.model_save_path}/ccot/{args.dataset}"
-        experiment_config.checkpoint_path = f"{experiment_config.checkpoint_path}/ccot/{args.dataset}"
-        experiment_config.result_path = f"{experiment_config.result_path}/ccot/{args.dataset}"
-        experiment_config.experiment_name = f"ccot_{args.compression_ratio}_{args.seed}"
+        experiment_config.model_save_path = f"{experiment_config.model_save_path}/ccot/{args.config}/{args.dataset}"
+        experiment_config.checkpoint_path = f"{experiment_config.checkpoint_path}/ccot/{args.config}/{args.dataset}"
+        experiment_config.result_path = f"{experiment_config.result_path}/ccot/{args.config}/{args.dataset}"
+        experiment_config.experiment_name = f"ccot_{args.compression_ratio}_{args.seed}_{args.dataset}_{args.config}"
 
         # Add compression ratio and autoregressive layer to experiment config
         experiment_config.compression_ratio = args.compression_ratio
@@ -220,6 +225,9 @@ def main():
         metrics = evaluate_model(results, eval_dataset)
 
         metrics.update({
+        'dataset': args.dataset,
+        'student': model_config.student_model_name,
+        'teacher': model_config.teacher_model_name,
         'sent_trans_lr': experiment_config.sent_trans_lr,
         'sent_trans_weight_decay': experiment_config.sent_trans_weight_decay,
         'sent_trans_epochs': experiment_config.sent_trans_epochs,
@@ -228,7 +236,10 @@ def main():
         'contemp_gen_lin_layer_lr': experiment_config.contemp_gen_lin_layer_lr,
         'contemp_gen_lin_layer_epochs': experiment_config.contemp_gen_lin_layer_epochs,
         'contemp_gen_lin_layer_weight_decay': experiment_config.contemp_gen_lin_layer_weight_decay,
-        'contemp_gen_weight_decay': experiment_config.contemp_gen_weight_decay
+        'contemp_gen_weight_decay': experiment_config.contemp_gen_weight_decay,
+        'eval_temp': experiment_config.eval_temp,
+        'train_max_contemp_tokens': experiment_config.train_max_contemp_tokens,
+        'eval_max_contemp_tokens': experiment_config.eval_max_contemp_tokens,
         })
 
         # save results
@@ -249,8 +260,13 @@ def main():
         )
         # Evaluate results
         metrics = evaluate_model(results, eval_dataset)
+        metrics.update({
+            'dataset': args.dataset,
+            'eval_temp': experiment_config.eval_temp,
+            'eval_max_contemp_tokens': experiment_config.eval_max_contemp_tokens,
+        })
         # save
-        utils.save_json(metrics, f"{experiment_config.result_path}/{args.cot_bsl_shot}_shot__baseline_results.json")
+        utils.append_to_jsonl_file(f"{experiment_config.result_path}/evaluation_results.jsonl", metrics)
         print(f"Baseline {args.baseline} results: {metrics}")
 if __name__ == "__main__":
     main()

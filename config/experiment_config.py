@@ -35,7 +35,8 @@ class ExperimentConfig:
         # self.max_reasoning_pairs = 1000  # Maximum reasoning pairs to generate
         # self.max_reasoning_pairs = 7473
         self.max_reasoning_pairs = 400
-        self.max_contemp_tokens = 5
+        self.train_max_contemp_tokens = 5
+        self.eval_max_contemp_tokens = 1
 
         # Model-specific parameters
         self.start_layer_idx = 16  # Start layer for sentence transformer
@@ -47,5 +48,8 @@ class ExperimentConfig:
         self.device = None
         self.ccot_stage = None
 
+        self.eval_temp = 0.7
+
+        self.ccot_lr = 1e-5
         # Load config-specific settings
         # self._load_specific_config()

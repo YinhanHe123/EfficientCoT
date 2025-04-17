@@ -11,8 +11,8 @@ def compute_loss_ans(contemp_states, teacher_model, teacher_tokenizer, answer_lo
     context_manager = torch.enable_grad() if mode == "train" else torch.no_grad()
 
     with context_manager:
-        # Get the total sequence length and limit contemp states to max_contemp_tokens
-        contemp_len = min(contemp_states.size(1), exp_config.max_contemp_tokens)
+        # Get the total sequence length and limit contemp states to train_max_contemp_tokens
+        contemp_len = min(contemp_states.size(1), exp_config.train_max_contemp_tokens)
 
         # Get the embeddings from the model's embedding layer (no gradients needed)
         with torch.no_grad():
@@ -180,7 +180,7 @@ def train_contemplation_generator(
         reason_loss = 0
         ans_loss = 0
 
-        for item in tqdm(train_dataset, desc=f"Epoch {epoch+1}/{exp_config.num_epochs}"):
+        for item in tqdm(train_dataset, desc=f"Epoch {epoch+1}/{exp_config.contemp_gen_epochs+exp_config.contemp_gen_lin_layer_epochs}"):
             optimizer.zero_grad()
             mode="train"
             loss, total_loss, reason_loss, ans_loss = process_item(
@@ -290,7 +290,7 @@ def process_item(mode, item, contemp_generator, teacher_model, teacher_tokenizer
     # Format query based on model type
     query_condensed_reasoning = format_query_for_model(query, teacher_model.config._name_or_path)
 
-    underscore_tokens = (contemp_generator.tokenizer.eos_token+' ')*exp_config.max_contemp_tokens
+    underscore_tokens = (contemp_generator.tokenizer.eos_token+' ')*exp_config.train_max_contemp_tokens
     underscore_tokens = underscore_tokens.strip()
     query_condensed_reasoning += underscore_tokens
 
@@ -306,7 +306,7 @@ def process_item(mode, item, contemp_generator, teacher_model, teacher_tokenizer
     contemp_states = contemp_generator(
         contemp_inputs.input_ids,
         attention_mask=contemp_inputs.attention_mask
-    )[:, -min(exp_config.max_contemp_tokens,contemp_inputs.input_ids.size(1)):, :]  # Get last N tokens
+    )[:, -min(exp_config.train_max_contemp_tokens,contemp_inputs.input_ids.size(1)):, :]  # Get last N tokens
 
     # Get contemplation embeddings using sentence transformer
     if variation == 'vanilla':

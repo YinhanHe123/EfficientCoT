@@ -39,7 +39,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
     contemp_time_list = []
     with torch.no_grad():
         for sample in tqdm(dataset, desc="Running inference"):
-            # config.max_contemp_tokens = 0
+            # config.eval_max_contemp_tokens = 0
             query = sample["query"]
 
             # Format the prompt based on the model
@@ -48,7 +48,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
             else:
                 query_condensed_reasoning = f"<<SYS>>You are an expert in math word problems<</SYS>>\nQuestion: {query}\nAnswer: "
 
-            query_condensed_reasoning += f"{contemp_generator.tokenizer.eos_token} " * config.max_contemp_tokens
+            query_condensed_reasoning += f"{contemp_generator.tokenizer.eos_token} " * config.eval_max_contemp_tokens
             query_condensed_reasoning = query_condensed_reasoning.strip()
 
             # Generate contemplation tokens hidden states (now acting as input embeddings)
@@ -64,7 +64,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
             contemp_states = contemp_generator(
                 query_inputs.input_ids,
                 attention_mask=query_inputs.attention_mask
-            )[:, -config.max_contemp_tokens:, :]
+            )[:, -config.eval_max_contemp_tokens:, :]
             contemp_end = time.time()
             contemp_time = contemp_end - contemp_start
             contemp_time_list.append(contemp_time)
@@ -93,7 +93,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
 
             # Calculate the lengths for proper positioning
             prompt_length = input_ids.size(1)
-            contemp_len = min(contemp_states.size(1), config.max_contemp_tokens)
+            contemp_len = min(contemp_states.size(1), config.eval_max_contemp_tokens)
             total_seq_length = prompt_length + contemp_len
 
             # Instead of using a hook to inject the contemplation states,

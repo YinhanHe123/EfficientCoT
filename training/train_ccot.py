@@ -14,13 +14,14 @@ import openai
 import gc
 from torch.utils.data import DataLoader
 from baselines.ccot_baseline_runner import prepare_ccot_decode_dataset
+import pdb
 
 def prepare_ccot_layer_dataset(queries, reasonings, tokenizer, device, layer_idx, compression_ratio=0.1, max_length=150):
     """
     Prepare a dataset for training a specific layer of the CCOT model using HuggingFace Dataset
     """
     # Precompute teacher hidden states
-    teacher_model = AutoModelForCausalLM.from_pretrained(tokenizer.name_or_path)
+    teacher_model = AutoModelForCausalLM.from_pretrained(tokenizer.name_or_path, torch_dtype=torch.bfloat16)
     teacher_model.to(device)
     teacher_model.eval()
 
@@ -30,13 +31,16 @@ def prepare_ccot_layer_dataset(queries, reasonings, tokenizer, device, layer_idx
     target_states_list = []
     #
 
+
     # Process each query-reasoning pair
     for query, reasoning in tqdm(zip(queries, reasonings), total=len(queries), desc="Preparing dataset"):
         # Tokenize the reasoning chain
         # seelct important tokens as target target tokens in reasoning.
         num_of_compressed_tokens = int(max_length * compression_ratio)
-        openai.api_key = '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' # Replace with your OpenAI API key
+        openai.api_key = "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" # Replace with your OpenAI API key
         selected_indices = []
+        # Use a MLP to determine the tokenized indices.
+
         repeat = 0
         while len(selected_indices) < num_of_compressed_tokens:
             if repeat > 3:
@@ -53,7 +57,6 @@ def prepare_ccot_layer_dataset(queries, reasonings, tokenizer, device, layer_idx
             selected_indices = torch.tensor(list(map(int, selected_indices.split(','))))
             repeat += 1
         selected_indices = selected_indices[:num_of_compressed_tokens]
-        # print('selected_indices:', selected_indices)
 
         # Tokenize the reasoning
         reasoning_inputs = tokenizer(reasoning, return_tensors="pt", padding="max_length",
@@ -76,7 +79,7 @@ def prepare_ccot_layer_dataset(queries, reasonings, tokenizer, device, layer_idx
         # Store the data
         input_ids_list.append(query_inputs.input_ids.squeeze().cpu().numpy())
         attention_mask_list.append(query_inputs.attention_mask.squeeze().cpu().numpy())
-        target_states_list.append(target_states.squeeze().cpu().numpy())
+        target_states_list.append(target_states.squeeze().half().cpu().numpy())
 
     # Free up GPU memory
     del teacher_model
@@ -136,6 +139,8 @@ def hidden_state_loss(pred_states, target_states):
 
 
 
+
+
 class CCOTLayerTrainer(Trainer):
     """Custom trainer for a specific layer of the CCOT model"""
     def __init__(self, model, args, train_dataset, eval_dataset=None, layer_idx=0, **kwargs):
@@ -151,6 +156,8 @@ class CCOTLayerTrainer(Trainer):
 
         # Get model outputs
         outputs = model(input_ids=input_ids, attention_mask=attention_mask, output_hidden_states=True)
+        # align the data type between target_states and outputs
+        target_states = target_states.to(outputs[0].dtype)
 
         # Extract the predicted hidden states
         if isinstance(outputs, tuple):
@@ -167,6 +174,8 @@ class CCOTLayerTrainer(Trainer):
         target_states = target_states[:, :predicted_states.shape[1], :]
         loss = hidden_state_loss(predicted_states, target_states)
 
+        del input_ids, attention_mask, target_states
+        torch.cuda.empty_cache()
         return (loss, outputs) if return_outputs else loss
 
     def evaluation_loop(self, dataloader, description, prediction_loss_only=None, ignore_keys=None, metric_key_prefix="eval"):
@@ -226,9 +235,9 @@ def train_ccot_model(
     autoregressive_layer=15,
     lora_rank=128,
     lora_alpha=256,
-    learning_rate=1e-4,
+    learning_rate=1e-30,
     num_epochs_per_layer=10,
-    batch_size=8,
+    batch_size=1,
     device="cuda",
     eval_steps=5
 ):
@@ -269,14 +278,15 @@ def train_ccot_model(
         autoregressive_layer=autoregressive_layer,
         device=device
     )
+    # ccot_model.model.gradient_checkpointing_enable()
 
     # Extract training data
-    queries = [item["question"] for item in train_dataset.dataset]
-    reasonings = [item["answer"] for item in train_dataset.dataset]
+    queries = [item["query"] for item in train_dataset]
+    reasonings = [item["full_answer"] for item in train_dataset]
 
     # Extract evaluation data
-    eval_queries = [item["question"] for item in eval_dataset.dataset]
-    eval_reasonings = [item["answer"] for item in eval_dataset.dataset]
+    eval_queries = [item["query"] for item in eval_dataset]
+    eval_reasonings = [item["full_answer"] for item in eval_dataset]
 
     # Determine the number of layers to train
     # We train from autoregressive_layer to the end
@@ -301,12 +311,14 @@ def train_ccot_model(
         report_to="tensorboard",
         push_to_hub=False,
         metric_for_best_model="eval_loss",
-        greater_is_better=False
+        greater_is_better=False,
+        optim="adamw_hf", # for debugging
+        max_grad_norm=1.0
     )
 
     # Train each layer starting from autoregressive_layer
     for layer_idx in range(0, num_layers): # train every three layers
-    # for layer_idx in range(autoregressive_layer, autoregressive_layer+2): # this line is for debugging
+    # for layer_idx in range(0, 1): # this line is for debugging
         print(f"===== Training layer {layer_idx} =====")
 
         # Apply LoRA to the current layer
@@ -345,6 +357,11 @@ def train_ccot_model(
         print('eval_dataset_attributes', eval_layer_dataset[0].keys())
 
         # Create layer trainer
+        # if hasattr(ccot_model.model, "gradient_checkpointing_enable"):
+        #     ccot_model.model.gradient_checkpointing_enable()
+        # elif hasattr(ccot_model.model, "config"):
+        #     ccot_model.model.config.use_cache = False
+
         trainer = CCOTLayerTrainer(
             model=ccot_model,
             args=training_args,
@@ -353,7 +370,10 @@ def train_ccot_model(
             layer_idx=layer_idx
         )
 
+
+
         # Train the layer
+        torch.cuda.empty_cache()
         trainer.train() # continue iterations will go from the parameters of the previously trained iteration
         # merge Lora parameters with original ccot to get new ccot mode parameters
         ccot_model.model = ccot_model.model.merge_and_unload(progressbar=True, safe_merge=True)
@@ -585,15 +605,18 @@ def cotrain_encode_decode(
         total_loss = 0.0
         # train_decode_dataset, eval_decode_dataset = get_decode_dataset(train_dataset, eval_dataset, ccot_model, tokenizer, device, cotrain_mode=True)
         # # Training
-        # train_loader = DataLoader(train_decode_dataset, batch_size=batch_size, shuffle=True)
-        # eval_loader = DataLoader(eval_decode_dataset, batch_size=batch_size, shuffle=False)
-        train_loader = DataLoader(train_dataset.dataset, batch_size=batch_size, shuffle=True)
-        eval_loader = DataLoader(eval_dataset.dataset, batch_size=batch_size, shuffle=False)
+        # train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
+        # eval_loader = DataLoader(eval_dataset, batch_size=batch_size, shuffle=False)
+        train_loader = train_dataset
+        eval_loader = eval_dataset
         for batch_idx, batch in enumerate(tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs}")):
             optimizer.zero_grad()
             # Extract training data
-            queries = batch['question']
+            queries = batch['query']
             answers = batch['answer']
+            # print('queries:', queries)
+            # print('answers:', answers)
+            # print('full_answer:', batch['full_answer'])
 
             # Create datasets using the new function
             batch = prepare_ccot_decode_dataset(
@@ -623,7 +646,6 @@ def cotrain_encode_decode(
             total_loss += loss.item()
             if (batch_idx + 1) % 10 == 0:
                 print(f"Batch {batch_idx+1}, Loss: {loss.item():.4f}")
-
         # Calculate average loss for the epoch
         avg_train_loss = total_loss / len(train_loader)
         print(f"Training Epoch {epoch+1}/{num_epochs}, Avg Loss: {avg_train_loss:.4f}")
@@ -636,8 +658,9 @@ def cotrain_encode_decode(
         with torch.no_grad():
             for batch in tqdm(eval_loader, desc="Evaluation"):
                 # Extract evaluation data
-                eval_queries = batch['question']
+                eval_queries = batch['query']
                 eval_answers = batch['answer']
+
 
                 batch = prepare_ccot_decode_dataset(
                     queries=eval_queries,
@@ -654,6 +677,7 @@ def cotrain_encode_decode(
                     attention_mask=batch["attention_mask"],
                     contemp_states=batch["contemp_states"]
                 )
+                labels = batch['labels'].to(device)
 
                 # Compute loss
                 logits = outputs.logits[:, :labels.shape[1], :]
@@ -736,8 +760,8 @@ def train_end_predictor(
         param.requires_grad = True
 
     # Extract queries for generating contemplation tokens
-    queries = [item["question"] for item in train_dataset.dataset]
-    reasonings = [item["answer"] for item in train_dataset.dataset]
+    queries = [item["query"] for item in train_dataset]
+    reasonings = [item["full_answer"] for item in train_dataset]
 
     # Tokenizer for processing inputs
     tokenizer = ccot_model.tokenizer
@@ -776,12 +800,12 @@ def train_end_predictor(
             # Label: 1 if we should stop (position >= target_length), 0 otherwise
             label = 1.0 if pos >= target_length else 0.0
 
-            end_pred_inputs.append(hidden_state.cpu().numpy())
+            end_pred_inputs.append(hidden_state.half().cpu().numpy())
             end_pred_labels.append(label)
 
     # Convert to PyTorch tensors
-    end_pred_inputs = torch.tensor(end_pred_inputs, dtype=torch.float32)
-    end_pred_labels = torch.tensor(end_pred_labels, dtype=torch.float32).unsqueeze(1)
+    end_pred_inputs = torch.tensor(end_pred_inputs, dtype=torch.bfloat16)
+    end_pred_labels = torch.tensor(end_pred_labels, dtype=torch.bfloat16).unsqueeze(1)
 
     # Create dataset and dataloader
     end_pred_dataset = TensorDataset(end_pred_inputs, end_pred_labels)
