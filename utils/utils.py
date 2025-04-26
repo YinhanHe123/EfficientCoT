@@ -3,8 +3,8 @@ import random
 import numpy as np
 import torch
 import json
-from pathlib import Path
 import transformers
+
 def set_seed(seed):
     """Set random seed for reproducibility"""
     random.seed(seed)
@@ -13,9 +13,11 @@ def set_seed(seed):
     transformers.set_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
+    os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':16:8'
+    torch.use_deterministic_algorithms(True)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
     os.environ['PYTHONHASHSEED'] = str(seed)
-    return
-
 
 def count_parameters(model):
     """Count the number of trainable parameters in a model"""

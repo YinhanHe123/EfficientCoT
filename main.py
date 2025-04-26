@@ -26,10 +26,14 @@ def parse_args():
     parser.add_argument("--dataset", type=str, default="gsm8k", choices=["gsm8k", "svamp", "multiarith"],
                         help="Dataset to use")
     parser.add_argument("--baseline", type=str, default="effi_cot",
-                        choices=["cot", "ccot", "pause", "implicit_cot","zero_shot_cot", "effi_cot"],
+                        choices=["cot", "ccot", "pause", "icot_kd", "zero_shot_cot", "effi_cot", "icot_si", "codi", "softcot"],
                         help="Baseline to run if mode is baseline")
     parser.add_argument("--ccot_stage", type=str, default="encode",choices=["encode", "decode", "prepare_decode_data", "evaluate", "cotrain_encode_decode"],
                         help="Stage for CCoT")
+    # Add CODI stage for CODI baseline
+    parser.add_argument("--codi_stage", type=str, default="train",
+                                choices=["train", "evaluate"], help="Stage for CODI baseline")
+
     parser.add_argument("--experiment_file", type=str, default="experiments.json",
                         help="JSON file containing experiment configurations")
     parser.add_argument("--device", type=int, default=0)
@@ -114,6 +118,19 @@ def main():
         # Add compression ratio and autoregressive layer to experiment config
         experiment_config.compression_ratio = args.compression_ratio
         experiment_config.autoregressive_layer = args.autoregressive_layer
+    elif args.mode == "baseline" and args.baseline == "codi":
+        experiment_config.model_save_path = f"{experiment_config.model_save_path}/codi/{args.config}/{args.dataset}"
+        experiment_config.checkpoint_path = f"{experiment_config.checkpoint_path}/codi/{args.config}/{args.dataset}"
+        experiment_config.result_path = f"{experiment_config.result_path}/codi/{args.config}/{args.dataset}"
+        experiment_config.experiment_name = f"codi_{args.seed}_{args.dataset}_{args.config}"
+
+        # Add CODI stage to experiment config
+        experiment_config.codi_stage = args.codi_stage
+    elif args.mode == "baseline" and args.baseline == "icot_kd":
+        experiment_config.model_save_path = f"{experiment_config.model_save_path}/icot_kd/{args.config}/{args.dataset}"
+        experiment_config.checkpoint_path = f"{experiment_config.checkpoint_path}/icot_kd/{args.config}/{args.dataset}"
+        experiment_config.result_path = f"{experiment_config.result_path}/icot_kd/{args.config}/{args.dataset}"
+        experiment_config.experiment_name = f"icot_kd_{args.seed}_{args.dataset}_{args.config}"
     else:
         # Original path handling for other modes
         experiment_config.model_save_path = f"{experiment_config.model_save_path}/{args.baseline}/{args.variation}/{args.config}/{args.dataset}" if args.baseline == 'effi_cot' else f"{experiment_config.model_save_path}/{args.baseline}/{args.config}/{args.dataset}"

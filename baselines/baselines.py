@@ -5,16 +5,27 @@ from transformers import pipeline
 import os
 from utils import utils
 from .ccot_baseline_runner import run_ccot_baseline
+from .icot_si_baseline_runner import run_icot_si_baseline
+from .codi_baseline_runner import run_codi_baseline
+from .icot_kd_baseline_runner import run_icot_kd_baseline
+from .softcot_baseline_runner import run_softcot_baseline
+from .pause_baseline_runner import run_pause_baseline
 
 def run_baseline(baseline_name, train_dataset, eval_dataset, model_config, experiment_config, num_shots=0):
     """Run one of the baseline methods for comparison"""
 
     if baseline_name == "ccot":
         return run_ccot_baseline(train_dataset, eval_dataset, model_config, experiment_config)
+    elif baseline_name == "softcot":
+        return run_softcot_baseline(train_dataset, eval_dataset, model_config, experiment_config)
+    elif baseline_name == "codi":
+        return run_codi_baseline(train_dataset, eval_dataset, model_config, experiment_config)
+    elif baseline_name == "icot_si":
+        return run_icot_si_baseline(train_dataset, eval_dataset, model_config, experiment_config)
     elif baseline_name == "pause":
         return run_pause_baseline(train_dataset, eval_dataset, model_config, experiment_config)
-    elif baseline_name == "implicit_cot":
-        return run_implicit_cot_baseline(train_dataset, eval_dataset, model_config, experiment_config)
+    elif baseline_name == "icot_kd":
+        return run_icot_kd_baseline(train_dataset, eval_dataset, model_config, experiment_config)
     elif baseline_name == "cot":
         return run_cot_baseline(train_dataset, eval_dataset, model_config, experiment_config, num_shots)
     else:
@@ -131,94 +142,3 @@ def run_cot_baseline(dataset, model_config, experiment_config, num_shots):
     return results
 
 
-def run_pause_baseline(dataset, model_config, experiment_config):
-    """
-    Pause Tokens baseline
-    Based on: Goyal et al. "Think before you speak: Training Language Models With Pause Tokens"
-    """
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    # Load model and tokenizer
-    tokenizer = AutoTokenizer.from_pretrained(model_config.teacher_model_name)
-    model = AutoModelForCausalLM.from_pretrained(model_config.teacher_model_name)
-    model = model.to(device)
-    model.eval()
-
-    # In the Pause method, the model has been trained with special pause tokens
-    # Here we simulate this with a placeholder implementation
-
-    results = []
-
-    with torch.no_grad():
-        for sample in tqdm(dataset, desc="Running Pause baseline"):
-            query = sample["query"]
-
-            # Add pause token to prompt
-            prompt = f"Question: {query}\n<PAUSE>\nAnswer:"
-
-            inputs = tokenizer(prompt, return_tensors="pt").to(device)
-
-            outputs = model.generate(
-                inputs.input_ids,
-                max_length=150,
-                temperature=0.7,
-                top_p=0.9,
-                do_sample=True
-            )
-
-            response = tokenizer.decode(outputs[0], skip_special_tokens=True)
-            answer = response.replace(prompt, "").strip()
-
-            results.append({
-                "query": query,
-                "ground_truth": sample.get("answer", ""),
-                "prediction": answer
-            })
-    # save results
-    return results
-
-def run_implicit_cot_baseline(dataset, model_config, experiment_config):
-    """
-    Implicit Chain of Thought baseline
-    Based on: Deng et al. "Implicit Chain of Thought Reasoning via Knowledge Distillation"
-    """
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    # In a real implementation, we would load a model that has been
-    # distilled from a teacher using the Implicit CoT approach
-    # For this placeholder, we'll use the teacher model directly
-
-    tokenizer = AutoTokenizer.from_pretrained(model_config.teacher_model_name)
-    model = AutoModelForCausalLM.from_pretrained(model_config.teacher_model_name)
-    model = model.to(device)
-    model.eval()
-
-    results = []
-
-    with torch.no_grad():
-        for sample in tqdm(dataset, desc="Running Implicit CoT baseline"):
-            query = sample["query"]
-
-            # Standard prompt without explicit reasoning request
-            prompt = f"Question: {query}\nAnswer:"
-
-            inputs = tokenizer(prompt, return_tensors="pt").to(device)
-
-            outputs = model.generate(
-                inputs.input_ids,
-                max_length=150,
-                temperature=0.7,
-                top_p=0.9,
-                do_sample=True
-            )
-
-            response = tokenizer.decode(outputs[0], skip_special_tokens=True)
-            answer = response.replace(prompt, "").strip()
-
-            results.append({
-                "query": query,
-                "ground_truth": sample.get("answer", ""),
-                "prediction": answer
-            })
-
-    return results

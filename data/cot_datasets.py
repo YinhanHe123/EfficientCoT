@@ -1,5 +1,8 @@
-from datasets import load_dataset
+from datasets import load_dataset, load_from_disk
 from torch.utils.data import Dataset, DataLoader
+from data.gpt4pair import ReasoningPairsGenerator
+from tqdm import tqdm
+import os
 
 def load_raw_dataset(data_path=None):
     """Load and prepare the raw dataset"""
@@ -7,8 +10,44 @@ def load_raw_dataset(data_path=None):
     data_name = data_path.split('/')[-1]
     if 'gsm8k' in data_path:
         raw = load_dataset(data_path, 'main')
-    elif 'SVAMP' in data_path or 'MultiArith' in data_path:
+    elif 'SVAMP' in data_path:
         raw = load_dataset(data_path, 'default')
+    elif 'MultiArith' in data_path:
+        processed_path = '/data/nee7ne/huggingface/datasets/processed_MultiArith'
+        if os.path.exists(processed_path):
+            raw = load_from_disk(processed_path)
+        else:
+            raw = load_dataset("ChilleD/MultiArith", 'default')
+            generator = ReasoningPairsGenerator()
+            def generate_mtarf_reasoning(example):
+                # Generate reasoning using GPT-4o-mini
+                query = example['question']
+                reasoning = generator.generate_reasoning(query)
+                example['answer'] = reasoning
+                example['final_answer'] = example['final_ans']
+                return example
+            raw = raw.map(generate_mtarf_reasoning)
+            os.makedirs(processed_path, exist_ok=True)
+            raw.save_to_disk(processed_path)
+
+        # raw = load_dataset(data_path, 'default')
+        # # generate reasoning with gpt 4o-mini
+        # generator = ReasoningPairsGenerator()
+        # for i in tqdm(range(len(raw['train']))):
+        #     query = raw['train'][i]['question']
+        #     reasoning = generator.generate_reasoning(query)
+        #     raw['train'][i]['answer'] = reasoning
+        #     raw['train'][i]['final_answer'] = raw['train'][i]['final_ans']
+        # for i in tqdm(range(len(raw['test']))):
+        #     query = raw['train'][i]['question']
+        #     reasoning = generator.generate_reasoning(query)
+        #     raw['train'][i]['answer'] = reasoning
+        #     raw['train'][i]['final_answer'] = raw['train'][i]['final_ans']
+        # # # save the dataset to the path
+        # raw['train'].save_to_disk(data_path + '/train')
+        # raw['test'].save_to_disk(data_path + '/test')
+
+
     train_dataset = raw['train'].select(range(400))  # For debugging
     eval_dataset = raw['test'].select(range(100))  # For debugging
     # Create custom PyTorch datasets
@@ -28,6 +67,8 @@ class RawDataset(Dataset):
         return len(self.dataset)
 
     def __getitem__(self, idx):
+        if isinstance(idx, slice):
+            return [self.__getitem__(i) for i in range(idx.start, idx.stop)] 
         item = self.dataset[idx]
 
         if self.name == 'gsm8k':
@@ -50,9 +91,9 @@ class RawDataset(Dataset):
         elif self.name == 'MultiArith': # gt reasoning not available.
             question = item['question']
             reasoning = ""
-            full_answer = item['final_ans']
+            full_answer = item['answer']
             condensed_reasoning = item['condensed_reasoning'] if 'condensed_reasoning' in item else None
-            final_answer = item['final_ans']
+            final_answer = item['final_answer']
         return {
             "query": question,
             "reasoning": reasoning,

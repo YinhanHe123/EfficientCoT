@@ -5,7 +5,6 @@ import time
 # import CCoT related models
 from models.ccot_model import CCoTModel, CCOTDecodeModel
 import utils.utils as utils
-import pdb
 from datasets import Dataset as HFDataset
 import gc
 import sys

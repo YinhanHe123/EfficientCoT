@@ -25,11 +25,10 @@ class ExperimentConfig:
         self.contemp_gen_lin_layer_weight_decay = 0.001
         self.contemp_gen_lin_layer_epochs = 10
 
-
         self.batch_size = 4
         self.alpha = 0.25  # Weight for Lreason in total loss
         self.save_interval = 1  # Save model every N epochs
-        self.max_seq_length = 150
+        self.max_seq_length = 512
         self.embedding_dim = 768  # Dimension for embeddings
         self.seed=42
         # self.max_reasoning_pairs = 1000  # Maximum reasoning pairs to generate
@@ -43,13 +42,13 @@ class ExperimentConfig:
         self.end_layer_idx = 20  # End layer for sentence transformer
         directory = str(os.path.abspath(os.path.join(__file__ ,"../..")))
         self.reasoning_pairs_path = os.path.join(directory, "gen_datasets")
-
-
+        
         self.device = None
         self.ccot_stage = None
+        self.ccot_lr = 1e-5
 
         self.eval_temp = 0.7
 
-        self.ccot_lr = 1e-5
+        self.codi_lr = 8e-4
         # Load config-specific settings
         # self._load_specific_config()
