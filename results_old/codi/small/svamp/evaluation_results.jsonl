@@ -1,0 +1,3 @@
+{"dataset": "svamp", "eval_temp": 0.7, "eval_max_contemp_tokens": 1}
+{"dataset": "svamp", "eval_temp": 0.7, "eval_max_contemp_tokens": 1}
+{"numerical_accuracy": 0.45, "close_match_rate": 0.45, "mean_relative_error": 0.95523541769543, "median_relative_error": 0.09906270200387848, "dataset": "svamp", "eval_temp": 0.7, "eval_max_contemp_tokens": 1}

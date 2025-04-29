@@ -1,0 +1,1 @@
+{"numerical_accuracy": 0.74, "close_match_rate": 0.74, "mean_relative_error": 0.1318435239767549, "median_relative_error": 0.0, "dataset": "multiarith", "eval_temp": 0.7, "eval_max_contemp_tokens": 1}

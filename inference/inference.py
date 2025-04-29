@@ -167,7 +167,8 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
             result = {
                 "query": query,
                 "ground_truth": sample.get("answer", ""),
-                "prediction": answer
+                "prediction": answer, 
+                "sample_time": contemp_time+gen_time
             }
             time_list.append(contemp_time+gen_time)
             results.append(result)

@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import get_peft_model, LoraConfig, TaskType
 import os
-
+import time
 
 class CODIModel(nn.Module):
     """
@@ -143,7 +143,7 @@ class CODIModel(nn.Module):
         query_inputs = self.tokenizer(
             data["query"], return_tensors="pt", add_special_tokens=False
         )["input_ids"].to(self.device)
-        
+
         if "reasoning" in data and len(data["reasoning"]) > 0:
             steps = data["reasoning"].split("\n")
             cot = "\n".join(steps[:-1] if len(steps) > 1 else steps)
@@ -153,7 +153,7 @@ class CODIModel(nn.Module):
             if len(steps) == 1:
                 steps = data["full_answer"].split("\n\n")
                 cot = "\n\n".join(steps[:-1])
-        
+
         cot_inputs = self.tokenizer(
            cot,
             return_tensors="pt",
@@ -183,7 +183,7 @@ class CODIModel(nn.Module):
         torch.cuda.empty_cache()
         return teacher_loss, student_loss, distill_loss
 
-    def generate(self, data, max_new_tokens=10, temperature=0.7, top_p=0.9, do_sample=True):
+    def generate(self, data, max_new_tokens=30, temperature=0.7, top_p=0.9, do_sample=True):
         """
         Generate an answer using the continuous thoughts
 

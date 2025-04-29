@@ -1,0 +1,3 @@
+{"dataset": "multiarith", "eval_temp": 0.7, "eval_max_contemp_tokens": 1}
+{"dataset": "multiarith", "eval_temp": 0.7, "eval_max_contemp_tokens": 1}
+{"numerical_accuracy": 0.17, "close_match_rate": 0.17, "mean_relative_error": 0.39209881003420777, "median_relative_error": 0.2928571428571428, "dataset": "multiarith", "eval_temp": 0.7, "eval_max_contemp_tokens": 1}

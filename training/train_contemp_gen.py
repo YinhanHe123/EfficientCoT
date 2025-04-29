@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from tqdm import tqdm
-from transformers import AutoModel, AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM
 import utils.utils as utils
 from utils.logging import Logger
 
@@ -135,93 +135,57 @@ def train_contemplation_generator(
     # Initialize answer loss function
     answer_loss_fn = nn.CrossEntropyLoss(ignore_index=teacher_tokenizer.pad_token_id)
 
-    # Define optimizers
-    optimizer_both = optim.AdamW(
-        contemp_generator.parameters(),
-        lr=exp_config.contemp_gen_lr,
-        weight_decay=exp_config.contemp_gen_weight_decay
-    )
-
-    optimizer_linear = optim.AdamW(
-        contemp_generator.parameters(),
-        lr=exp_config.contemp_gen_lin_layer_lr,
-        weight_decay=exp_config.contemp_gen_lin_layer_weight_decay
-    )
-
     # Setup logger
     logger = Logger(
         log_dir=exp_config.log_dir,
-        experiment_name=f"contemp_generator"
+        experiment_name=f"contemp_generator/{exp_config.config_name}/{exp_config.experiment_name}"
     )
     logger.log_hyperparams(exp_config.__dict__ | model_config.__dict__)
 
     # Training loop
-    best_val_loss = float('inf')
+    
     best_state_dict = None
     print("Starting training contemplation generator...")
-    for epoch in (range(exp_config.contemp_gen_epochs+exp_config.contemp_gen_lin_layer_epochs)):
-        # Set contemp_generator to train mode only during training
-        contemp_generator.train()
+    for name, param in contemp_generator.student_model.named_parameters():
+        param.requires_grad = False
+    for (lr, wd, ne) in [(exp_config.cg_linear_lr, exp_config.cg_linear_wd, exp_config.cg_linear_epochs), (exp_config.cg_llm_lr, exp_config.cg_llm_wd, exp_config.cg_llm_epochs)]:
+        best_val_loss = float('inf')
+        optimizer = optim.AdamW(contemp_generator.parameters(), lr=lr, weight_decay=wd)
 
-        if epoch < exp_config.contemp_gen_epochs:
-            for name, param in contemp_generator.student_model.named_parameters():
-                param.requires_grad = False
-            optimizer = optimizer_linear
-        elif epoch == exp_config.contemp_gen_epochs:
-            for name, param in contemp_generator.student_model.named_parameters():
-                param.requires_grad = True
-            optimizer = optimizer_both
-            # reset validition loss for infty
-            best_val_loss = float('inf')
-            if best_state_dict is not None:
-                contemp_generator.load_state_dict(best_state_dict)
+        for epoch in (range(ne)):
+            contemp_generator.train()
+            total_loss, reason_loss, ans_loss = 0, 0, 0
 
-        total_loss = 0
-        reason_loss = 0
-        ans_loss = 0
+            for item in tqdm(train_dataset, desc=f"Epoch {epoch+1}/{exp_config.contemp_gen_epochs+exp_config.contemp_gen_lin_layer_epochs}"):
+                optimizer.zero_grad()
+                mode="train"
+                loss, total_loss, reason_loss, ans_loss = process_item(
+                    mode,
+                    item,
+                    contemp_generator,
+                    teacher_model,
+                    teacher_tokenizer,
+                    sentence_transformer,
+                    answer_loss_fn,
+                    exp_config,
+                    device,
+                    variation,
+                    total_loss,
+                    reason_loss,
+                    ans_loss
+                )
 
-        for item in tqdm(train_dataset, desc=f"Epoch {epoch+1}/{exp_config.contemp_gen_epochs+exp_config.contemp_gen_lin_layer_epochs}"):
-            optimizer.zero_grad()
-            mode="train"
-            loss, total_loss, reason_loss, ans_loss = process_item(
-                mode,
-                item,
-                contemp_generator,
-                teacher_model,
-                teacher_tokenizer,
-                sentence_transformer,
-                answer_loss_fn,
-                exp_config,
-                device,
-                variation,
-                total_loss,
-                reason_loss,
-                ans_loss
-            )
+                # Backpropagate
+                loss.backward()
+                optimizer.step()
+                # clean cache
+                torch.cuda.empty_cache()
 
-            # Backpropagate
-            loss.backward()
-            optimizer.step()
-            # clean cache
-            torch.cuda.empty_cache()
-
-
-        # Calculate average losses
-        avg_total_loss = total_loss / len(train_dataset)
-        avg_reason_loss = reason_loss / len(train_dataset)
-        avg_ans_loss = ans_loss / len(train_dataset)
-
-        # Log metrics
-        logger.log_metrics({
-            "total_loss": avg_total_loss,
-            "reason_loss": avg_reason_loss,
-            "ans_loss": avg_ans_loss
-        }, epoch)
-
-        print(f"Epoch {epoch+1} - Loss: {avg_total_loss:.4f} (Reason: {avg_reason_loss:.4f}, Ans: {avg_ans_loss:.4f})")
-
-        # Evaluate on validation set
-        if (epoch) % 1 == 0:
+            # Calculate average losses
+            avg_total_loss = total_loss / len(train_dataset)
+            avg_reason_loss = reason_loss / len(train_dataset)
+            avg_ans_loss = ans_loss / len(train_dataset)
+            
             eval_loss = evaluate(
                 teacher_model,
                 teacher_tokenizer,
@@ -232,15 +196,26 @@ def train_contemplation_generator(
                 exp_config,
                 variation
             )
-            logger.log_metrics({"eval_loss": eval_loss}, epoch)
-            print(f"Validation Loss: {eval_loss:.4f}")
+            
+            # Log metrics
+            logger.log_metrics({
+                "total_loss": avg_total_loss,
+                "reason_loss": avg_reason_loss,
+                "ans_loss": avg_ans_loss,
+                "eval_loss": eval_loss
+            }, epoch)
+            print(f"Epoch {epoch+1}/{ne} - Train Loss: {avg_total_loss:.4f} (Reason: {avg_reason_loss:.4f}, Ans: {avg_ans_loss:.4f}), Val Loss: {eval_loss:.4f}")
 
             # Save best model
             if eval_loss < best_val_loss:
                 best_val_loss = eval_loss
                 best_state_dict = contemp_generator.state_dict()
-
-    contemp_generator.load_state_dict(best_state_dict)
+        contemp_generator.load_state_dict(best_state_dict)
+        logger.logger.info(f"Loading best validation loss = {best_val_loss}")
+        print(f"Loading best validation loss = {best_val_loss}")
+        for name, param in contemp_generator.student_model.named_parameters():
+            param.requires_grad = True
+            
     model_path = f"{exp_config.model_save_path}/contemp_generator/{contemp_generator.student_model_name}"
     utils.create_directory(model_path)
     contemp_generator.save_pretrained(model_path)

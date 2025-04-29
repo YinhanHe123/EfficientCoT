@@ -1,10 +1,8 @@
 import torch
 import os
 from tqdm import tqdm
-from transformers import AutoModelForCausalLM, AutoTokenizer
 import utils.utils as utils
 import gc
-import sys
 from training.train_icot_kd import train_icot_kd_model, ImplicitCoTModelWithRNN
 
 def run_icot_kd_baseline(train_dataset, eval_dataset, model_config, experiment_config):
@@ -24,33 +22,28 @@ def run_icot_kd_baseline(train_dataset, eval_dataset, model_config, experiment_c
     Returns:
         List of prediction results
     """
-    device = experiment_config.device
-
     # Check for trained model
-    icot_kd_model_path = os.path.join(experiment_config.model_save_path, "icot_kd_model")
+    output_path = os.path.join(experiment_config.model_save_path, "icot_kd_model")
 
     # if model doesn't exist, train it
-    if not os.path.exists(icot_kd_model_path):
+    if not os.path.exists(output_path):
         print("No pre-trained Implicit CoT model found. Training model...")
-        os.makedirs(icot_kd_model_path, exist_ok=True)
+        os.makedirs(output_path, exist_ok=True)
 
         # Train the implicit CoT model
-        icot_kd_model = train_icot_kd_model(
+        train_icot_kd_model(
             teacher_model_name=model_config.teacher_model_name,
             student_model_name=model_config.student_model_name,
             train_dataset=train_dataset,
             eval_dataset=eval_dataset,
-            output_path=icot_kd_model_path,
+            output_path=output_path,
             learning_rate=experiment_config.contemp_gen_lr,
             num_epochs=experiment_config.contemp_gen_epochs,
             batch_size=experiment_config.batch_size,
-            device=device
+            device=experiment_config.device
         )
-    else:
-        print("Loading pre-trained Implicit CoT model...")
-        # Load pre-trained model
-        icot_kd_model = ImplicitCoTModelWithRNN.from_pretrained(icot_kd_model_path, device=device)
-        icot_kd_model.eval()
+    icot_kd_model = ImplicitCoTModelWithRNN.from_pretrained(output_path, device=experiment_config.device)
+    icot_kd_model.eval()
 
     # Run inference on evaluation dataset
     print("Predicting on evaluation dataset...")
@@ -72,12 +65,12 @@ def run_icot_kd_baseline(train_dataset, eval_dataset, model_config, experiment_c
 
             # Tokenize input
             inputs = icot_kd_model.student_tokenizer(
-                prompt,
+                f"Question: {sample['query']}\nAnswer: ",
                 return_tensors="pt",
                 padding=True,
                 truncation=True,
                 max_length=experiment_config.max_seq_length
-            ).to(device)
+            ).to(experiment_config.device)
 
             # Generate answer
             # First run through the implicit CoT model to get modified hidden states

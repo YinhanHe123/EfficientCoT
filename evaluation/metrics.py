@@ -1,5 +1,4 @@
 import numpy as np
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 def evaluate_model(results, dataset):
     """Calculate metrics for the model's performance"""

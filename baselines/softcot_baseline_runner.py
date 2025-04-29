@@ -92,6 +92,7 @@ def run_softcot_baseline(train_dataset, eval_dataset, model_config, experiment_c
 
             # Generate soft thought tokens
             start_time = time.time()
+            sample_start = start_time
             num_soft_tokens = experiment_config.eval_max_contemp_tokens
             soft_thought_tokens = softcot_model.generate_soft_thoughts(query, num_soft_tokens)
 
@@ -137,6 +138,7 @@ def run_softcot_baseline(train_dataset, eval_dataset, model_config, experiment_c
                 pad_token_id=softcot_model.llm_tokenizer.eos_token_id
             )
             inference_time = time.time() - start_time
+            sample_end = inference_time
             inference_time_list.append(inference_time)
 
             # Extract the answer (skip the initial prompt and projected soft thoughts)
@@ -150,7 +152,8 @@ def run_softcot_baseline(train_dataset, eval_dataset, model_config, experiment_c
                 "prediction": answer,
                 "softcot_time": softcot_time,
                 "inference_time": inference_time,
-                "total_time": softcot_time + inference_time
+                "total_time": softcot_time + inference_time,
+                "sample_time": sample_end - sample_start
             }
             results.append(result)
 

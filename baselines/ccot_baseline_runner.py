@@ -2,7 +2,6 @@ import torch
 from tqdm import tqdm
 import os
 import time
-# import CCoT related models
 from models.ccot_model import CCoTModel, CCOTDecodeModel
 import utils.utils as utils
 from datasets import Dataset as HFDataset
@@ -37,7 +36,6 @@ def prepare_ccot_decode_dataset(queries, answers, ccot_model, tokenizer, device,
 
         # Extract reasoning and final answer
         reasoning_parts = answer.split('####')
-        reasoning = reasoning_parts[0].strip()
 
         # The final answer comes after ####
         final_answer = reasoning_parts[1].strip() if len(reasoning_parts) > 1 else ""
@@ -69,8 +67,6 @@ def prepare_ccot_decode_dataset(queries, answers, ccot_model, tokenizer, device,
             labels_list.append(answer_inputs.input_ids.squeeze().numpy())
 
     # Create HuggingFace Dataset
-
-
     if cotrain_mode:
         dataset_dict = {
             "input_ids": torch.stack(input_ids_list),
@@ -379,7 +375,7 @@ def run_ccot_baseline(train_dataset, eval_dataset, model_config, experiment_conf
                     "query": query,
                     "ground_truth": sample.get("answer", ""),
                     "prediction": answer,
-                    "generation_time": end_time - start_time
+                    "sample_time": end_time - start_time
                 })
             del decode_model
             gc.collect()

@@ -22,22 +22,21 @@ def run_codi_baseline(train_dataset, eval_dataset, model_config, experiment_conf
         List of prediction results
     """
     # Check for trained models
-    codi_model_path = os.path.join(experiment_config.model_save_path, f"model_tokens={experiment_config.train_max_contemp_tokens}_lr={experiment_config.codi_lr}")
-    
+    output_path = f"{experiment_config.model_save_path}/model_tokens={experiment_config.train_max_contemp_tokens}_lr={experiment_config.codi_lr}"
+        
     print("Training model...")
-    if not os.path.exists(codi_model_path):
-        os.makedirs(codi_model_path, exist_ok=True)
-        codi_model = train_codi_model(
+    if not os.path.exists(f"{output_path}/model.pt"):
+        os.makedirs(output_path, exist_ok=True)
+        train_codi_model(
             base_model_name=model_config.teacher_model_name,
             train_dataset=train_dataset,
             eval_dataset=eval_dataset,
-            output_path=codi_model_path,
+            output_path=output_path,
             num_continuous_tokens=experiment_config.train_max_contemp_tokens,
             learning_rate=experiment_config.codi_lr,
             device=experiment_config.device
         )
-    else:
-        codi_model = CODIModel.from_pretrained(codi_model_path)
+    codi_model = CODIModel.from_pretrained(output_path)
     codi_model.eval()
     
     print("Predicting on evaluation dataset...")
@@ -54,7 +53,7 @@ def run_codi_baseline(train_dataset, eval_dataset, model_config, experiment_conf
                 "query": sample['query'],
                 "ground_truth": sample['answer'],
                 "prediction": answers,
-                "generation_time": generation_time
+                "sample_time": generation_time
             })
 
     # Calculate total time
@@ -75,7 +74,7 @@ def run_codi_baseline(train_dataset, eval_dataset, model_config, experiment_conf
     # Save results with summary
     utils.save_json({"results": results, "summary": summary}, f"{results_dir}/inference_results.json")
     print(f"CODI baseline completed. Average generation time: {ave_gen_time:.2f} seconds")
-    os.remove(f"{codi_model_path}/model.pt")
-    os.remove(f"{codi_model_path}/config.pt")
-    os.removedirs(f"{codi_model_path}/checkpoints")
+    os.remove(f"{output_path}/model.pt")
+    os.remove(f"{output_path}/config.pt")
+    os.removedirs(f"{output_path}/checkpoints")
     return results

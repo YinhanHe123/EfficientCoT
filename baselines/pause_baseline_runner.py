@@ -1,8 +1,10 @@
+import shutil
 import time
 import torch
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import os
+from training.train_pause import train_pause_model
 from utils import utils
 
 def run_pause_baseline(train_dataset, eval_dataset, model_config, experiment_config):
@@ -19,13 +21,11 @@ def run_pause_baseline(train_dataset, eval_dataset, model_config, experiment_con
     Returns:
         List of prediction results
     """
-    device = experiment_config.device
+    device = "cuda:0"
 
     # Load model and tokenizer
     tokenizer = AutoTokenizer.from_pretrained(model_config.teacher_model_name)
-    model = AutoModelForCausalLM.from_pretrained(model_config.teacher_model_name)
-    model = model.to(device)
-    model.eval()
+    model = AutoModelForCausalLM.from_pretrained(model_config.teacher_model_name).to(device)
 
     # Create output directory for results
     result_dir = os.path.join(experiment_config.result_path, "pause")
@@ -45,11 +45,12 @@ def run_pause_baseline(train_dataset, eval_dataset, model_config, experiment_con
     # Set default pad token if not set
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
-
-    results = []
-    generation_times = []
+        
+    model = train_pause_model(tokenizer, model, train_dataset, eval_dataset, experiment_config, result_dir)
     pause_token_id = tokenizer.convert_tokens_to_ids(pause_token)
-
+    num_pause_tokens = experiment_config.eval_max_contemp_tokens
+    pause_tokens = torch.tensor([[pause_token_id] * num_pause_tokens], device=device)
+    results = []
     with torch.no_grad():
         for sample in tqdm(eval_dataset, desc="Running Pause baseline"):
             query = sample["query"]
@@ -63,18 +64,14 @@ def run_pause_baseline(train_dataset, eval_dataset, model_config, experiment_con
             # Tokenize the input
             input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(device)
 
+            start = time.time()
             # Append pause tokens to the input (the paper's core idea)
-            num_pause_tokens = experiment_config.eval_max_contemp_tokens
-
-            # Create pause tokens tensor and append to input
-            pause_tokens = torch.tensor([[pause_token_id] * num_pause_tokens], device=device)
             modified_input_ids = torch.cat([input_ids, pause_tokens], dim=1)
             
-            start = time.time()
             # Generate the response, ignoring the pause tokens
             outputs = model.generate(
                 modified_input_ids,
-                max_length=150 + modified_input_ids.size(1),
+                max_length=30 + modified_input_ids.size(1),
                 temperature=experiment_config.eval_temp,
                 top_p=0.9,
                 do_sample=True
@@ -84,15 +81,10 @@ def run_pause_baseline(train_dataset, eval_dataset, model_config, experiment_con
             # Skip input prompt and pause tokens to get just the answer
             answer_ids = outputs[0][input_ids.size(1) + num_pause_tokens:]
             answer = tokenizer.decode(answer_ids, skip_special_tokens=True).strip()
-
             results.append({
                 "query": query,
                 "ground_truth": sample.get("answer", ""),
                 "prediction": answer,
-                "generation_time": end - start
+                "sample_time": end - start
             })
-
-    # Save results to file
-    utils.save_json(results, f"{result_dir}/inference_results.json")
-
     return results

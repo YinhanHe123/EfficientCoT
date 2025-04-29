@@ -1,0 +1,1 @@
+{"numerical_accuracy": 0.35, "close_match_rate": 0.35, "mean_relative_error": 0.3625340420302704, "median_relative_error": 0.18438914027149322, "dataset": "gsm8k", "eval_temp": 0.7, "eval_max_contemp_tokens": 1}

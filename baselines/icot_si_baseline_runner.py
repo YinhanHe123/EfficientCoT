@@ -1,17 +1,13 @@
+import copy
+import time
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 import os
-import time
 import math
-import random
-import numpy as np
-from transformers import AutoModelForCausalLM, AutoTokenizer, GenerationConfig, StoppingCriteriaList, LogitsProcessorList
+from transformers import AutoModelForCausalLM, AutoTokenizer, GenerationConfig, StoppingCriteriaList
 from peft import get_peft_model, LoraConfig, TaskType
-
-# Add necessary imports from the existing project
 import utils.utils as utils
 
 # Utilities from the second project adapted to the first project's framework
@@ -83,15 +79,11 @@ def compute_lambda_distribution(removal_smoothing_lambda, truncate_length=100):
         lambda_distribution[-1] = lambda_distribution[-1] + (1-cum_prob)
     return lambda_distribution
 
-def extract_answer(text):
-    """Extract the final answer from text with '####' delimiter"""
-    split_pattern = '####'
-    if split_pattern not in text:
-        return text.strip()
-    else:
-        _, ans = text.strip().split('####', 1)
-        ans = ans.strip()
-        return ans
+def extract_answer(text, eos_token):
+    """Extract the final answer from text with eos_token delimiter"""
+    possible_answers = text.split(eos_token)
+    possible_answers = [a.strip() for a in possible_answers if len(a.strip()) > 0]
+    return possible_answers[-1]
 
 class ImplicitCoTTrainer:
     """Trainer for Implicit Chain of Thought (adapted from second project)"""
@@ -157,13 +149,21 @@ class ImplicitCoTTrainer:
         # Initialize optimizer
         self.optimizer = optim.AdamW(self.model.parameters(), lr=lr)
 
-    def prepare_batch(self, item, scheduled_to_remove=0):
+    def prepare_item(self, item, scheduled_to_remove=0, with_answer=True):
         """Prepare a batch for training with CoT removal strategy"""
-        query = item["query"][0]
-        full_answer = item["full_answer"][0] if "full_answer" in item else f"{item['reasoning'][0]} #### {item['answer'][0]}"
-
-        # Format input with query and full answer (reasoning + answer)
-        input_text = f"Question: {query}\n{full_answer}"
+        eos_tok = self.tokenizer.eos_token
+        if "reasoning" in item and len(item["reasoning"]) > 0:
+            steps = item["reasoning"].split("\n")
+            cot = "\n".join(steps[:-1] if len(steps) > 1 else steps)
+        elif "full_answer" in item and len(item["full_answer"]) > 0:
+            steps = item["full_answer"].split("### Conclusion")
+            cot = steps[0]
+            if len(steps) == 1:
+                steps = item["full_answer"].split("\n\n")
+                cot = "\n\n".join(steps[:-1])
+        input_text = f"{item['query']} {eos_tok} {cot} {eos_tok}"
+        if with_answer:
+            input_text += f" {item['answer']} {eos_tok}"
 
         # Tokenize input
         inputs = self.tokenizer(
@@ -174,33 +174,27 @@ class ImplicitCoTTrainer:
             max_length=self.max_seq_length
         ).to(self.device)
 
-        input_ids = inputs.input_ids
-        labels = input_ids.clone()
+        input_ids, labels = inputs.input_ids.clone(), inputs.input_ids.clone()
 
         # Find separator positions (question|reasoning|answer)
-        question_end = get_sep_position(input_ids, self.tokenizer.encode("\n", add_special_tokens=False)[-1])
-        reasoning_delimiter = get_sep_position(input_ids, self.tokenizer.encode("####", add_special_tokens=False)[-1])
+        question_end = get_sep_position(input_ids, self.tokenizer.eos_token_id)
+        reasoning_delimiter = get_sep_position(input_ids, self.tokenizer.eos_token_id, skip=1)
 
         # Mask out question tokens in labels (we don't want to predict the question)
-        for i in range(input_ids.shape[0]):
-            labels[i, :question_end[i]+1] = self.tokenizer.pad_token_id
+        labels[0, :question_end[0]+1] = self.tokenizer.pad_token_id
 
         # Apply CoT removal if scheduled
         if scheduled_to_remove > 0:
-            batch_size = input_ids.shape[0]
+            if (question_end[0] + 1 + scheduled_to_remove) > reasoning_delimiter[0]:
+                return None
+            
             position_ids = None
-
             if self.keep_position:
-                position_ids = torch.arange(0, input_ids.shape[1], device=self.device).unsqueeze(0).repeat(batch_size, 1)
-
-            input_ids_tmp = []
-            labels_tmp = []
+                position_ids = torch.arange(0, input_ids.shape[1], device=self.device).unsqueeze(0)
 
             # Sample random removal offsets
             random_removal_offset = torch.multinomial(
-                self.lambda_distribution,
-                batch_size,
-                replacement=True
+                self.lambda_distribution, 1, replacement=True
             ).to(self.device)
 
             to_remove = scheduled_to_remove + random_removal_offset
@@ -208,37 +202,33 @@ class ImplicitCoTTrainer:
             if self.removal_side == 'left':
                 # Remove from start of reasoning
                 removal_from = question_end + 1
-                removal_to = question_end + 1 + to_remove
+                removal_to = removal_from + to_remove
             else:
                 # Remove from end of reasoning
                 removal_to = reasoning_delimiter
                 removal_from = reasoning_delimiter - to_remove
 
-            for batch_id in range(batch_size):
-                qe = question_end[batch_id]
-                rd = reasoning_delimiter[batch_id] if reasoning_delimiter[batch_id] > 0 else input_ids.shape[1]-1
+            qe = question_end[0] + 1
+            rd = reasoning_delimiter[0] if reasoning_delimiter[0] > 0 else input_ids.shape[1] - 1
 
-                # Calculate actual removal positions
-                r_from = max(removal_from[batch_id], qe+1)
-                r_to = min(removal_to[batch_id], rd)
+            # Calculate actual removal positions
+            r_from, r_to = max(removal_from[0], qe), min(removal_to[0], rd)
 
-                if self.keep_position and position_ids is not None:
-                    position_ids[batch_id, r_from:] += r_to - r_from
+            if self.keep_position and position_ids is not None:
+                position_ids[0, r_from:] += r_to - r_from
 
-                # Create new sequences with removed tokens
-                input_ids_tmp.append(torch.cat([
-                    input_ids[batch_id, :r_from],
-                    input_ids[batch_id, r_to:]
-                ]))
+            # Create new sequences with removed tokens
+            input_ids = torch.cat([
+                input_ids[0, :r_from], input_ids[0, r_to:]
+            ]).unsqueeze(0)
 
-                labels_tmp.append(torch.cat([
-                    labels[batch_id, :r_from],
-                    labels[batch_id, r_to:]
-                ]))
-
+            labels = torch.cat([
+                labels[0, :r_from], labels[0, r_to:]
+            ]).unsqueeze(0)
+            
             # Batch padded sequences
-            input_ids = batch_ids(input_ids_tmp, self.tokenizer.pad_token_id, self.device, input_ids.dtype)
-            labels = batch_ids(labels_tmp, self.tokenizer.pad_token_id, self.device, labels.dtype)
+            input_ids = batch_ids(input_ids, self.tokenizer.pad_token_id, self.device, input_ids.dtype)
+            labels = batch_ids(labels, self.tokenizer.pad_token_id, self.device, labels.dtype)
 
             return {
                 'input_ids': input_ids,
@@ -255,26 +245,22 @@ class ImplicitCoTTrainer:
     def train_epoch(self, scheduled_to_remove=0):
         """Train for one epoch with the specified amount of CoT removal"""
         self.model.train()
-        total_loss = 0
-        steps = 0
-
-        # Create dataloader
-        dataloader = DataLoader(
-            [{k: v for k,v  in d.items() if k != "condensed_reasoning"} for d in self.train_dataset],
-            batch_size=self.batch_size,
-            shuffle=True
-        )
-
-        for item in tqdm(dataloader, desc=f"Training (remove={scheduled_to_remove})"):
-            batch = self.prepare_batch(item, scheduled_to_remove)
+        total_loss, steps, max_len_reached = 0, 0, 0
+        for item in tqdm(self.train_dataset, desc=f"Training (remove={scheduled_to_remove})"):
+            data = self.prepare_item(item, scheduled_to_remove)
+            if data is None:
+                max_len_reached += 1
+                continue
             # Forward pass
             outputs = self.model(
-                input_ids=batch['input_ids'],
-                labels=batch['labels'],
-                position_ids=batch['position_ids']
+                input_ids=data['input_ids'],
+                labels=data['labels'],
+                position_ids=data['position_ids']
             )
 
-            loss = outputs.loss
+            shift_logits =  outputs.logits[..., :-1, :].contiguous()
+            shift_labels = data['labels'][..., 1:].contiguous()
+            loss = torch.nn.CrossEntropyLoss()(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
 
             # Backward pass
             self.optimizer.zero_grad()
@@ -286,47 +272,29 @@ class ImplicitCoTTrainer:
 
             if steps % 100 == 0:
                 print(f"Step {steps} - Loss: {loss.item():.4f}")
-
+        if max_len_reached == len(self.train_dataset):
+            return -1
         return total_loss / steps
 
     def evaluate(self, scheduled_to_remove=0):
         """Evaluate the model on the evaluation dataset"""
         self.model.eval()
         total_correct = 0
-        total_samples = 0
-
-        dataloader = DataLoader(
-            [{k: v for k,v  in d.items() if k != "condensed_reasoning"} for d in self.eval_dataset],
-            batch_size=self.batch_size,
-            shuffle=False
-        )
-
         with torch.no_grad():
-            for item in tqdm(dataloader, desc=f"Evaluating (remove={scheduled_to_remove})"):
-                batch = self.prepare_batch(item, scheduled_to_remove)
-
-                # Get queries for generation
-                queries = [f"Question: {q}\n" for q in item["query"]]
-                query_inputs = self.tokenizer(
-                    queries,
-                    return_tensors="pt",
-                    padding=True,
-                    truncation=True,
-                    max_length=self.max_seq_length
-                ).to(self.device)
-
+            for item in tqdm(self.eval_dataset, desc=f"Evaluating (remove={scheduled_to_remove})"):
+                data = self.prepare_item(item, scheduled_to_remove, with_answer=False)
+                if data is None:
+                    continue
                 # Generate answers
                 stopping_criteria = DoubleEOSStoppingCriteria(self.tokenizer.eos_token_id)
                 logits_processor = DoubleEOSLogitsProcessor(self.tokenizer.eos_token_id)
-
                 generation_config = GenerationConfig.from_model_config(self.model.config)
-                # generation_config.eos_token_id = -1  # Disable default EOS stopping
+                generation_config.eos_token_id = -1
 
                 outputs = self.model.generate(
-                    input_ids=query_inputs.input_ids,
-                    attention_mask=query_inputs.attention_mask,
-                    position_ids=batch.get('position_ids', None),
-                    max_new_tokens=150,
+                    input_ids=data['input_ids'],
+                    position_ids=data['position_ids'],
+                    max_new_tokens=30,
                     stopping_criteria=[stopping_criteria],
                     logits_processor=[logits_processor],
                     generation_config=generation_config,
@@ -336,38 +304,22 @@ class ImplicitCoTTrainer:
                 )
 
                 # Compare generated answers with ground truth
-                for i, output in enumerate(outputs):
-                    generated_text = self.tokenizer.decode(output, skip_special_tokens=True)
-                    ground_truth = item["answer"][i]
-
-                    generated_answer = extract_answer(generated_text)
-
-                    if generated_answer.strip() == ground_truth.strip():
-                        total_correct += 1
-
-                    total_samples += 1
-
-        accuracy = total_correct / total_samples
-        return accuracy
+                generated_text = self.tokenizer.decode(outputs[0])
+                generated_answer = extract_answer(generated_text, self.tokenizer.eos_token)
+                if generated_answer.strip() == item["answer"].strip():
+                    total_correct += 1
+        return total_correct / len(self.eval_dataset)
 
     def train(self):
         """Train the model with progressive CoT removal"""
-        best_accuracy = -1
-        best_checkpoint = None
-        scheduled_to_remove = 0
-
-        steps_per_epoch = len(self.train_dataset) // self.batch_size
-        steps_per_removed_token = max(1, int(steps_per_epoch / self.remove_per_epoch))
-
+        best_accuracy = 0
         for epoch in range(self.epochs):
-            # Update scheduled_to_remove
-            if epoch > 0:
-                scheduled_to_remove += self.remove_per_epoch
-
+            scheduled_to_remove = epoch * self.remove_per_epoch
             print(f"Epoch {epoch+1}/{self.epochs} - Removing {scheduled_to_remove} tokens")
 
             # Train for one epoch
             avg_loss = self.train_epoch(scheduled_to_remove)
+            if avg_loss == -1: break
             print(f"Epoch {epoch+1} - Average Loss: {avg_loss:.4f}")
 
             # Evaluate
@@ -382,12 +334,11 @@ class ImplicitCoTTrainer:
                 self.model.save_pretrained(self.output_path)
                 print(f"New best accuracy: {best_accuracy:.4f}")
         print(f"Training completed. Best accuracy: {best_accuracy:.4f}")
-        return best_checkpoint
 
 def run_icot_si_baseline(train_dataset, eval_dataset, model_config, experiment_config):
     """
-    Implicit Chain of Thought baseline
-    Based on: "Implicit Chain of Thought Reasoning via Knowledge Distillation"
+    Implicit Chain of Thought Stepwise Internalization baseline
+    Based on: "From Explicit CoT to Implicit CoT: Learning to Internalize CoT Step by Step"
 
     Args:
         train_dataset: Dataset for training
@@ -398,13 +349,11 @@ def run_icot_si_baseline(train_dataset, eval_dataset, model_config, experiment_c
     Returns:
         List of prediction results
     """
-    device = experiment_config.device
-
     # Set up output paths
-    output_path = experiment_config.model_save_path
+    output_path = f"{experiment_config.model_save_path}/model_removedTokens=1"
 
     # Check if the model has already been trained
-    if not os.path.exists(output_path):
+    if not os.path.exists(f"{output_path}/adapter_model.safetensors"):
         os.makedirs(output_path, exist_ok=True)
         print("Training Implicit CoT model...")
 
@@ -414,82 +363,75 @@ def run_icot_si_baseline(train_dataset, eval_dataset, model_config, experiment_c
             train_dataset=train_dataset,
             eval_dataset=eval_dataset,
             output_path=output_path,
-            device=device,
-            epochs=experiment_config.contemp_gen_epochs,
-            lr=experiment_config.contemp_gen_lr,
+            device=experiment_config.device,
             batch_size=1,
             max_seq_length=experiment_config.max_seq_length,
-            remove_per_epoch=8,  # Gradually increase removal tokens
+            remove_per_epoch=1,  # Gradually increase removal tokens
             removal_smoothing_lambda=0.5,  # Allow some variance in removal
             removal_side='left',  # Remove from start of reasoning
             keep_position=True,  # Maintain position embeddings
         )
-
         # Train the model
         trainer.train()
-
+        del trainer.model, trainer
+        torch.cuda.empty_cache()
     # Load the trained model for inference
     tokenizer = AutoTokenizer.from_pretrained(model_config.teacher_model_name)
-    model = AutoModelForCausalLM.from_pretrained(output_path)
-    model = model.to(device)
+    tokenizer.pad_token = tokenizer.eos_token
+    model = AutoModelForCausalLM.from_pretrained(output_path).to(experiment_config.device)
     model.eval()
+    
+    stopping_criteria = DoubleEOSStoppingCriteria(tokenizer.eos_token_id)
+    logits_processor = DoubleEOSLogitsProcessor(tokenizer.eos_token_id)
+    generation_config = GenerationConfig.from_model_config(model.config)
+    generation_config.eos_token_id = -1
 
     # Prepare inference results
     results = []
-
     # Run inference on evaluation dataset
     for item in tqdm(eval_dataset, desc="Running Implicit CoT inference"):
-        query = item["query"]
-
-        # Format input
-        input_text = f"Question: {query}\n"
-
         # Tokenize input
+        input_text = f"{item['query']} {tokenizer.eos_token}"
         inputs = tokenizer(
             input_text,
             return_tensors="pt",
             padding=True,
             truncation=True,
             max_length=experiment_config.max_seq_length
-        ).to(device)
-
-        # Set up generation parameters
-        stopping_criteria = DoubleEOSStoppingCriteria(tokenizer.eos_token_id)
-        logits_processor = DoubleEOSLogitsProcessor(tokenizer.eos_token_id)
-
-        generation_config = GenerationConfig.from_model_config(model.config)
-        # generation_config.eos_token_id = -1  # Disable default EOS stopping
+        ).to(experiment_config.device)
 
         # Generate answer
+        start = time.time()
         with torch.no_grad():
             outputs = model.generate(
-                input_ids=inputs.input_ids,
-                attention_mask=inputs.attention_mask,
-                max_new_tokens=150,
+                input_ids=inputs['input_ids'],
+                max_new_tokens=30,
                 stopping_criteria=[stopping_criteria],
                 logits_processor=[logits_processor],
                 generation_config=generation_config,
                 do_sample=True,
-                temperature=experiment_config.eval_temp,
+                temperature=0.7,
                 top_p=0.9
             )
+        end = time.time()
 
         # Decode and extract answer
-        generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
-        answer = extract_answer(generated_text)
+        generated_text = tokenizer.decode(outputs[0])
+        answer = extract_answer(generated_text, tokenizer.eos_token)
 
         # Store result
         results.append({
-            "query": query,
+            "query": item['query'],
             "ground_truth": item.get("answer", ""),
-            "prediction": answer
+            "prediction": answer,
+            "sample_time": end - start
         })
 
     # Save results
     results_dir = os.path.join(experiment_config.result_path, "icot_si")
     if not os.path.exists(results_dir):
         os.makedirs(results_dir)
-
     utils.save_json(results, f"{results_dir}/inference_results.json")
-
+    os.remove(f"{output_path}/adapter_config.json")
+    os.remove(f"{output_path}/adapter_model.safetensors")
     return results

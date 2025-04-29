@@ -1,0 +1,3 @@
+{"dataset": "gsm8k", "eval_temp": 0.7, "eval_max_contemp_tokens": 1}
+{"dataset": "gsm8k", "eval_temp": 0.7, "eval_max_contemp_tokens": 1}
+{"numerical_accuracy": 0.12, "close_match_rate": 0.12, "mean_relative_error": 0.6918025905206762, "median_relative_error": 0.4562807881773399, "dataset": "gsm8k", "eval_temp": 0.7, "eval_max_contemp_tokens": 1}

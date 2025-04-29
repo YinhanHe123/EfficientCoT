@@ -3,7 +3,6 @@ import torch
 import torch.optim as optim
 from tqdm import tqdm
 import os
-import gc
 from models.codi_model import CODIModel
 from utils.logging import Logger
 
@@ -150,15 +149,10 @@ def train_codi_model(
                 codi_model.save_pretrained(output_path)
                 print(f"Saved best model with validation loss: {best_val_loss:.4f}")
         # Clean up memory
-        gc.collect()
         torch.cuda.empty_cache()
     del codi_model
     torch.cuda.empty_cache()
-    # Load the best model
-    best_model = CODIModel.from_pretrained(output_path)
     logger.close()
-    return best_model
-
 
 def evaluate_codi(codi_model, eval_dataset):
     """
