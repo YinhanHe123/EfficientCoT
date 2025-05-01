@@ -1,1 +1,7 @@
-{"numerical_accuracy": 0.35, "close_match_rate": 0.35, "mean_relative_error": 0.3625340420302704, "median_relative_error": 0.18438914027149322, "dataset": "gsm8k", "eval_temp": 0.7, "eval_max_contemp_tokens": 1}
+{"numerical_accuracy": 0.03, "close_match_rate": 0.03, "mean_relative_error": 1.0397849714387138e+27, "median_relative_error": 5.186480186480186e+24, "exp_num": 0, "dataset": "gsm8k", "eval_temp": 0.7, "eval_max_contemp_tokens": 1}
+{"numerical_accuracy": 0.03, "close_match_rate": 0.03, "mean_relative_error": 1.0397849714387138e+27, "median_relative_error": 5.186480186480186e+24, "exp_num": 0, "dataset": "gsm8k", "eval_temp": 0.7, "eval_max_contemp_tokens": 1}
+{"numerical_accuracy": 0.06, "close_match_rate": 0.06, "mean_relative_error": 5.549827251054799e+26, "median_relative_error": 0.8, "exp_num": 1, "dataset": "gsm8k", "eval_temp": 0.7, "eval_max_contemp_tokens": 1}
+{"numerical_accuracy": 0.06, "close_match_rate": 0.06, "mean_relative_error": 5.549827251054799e+26, "median_relative_error": 0.8, "exp_num": 2, "dataset": "gsm8k", "eval_temp": 0.7, "eval_max_contemp_tokens": 1}
+{"numerical_accuracy": 0.06, "close_match_rate": 0.06, "mean_relative_error": 5.549827251054799e+26, "median_relative_error": 0.8, "exp_num": 3, "dataset": "gsm8k", "eval_temp": 0.7, "eval_max_contemp_tokens": 1}
+{"numerical_accuracy": 0.06, "close_match_rate": 0.06, "mean_relative_error": 5.549827251054799e+26, "median_relative_error": 0.8, "exp_num": 4, "dataset": "gsm8k", "eval_temp": 0.7, "eval_max_contemp_tokens": 1}
+{"summary_acc": "0.05 \u00b1 0.01", "summary_time": "3.03 \u00b1 0.02", "acc": [0.03, 0.06, 0.06, 0.06, 0.06], "ave_sample_time": [3.070387647151947, 3.027418508529663, 3.0211004304885862, 3.0230869388580324, 3.0196881914138793]}

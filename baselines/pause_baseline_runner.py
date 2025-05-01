@@ -28,7 +28,7 @@ def run_pause_baseline(train_dataset, eval_dataset, model_config, experiment_con
     model = AutoModelForCausalLM.from_pretrained(model_config.teacher_model_name).to(device)
 
     # Create output directory for results
-    result_dir = os.path.join(experiment_config.result_path, "pause")
+    result_dir = os.path.join(experiment_config.model_save_path, "pause")
     if not os.path.exists(result_dir):
         os.makedirs(result_dir)
 

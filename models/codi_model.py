@@ -39,6 +39,11 @@ class CODIModel(nn.Module):
         # Resize token embeddings if new tokens were added
         if num_added > 0:
             self.model.resize_token_embeddings(len(self.tokenizer))
+            with torch.no_grad():
+                std = self.model.get_input_embeddings().weight.std().item()
+                for token in ["<bot>", "<eot>"]:
+                    token_id = self.tokenizer.convert_tokens_to_ids(token)
+                    self.model.get_input_embeddings().weight[token_id].normal_(mean=0.0, std=std)
 
         self.bot_token_id = torch.tensor(self.tokenizer.convert_tokens_to_ids("<bot>")).reshape(1,1)
         self.eot_token_id = torch.tensor(self.tokenizer.convert_tokens_to_ids("<eot>")).reshape(1,1)
@@ -69,6 +74,17 @@ class CODIModel(nn.Module):
         Returns:
             Continuous thought hidden states, student model outputs, and student loss
         """
+        # query_embeds = self.model.get_input_embeddings()(query_inputs)
+        # bot_token_embeds = self.model.get_input_embeddings()(self.bot_token_id.to(self.device))
+        # bot_token_embeds.requires_grad = True
+        # # Concatenate the embeddings
+        # input_embeds = torch.cat([query_embeds, bot_token_embeds], dim=1)
+
+        # # Run the model with embeddings input instead of IDs
+        # student_outputs = self.model(
+        #     inputs_embeds=input_embeds,
+        #     output_hidden_states=True
+        # )
         student_input_ids = torch.cat([query_inputs, self.bot_token_id.to(self.device)], dim=1)
         student_outputs = self.model(input_ids=student_input_ids, output_hidden_states=True)
         continuous_tokens = []
@@ -89,16 +105,28 @@ class CODIModel(nn.Module):
         student_input_ids = torch.cat([self.eot_token_id.to(self.device), self.answer_prompt.to(self.device)], dim=-1)
         if answer_inputs is not None:
             student_input_ids = torch.cat([student_input_ids, answer_inputs], dim=-1)
+
+        # eot_token_embeds = self.model.get_input_embeddings()(self.eot_token_id.to(self.device))
+        # eot_token_embeds.requires_grad = True
+        # answer_prompt_embeds = self.model.get_input_embeddings()(self.answer_prompt.to(self.device))
+        # end_embs = torch.cat([eot_token_embeds, answer_prompt_embeds], dim=1)
+        # if answer_inputs is not None:
+        #     end_embs = torch.cat([end_embs, self.model.get_input_embeddings()(answer_inputs)], dim=1)
+
+        # end_embeds = torch.cat([eot_token_embeds, answer_prompt_embeds], dim=1)
+
         student_outputs = self.model(
             input_ids=student_input_ids,
+            # inputs_embeds=end_embs,
             past_key_values=past_key_values,
             output_hidden_states=True,
         )
 
         student_loss = None
         if answer_inputs is not None:
-            labels = torch.cat([answer_inputs, self.eos_token_id.to(self.device)], dim=1).reshape(-1)
-            student_loss = self.cross_entropy(student_outputs["logits"][:, self.eot_token_id.shape[1] + self.answer_prompt.shape[1] - 1:].squeeze(0), labels ).mean()
+            # labels = torch.cat([answer_inputs, self.eos_token_id.to(self.device)], dim=1).reshape(-1)
+            labels = answer_inputs.reshape(-1)
+            student_loss = self.cross_entropy(student_outputs["logits"][:, self.eot_token_id.shape[1] + self.answer_prompt.shape[1] - 1:-1].squeeze(0), labels).mean()
         del latent, past_key_values, student_input_ids
         return student_outputs, student_loss, continuous_tokens
 
@@ -195,16 +223,36 @@ class CODIModel(nn.Module):
         Returns:
             Generated answer
         """
+        tokenize_begin = time.time() # DEBUG
         query_inputs = self.tokenizer(data["query"], return_tensors="pt", add_special_tokens=False)["input_ids"].to(self.device)
+
+        token_end = time.time()      # DEBUG
+        print(f"Tokenization time: {token_end - tokenize_begin:.2f} seconds") # DEBUG
+        student_begin = time.time() # DEBUG
         _, _, continuous_hidden = self.forward_student(query_inputs)
+        student_end = time.time()   # DEBUG
+        print(f"Student forward time: {student_end - student_begin:.2f} seconds") # DEBUG
 
-        input_begin = torch.cat([query_inputs, self.bot_token_id.to(self.device)], dim=1)
-        input_end = torch.cat([self.eot_token_id.to(self.device), self.answer_prompt.to(self.device)], dim=-1,)
+        # Get embeddings directly
+        query_embeds = self.model.get_input_embeddings()(query_inputs)
+        bot_token_embeds = self.model.get_input_embeddings()(self.bot_token_id.to(self.device))
+        eot_token_embeds = self.model.get_input_embeddings()(self.eot_token_id.to(self.device))
+        answer_prompt_embeds = self.model.get_input_embeddings()(self.answer_prompt.to(self.device))
 
-        embed_begin = self.model.get_input_embeddings()(input_begin)
-        embed_end = self.model.get_input_embeddings()(input_end)
+        # Concatenate for input
+        embed_begin = torch.cat([query_embeds, bot_token_embeds], dim=1)
+        embed_end = torch.cat([eot_token_embeds, answer_prompt_embeds], dim=1)
         input_embeds = torch.cat([embed_begin, continuous_hidden, embed_end], dim=1)
+        input_embeds = torch.cat([query_embeds, answer_prompt_embeds, bot_token_embeds, continuous_hidden, eot_token_embeds], dim=1) # DEBUG
 
+        # input_begin = torch.cat([query_inputs, self.bot_token_id.to(self.device)], dim=1)
+        # input_end = torch.cat([self.eot_token_id.to(self.device), self.answer_prompt.to(self.device)], dim=-1,)
+
+        # embed_begin = self.model.get_input_embeddings()(input_begin)
+        # embed_end = self.model.get_input_embeddings()(input_end)
+        # input_embeds = torch.cat([embed_begin, continuous_hidden, embed_end], dim=1)
+
+        generate_begin = time.time() # DEBUG
         outputs = self.model.generate(
             inputs_embeds=input_embeds,
             max_new_tokens=max_new_tokens + input_embeds.shape[1],
@@ -213,8 +261,15 @@ class CODIModel(nn.Module):
             do_sample=do_sample,
             pad_token_id=self.tokenizer.eos_token_id,
         )
+        generate_end = time.time() # DEBUG
+        print(f"Generation time: {generate_end - generate_begin:.2f} seconds")
+
+        tokenize_decde_begin = time.time() # DEBUG
         answer = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
-        del query_inputs, input_begin, input_end, embed_begin, embed_end, input_embeds, outputs
+        tokenize_decode_end = time.time() # DEBUG
+        print(f"Tokenization and decoding time: {tokenize_decode_end - tokenize_decde_begin:.2f} seconds") # DEBUG
+        # del query_inputs, input_begin, input_end, embed_begin, embed_end, input_embeds, outputs
+        del query_inputs, embed_begin, embed_end, input_embeds, outputs
         torch.cuda.empty_cache()
         return answer
 
@@ -244,12 +299,16 @@ class CODIModel(nn.Module):
         # Enable input require grads
         self.model.enable_input_require_grads()
 
+        for name, param in self.model.named_parameters():
+            if "embed_tokens" in name:
+                param.requires_grad = True
+
         # Apply LoRA
         self.model = get_peft_model(self.model, peft_config)
         return self
 
     @classmethod
-    def from_pretrained(cls, path):
+    def from_pretrained(cls, path, device):
         """
         Load a pretrained CODI model
 
@@ -267,12 +326,12 @@ class CODIModel(nn.Module):
         model = cls(
             config["base_model_name"],
             num_continuous_tokens=config["num_continuous_tokens"],
-            device=config["device"],
+            device=device,
         )
 
         # Load state dict
         model_path = os.path.join(path, "model.pt")
-        model.load_state_dict(torch.load(model_path))
+        model.load_state_dict(torch.load(model_path, map_location=device if isinstance(device, str) else f"cuda:{device}"))
 
         return model
 

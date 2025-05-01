@@ -1,0 +1,4 @@
+{"numerical_accuracy": 0.0, "close_match_rate": 0.0, "mean_relative_error": 1.778946592630844, "median_relative_error": 0.8888888888888888, "dataset": "svamp", "eval_temp": 0.7, "eval_max_contemp_tokens": 1}
+{"numerical_accuracy": 0.0, "close_match_rate": 0.0, "mean_relative_error": 1.778946592630844, "median_relative_error": 0.8888888888888888, "dataset": "svamp", "eval_temp": 0.7, "eval_max_contemp_tokens": 1}
+{"numerical_accuracy": 0.61, "close_match_rate": 0.61, "mean_relative_error": 0.4890261543225604, "median_relative_error": 0.0, "exp_num": 0, "dataset": "svamp", "eval_temp": 0.7, "eval_max_contemp_tokens": 1}
+{"summary_acc": "0.61 \u00b1 0.00", "summary_time": "2.11 \u00b1 0.00", "acc": [0.61], "ave_sample_time": [2.1108564829826353]}

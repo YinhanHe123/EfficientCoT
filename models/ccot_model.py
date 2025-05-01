@@ -212,6 +212,15 @@ class CCoTModel(nn.Module):
             self.model.enable_input_require_grads()
 
         lora_model = get_peft_model(self.model, peft_config)
+        lora_model.model.lm_head.weight.requires_grad = True
+        lora_model.model.model.embed_tokens.weight.requires_grad=True
+        
+        def freeze_old_weights_hook(grad):
+            return torch.nan_to_num(grad, nan=0, posinf=0, neginf=0) * torch.concat([torch.zeros_like(grad[:-1]), torch.ones_like(grad[-1:])], dim=0).to(grad.device)
+        
+        self.hooks = []
+        self.hooks.append(lora_model.model.lm_head.weight.register_hook(freeze_old_weights_hook))
+        self.hooks.append(lora_model.model.model.embed_tokens.weight.register_hook(freeze_old_weights_hook))
 
         # Verify only LoRA parameters are trainable
         trainable_params = 0
@@ -222,8 +231,7 @@ class CCoTModel(nn.Module):
                 trainable_params += param.numel()
         print(f"trainable params: {trainable_params} || all params: {all_param} || trainable%: {100 * trainable_params / all_param}")
 
-
-        return get_peft_model(self.model, peft_config)
+        return lora_model
 
     @classmethod
     def from_pretrained(cls, path):

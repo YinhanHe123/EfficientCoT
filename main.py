@@ -24,16 +24,18 @@ def parse_args():
                         default="train_sentence_transformer",
                         help="Operation mode")
     parser.add_argument("--config", type=str, default="small", help="Configuration name")
-    parser.add_argument("--dataset", type=str, default="gsm8k", choices=["gsm8k", "svamp", "multiarith"],
+    parser.add_argument("--dataset", type=str, default="gsm8k", choices=["gsm8k", "svamp", "multiarith", "commonsense_qa", "coin_flip"],
                         help="Dataset to use")
     parser.add_argument("--baseline", type=str, default="effi_cot",
-                        choices=["cot", "ccot", "pause", "icot_kd", "zero_shot_cot", "effi_cot", "icot_si", "codi", "softcot"],
+                        choices=["cot", "ccot", "pause", "icot_kd", "zero_shot_cot", "effi_cot", "icot_si", "codi", "softcot", "coconut"],
                         help="Baseline to run if mode is baseline")
     parser.add_argument("--ccot_stage", type=str, default="encode",choices=["encode", "decode", "prepare_decode_data", "evaluate", "cotrain_encode_decode"],
                         help="Stage for CCoT")
     # Add CODI stage for CODI baseline
     parser.add_argument("--codi_stage", type=str, default="train",
                                 choices=["train", "evaluate"], help="Stage for CODI baseline")
+    parser.add_argument("--coconut_stage", type=str, default="train",
+                        choices=["train", "evaluate"], help="Stage for Coconut baseline")
 
     parser.add_argument("--experiment_file", type=str, default="experiments.json",
                         help="JSON file containing experiment configurations")
@@ -73,7 +75,7 @@ def parse_args():
                         help="Weight decay for contemporary generator linear layer")
     parser.add_argument("--contemp_gen_lin_layer_epochs", type=int, default=10,
                         help="Number of epochs for contemporary generator linear layer training")
-    
+
     parser.add_argument("--st_linear_lr", "-stllr", type=float, default=1e-4,
                         help="Linear layer learning rate for sentence transformer")
     parser.add_argument("--st_linear_wd", "-stlwd", type=float, default=1e-3,
@@ -121,18 +123,18 @@ def main():
     experiment_config.st_llm_lr = args.st_llm_lr
     experiment_config.st_llm_wd = args.st_llm_wd
     experiment_config.st_llm_epochs = args.st_llm_epochs
-    
+
     experiment_config.cg_linear_lr = args.cg_linear_lr
     experiment_config.cg_linear_wd = args.cg_linear_wd
     experiment_config.cg_linear_epochs = args.cg_linear_epochs
     experiment_config.cg_llm_lr = args.cg_llm_lr
     experiment_config.cg_llm_wd = args.cg_llm_wd
     experiment_config.cg_llm_epochs = args.cg_llm_epochs
-    
+
     if args.variation == "no_warmup":
         experiment_config.st_linear_epochs = 0
         experiment_config.cg_linear_epochs = 0
-    
+
     # Special handling for CCoT mode
     if args.mode == "train_ccot" or (args.mode == "baseline" and args.baseline == "ccot"):
         experiment_config.model_save_path = f"{experiment_config.model_save_path}/ccot/{args.config}/{args.dataset}"
@@ -156,6 +158,13 @@ def main():
         experiment_config.checkpoint_path = f"{experiment_config.checkpoint_path}/icot_kd/{args.config}/{args.dataset}"
         experiment_config.result_path = f"{experiment_config.result_path}/icot_kd/{args.config}/{args.dataset}"
         experiment_config.experiment_name = f"icot_kd_{args.seed}_{args.dataset}_{args.config}"
+    elif args.mode == "baseline" and args.baseline == "coconut":
+        experiment_config.model_save_path = f"{experiment_config.model_save_path}/coconut/{args.config}/{args.dataset}"
+        experiment_config.checkpoint_path = f"{experiment_config.checkpoint_path}/coconut/{args.config}/{args.dataset}"
+        experiment_config.result_path = f"{experiment_config.result_path}/coconut/{args.config}/{args.dataset}"
+        experiment_config.experiment_name = f"coconut_{args.seed}_{args.dataset}_{args.config}"
+        # Add Coconut stage to experiment config
+        experiment_config.coconut_stage = args.coconut_stage
     else:
         # Original path handling for other modes
         experiment_config.model_save_path = f"{experiment_config.model_save_path}/{args.baseline}/{args.variation}/{args.config}/{args.dataset}" if args.baseline == 'effi_cot' else f"{experiment_config.model_save_path}/{args.baseline}/{args.config}/{args.dataset}"
@@ -180,6 +189,10 @@ def main():
         model_config.data_path = 'ChilleD/SVAMP'
     elif args.dataset == 'multiarith':
         model_config.data_path = 'ChilleD/MultiArith'
+    elif args.dataset == 'commonsense_qa':
+        model_config.data_path = 'tau/commonsense_qa'
+    elif args.dataset == 'coin_flip':
+        model_config.data_path = 'skrishna/coin_flip'
 
     train_dataset, eval_dataset = load_raw_dataset(model_config.data_path)
     acc, ave_sample_time = [], []
@@ -209,19 +222,19 @@ def main():
 
                 # Train sentence transformer
                 from training.train_sent_trans import train_sentence_transformer
-                sentence_transformer = train_sentence_transformer(
-                    model_config.teacher_model_name,
-                    experiment_config.start_layer_idx,
-                    experiment_config.end_layer_idx,
-                    pairs_dataset,
-                    experiment_config
-                )
+                # sentence_transformer = train_sentence_transformer(
+                #     model_config.teacher_model_name,
+                #     experiment_config.start_layer_idx,
+                #     experiment_config.end_layer_idx,
+                #     pairs_dataset,
+                #     experiment_config
+                # )
                 sentence_transformer = CustomizedSentenceTransformer.from_pretrained(
                     experiment_config.model_save_path+"/sentence_transformer"
                 ).to(args.device)
             pairs_dataset = utils.load_json(reasoning_pairs_path)
             # add to train dataset items with condensed reasoning of pairs_dataset
-            for i in range(len(train_dataset)):
+            for i in range(len(pairs_dataset)):
                 train_dataset.update_item(i, "condensed_reasoning", pairs_dataset[i]["condensed_reasoning"])
 
             # Initialize contemplation generator
@@ -233,15 +246,15 @@ def main():
             )
 
             # Train the contemplation generator
-            train_contemplation_generator(
-                contemp_generator,
-                sentence_transformer,
-                train_dataset,
-                eval_dataset,
-                model_config,
-                experiment_config,
-                args.variation
-            )
+            # train_contemplation_generator(
+            #     contemp_generator,
+            #     sentence_transformer,
+            #     train_dataset,
+            #     eval_dataset,
+            #     model_config,
+            #     experiment_config,
+            #     args.variation
+            # )
             contemp_generator = ContemplationGenerator.from_pretrained(
                 experiment_config.model_save_path+"/contemp_generator/"+model_config.student_model_name+"/"
             ).to(args.device)

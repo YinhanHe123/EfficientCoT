@@ -145,7 +145,6 @@
 #     return model
 
 
-import os
 import torch
 from torch.utils.data import Dataset
 from transformers import Trainer, TrainingArguments
@@ -182,7 +181,7 @@ class PauseFinetuningDataset(Dataset):
         # Tokenize answer
         answer_tokens = self.tokenizer(answer, return_tensors="pt",
                                       truncation=True, max_length=self.max_length)
-        answer_ids = answer_tokens.input_ids[0]
+        answer_ids = answer_tokens.input_ids[0][2:]
         self.answer_len = len(answer_ids)
 
 
@@ -193,7 +192,6 @@ class PauseFinetuningDataset(Dataset):
         attention_mask = torch.ones(len(input_ids), dtype=torch.long)
 
         labels = torch.cat([input_ids, answer_ids])
-
 
         return {
             "input_ids": input_ids,
@@ -256,7 +254,8 @@ class PauseFinetuningTrainer(Trainer):
 
         # Forward pass with huggingface's built-in loss calculation
         outputs = model(input_ids=labels, labels=lm_labels)
-
+        # import pdb
+        # pdb.set_trace()
         # Get the loss calculated by the model
         loss = outputs.loss
         return (loss, outputs) if return_outputs else loss
@@ -265,19 +264,6 @@ def train_pause_model(tokenizer, model, train_dataset, eval_dataset, experiment_
     """
     Train a model with pause tokens as per the paper using LoRA
     """
-
-    # Set pad token if not set
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
-
-    # Add pause token to vocabulary
-    pause_token = "<pause>"
-    if pause_token not in tokenizer.get_vocab():
-        special_tokens = {"additional_special_tokens": [pause_token]}
-        num_added = tokenizer.add_special_tokens(special_tokens)
-        if num_added > 0:
-            model.resize_token_embeddings(len(tokenizer))
-
     # Define LoRA Configuration
     lora_config = LoraConfig(
         task_type=TaskType.CAUSAL_LM,
@@ -300,6 +286,17 @@ def train_pause_model(tokenizer, model, train_dataset, eval_dataset, experiment_
     lora_model = get_peft_model(model, lora_config)
     lora_model.train()
     lora_model.config.use_cache = False  # Disable KV cache for training with gradient checkpointing
+
+    lora_model.model.lm_head.weight.requires_grad = True
+    lora_model.model.model.embed_tokens.weight.requires_grad=True
+    
+    def freeze_old_weights_hook(grad):
+        # import pdb
+        # pdb.set_trace()
+        return torch.nan_to_num(grad, nan=0, posinf=0, neginf=0) * torch.concat([torch.zeros_like(grad[:-1]), torch.ones_like(grad[-1:])], dim=0).to(grad.device)
+    
+    lm_head_hooks = lora_model.model.lm_head.weight.register_hook(freeze_old_weights_hook)
+    embed_tokens_hooks = lora_model.model.model.embed_tokens.weight.register_hook(freeze_old_weights_hook)
 
     # Log trainable vs. all parameters
     total_params = sum(p.numel() for p in lora_model.parameters())
@@ -331,8 +328,7 @@ def train_pause_model(tokenizer, model, train_dataset, eval_dataset, experiment_
         weight_decay=0.01,
         logging_dir=save_path,
         logging_steps=10,
-        evaluation_strategy="epoch",
-        save_strategy="epoch",
+        save_strategy="best",
         load_best_model_at_end=True,
         fp16=True if torch.cuda.is_available() else False,
         gradient_checkpointing=True,
@@ -355,4 +351,6 @@ def train_pause_model(tokenizer, model, train_dataset, eval_dataset, experiment_
 
     # Train the model
     trainer.train()
+    lm_head_hooks.remove()
+    embed_tokens_hooks.remove()
     return lora_model

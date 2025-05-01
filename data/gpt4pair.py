@@ -39,10 +39,27 @@ class ReasoningPairsGenerator:
         Returns:
             Detailed step-by-step reasoning
         """
-        messages = [
-            {"role": "system", "content": "You are a math tutor who provides detailed step-by-step solutions to math problems."},
-            {"role": "user", "content": f"Problem: {query}\n\nPlease solve this step-by-step, showing all your work."}
-        ]
+         # Determine the type of problem
+        is_commonsense_qa = "choices:" in query.lower()
+        is_coin_flip = "coin" in query.lower() and "flip" in query.lower()
+
+        if is_commonsense_qa:
+            messages = [
+                {"role": "system", "content": "You are an AI that provides step-by-step reasoning for multiple-choice commonsense questions."},
+                {"role": "user", "content": f"Problem: {query}\n\nPlease think through this question step by step. Consider what each answer option means and why it would or wouldn't be appropriate. At the end, provide your answer as a single letter (A, B, C, D, or E)."}
+            ]
+        elif is_coin_flip:
+            messages = [
+                {"role": "system", "content": "You are an AI that explains coin flip logical problems."},
+                {"role": "user", "content": f"Problem: {query}\n\nPlease solve this problem by tracking the state of the coin at each step. You only need to consider whether the coin is heads up or tails up after each flip or non-flip. At the end, answer with 'yes' or 'no' to whether the coin is still heads up."}
+            ]
+        else:
+            # Default math tutor prompt
+            messages = [
+                {"role": "system", "content": "You are a math tutor who provides detailed step-by-step solutions to math problems."},
+                {"role": "user", "content": f"Problem: {query}\n\nPlease solve this step-by-step, showing all your work."}
+            ]
+        
 
         try:
             response = requests.post(

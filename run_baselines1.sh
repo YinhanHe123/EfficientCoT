@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Array of datasets
-datasets=("svamp" "gsm8k" "multiarith")
+datasets=("gsm8k" "svamp" "multiarith" "commonsense_qa" "coin_flip")
 models=("small" "mistral")
 
 # Loop through each dataset
@@ -15,6 +15,18 @@ models=("small" "mistral")
 
 for dataset in "${datasets[@]}"; do
     for model in "${models[@]}"; do
-        CUDA_VISIBLE_DEVICES=3 python main.py --mode baseline --baseline pause --config $model --dataset $dataset
+        CUDA_VISIBLE_DEVICES=2 python main.py --mode baseline --baseline pause --config $model --dataset $dataset --device 2
+    done
+done
+
+for dataset in "${datasets[@]}"; do
+    for model in "${models[@]}"; do
+        python main.py --mode baseline --baseline codi --config $model --dataset $dataset --device 2
+    done
+done
+
+for dataset in "${datasets[@]}"; do
+    for model in "${models[@]}"; do
+        python main.py --mode baseline --baseline icot_si --config $model --device 1 --dataset $dataset
     done
 done

@@ -81,7 +81,6 @@ def train_softcot_model(
 
     # Training loop
     best_val_loss = float('inf')
-    best_state_dict = None
 
     # Process dataset in batches
     for epoch in range(num_epochs):
@@ -185,21 +184,17 @@ def train_softcot_model(
         # Save best model
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
-            best_state_dict = softcot_model.projection_module.state_dict()
 
             # Save checkpoint
             checkpoint_path = os.path.join(output_path, "checkpoints")
             os.makedirs(checkpoint_path, exist_ok=True)
-            torch.save(best_state_dict, os.path.join(checkpoint_path, f"projection_module_best.pt"))
+            torch.save(softcot_model.projection_module.state_dict(), os.path.join(checkpoint_path, f"projection_module_best.pt"))
 
             print(f"Saved best model with validation loss: {best_val_loss:.6f}")
 
     # Load best model
-    if best_state_dict is not None:
-        softcot_model.projection_module.load_state_dict(best_state_dict)
-
-    # Save final model
-    softcot_model.save_pretrained(output_path)
+    if os.path.exists(os.path.join(checkpoint_path, f"projection_module_best.pt")):
+        softcot_model.projection_module.load_state_dict(torch.load(os.path.join(checkpoint_path, f"projection_module_best.pt")))
 
     logger.close()
     return softcot_model

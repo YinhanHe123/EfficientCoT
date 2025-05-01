@@ -1,4 +1,3 @@
-import copy
 import time
 import torch
 import torch.nn as nn
@@ -350,7 +349,7 @@ def run_icot_si_baseline(train_dataset, eval_dataset, model_config, experiment_c
         List of prediction results
     """
     # Set up output paths
-    output_path = f"{experiment_config.model_save_path}/model_removedTokens=1"
+    output_path = f"{experiment_config.model_save_path}/model"
 
     # Check if the model has already been trained
     if not os.path.exists(f"{output_path}/adapter_model.safetensors"):
@@ -366,8 +365,8 @@ def run_icot_si_baseline(train_dataset, eval_dataset, model_config, experiment_c
             device=experiment_config.device,
             batch_size=1,
             max_seq_length=experiment_config.max_seq_length,
-            remove_per_epoch=1,  # Gradually increase removal tokens
-            removal_smoothing_lambda=0.5,  # Allow some variance in removal
+            remove_per_epoch=8,  # Gradually increase removal tokens
+            removal_smoothing_lambda=4,  # Allow some variance in removal
             removal_side='left',  # Remove from start of reasoning
             keep_position=True,  # Maintain position embeddings
         )

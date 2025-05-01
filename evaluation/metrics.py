@@ -4,41 +4,82 @@ def evaluate_model(results, dataset):
     """Calculate metrics for the model's performance"""
     metrics = {}
        # If ground truth contains numerical answers, compute numerical accuracy
-    num_correct = 0
-    num_close = 0  # Within 1% error
-    relative_errors = []
+    data_path = getattr(dataset, 'name', '').lower()
+    is_commonsense_qa = 'commonsense_qa' in data_path
+    is_coin_flip = 'coin_flip' in data_path
 
-    for i, result in enumerate(results):
-        try:
-            # Extract all numbers from the prediction
-            pred_nums = extract_all_numbers(result["prediction"])
+    if is_commonsense_qa:
+        # For CommonsenseQA, check if prediction matches the correct answer label (A, B, C, D, E)
+        num_correct = 0
 
-            # Get the answer from the data
-            gt_num = float(dataset[i]["answer"])
+        for i, result in enumerate(results):
+            prediction = result["prediction"].strip().lower()
+            ground_truth = dataset[i]["answer"].strip().lower()
 
-            # Check for exact match among any of the extracted numbers
-            if any(abs(pred - gt_num) < 1e-6 for pred in pred_nums):  # Allow for small floating point differences
+            # Check if the prediction contains or exactly matches the answer option
+            # Allow both 'A' and 'A.' as valid formats
+            if (ground_truth == prediction or
+                ground_truth + '.' == prediction or
+                ground_truth in prediction.split() or
+                ground_truth + '.' in prediction.split()):
                 num_correct += 1
 
-            # Find the closest match and calculate relative error
-            if pred_nums:
-                closest_pred = min(pred_nums, key=lambda x: abs(x - gt_num))
-                rel_error = abs(closest_pred - gt_num) / abs(gt_num)
-                relative_errors.append(rel_error)
+        metrics["numerical_accuracy"] = round(num_correct / len(results), 3) if results else 0
+        return metrics
 
-                # Check if the closest match is within 1% error
-                if rel_error < 0.01:
-                    num_close += 1
-        except (ValueError, TypeError):
-            continue
+    elif is_coin_flip:
+        # For coin_flip, check if prediction matches yes/no
+        num_correct = 0
 
-        if results:  # Avoid division by zero
-            metrics["numerical_accuracy"] = round(num_correct / len(results), 3)
-            metrics["close_match_rate"] = round(num_close / len(results), 3)
+        for i, result in enumerate(results):
+            prediction = result["prediction"].strip().lower()
+            ground_truth = dataset[i]["answer"].strip().lower()
 
-        if relative_errors:
-            metrics["mean_relative_error"] = np.mean(relative_errors)
-            metrics["median_relative_error"] = np.median(relative_errors)
+            # Check for yes/no match
+            if (ground_truth == prediction or
+                (ground_truth == 'yes' and ('yes' in prediction.lower() or 'still heads' in prediction.lower())) or
+                (ground_truth == 'no' and ('no' in prediction.lower() or 'not heads' in prediction.lower()))):
+                num_correct += 1
+
+        metrics["numerical_accuracy"] = round(num_correct / len(results), 3) if results else 0
+        return metrics
+
+    else:
+        num_correct = 0
+        num_close = 0  # Within 1% error
+        relative_errors = []
+
+        for i, result in enumerate(results):
+            try:
+                # Extract all numbers from the prediction
+                pred_nums = extract_all_numbers(result["prediction"])
+
+                # Get the answer from the data
+                gt_num = float(dataset[i]["answer"])
+
+                # Check for exact match among any of the extracted numbers
+                if any(abs(pred - gt_num) < 1e-6 for pred in pred_nums):  # Allow for small floating point differences
+                    num_correct += 1
+
+                # Find the closest match and calculate relative error
+                if pred_nums:
+                    closest_pred = min(pred_nums, key=lambda x: abs(x - gt_num))
+                    rel_error = abs(closest_pred - gt_num) / abs(gt_num)
+                    relative_errors.append(rel_error)
+
+                    # Check if the closest match is within 1% error
+                    if rel_error < 0.01:
+                        num_close += 1
+            except (ValueError, TypeError):
+                continue
+
+            if results:  # Avoid division by zero
+                metrics["numerical_accuracy"] = round(num_correct / len(results), 3)
+                metrics["close_match_rate"] = round(num_close / len(results), 3)
+
+            if relative_errors:
+                metrics["mean_relative_error"] = np.mean(relative_errors)
+                metrics["median_relative_error"] = np.median(relative_errors)
 
     return metrics
 

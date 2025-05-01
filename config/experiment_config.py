@@ -42,7 +42,7 @@ class ExperimentConfig:
         self.end_layer_idx = 20  # End layer for sentence transformer
         directory = str(os.path.abspath(os.path.join(__file__ ,"../..")))
         self.reasoning_pairs_path = os.path.join(directory, "gen_datasets")
-        
+
         self.device = None
         self.ccot_stage = None
         self.ccot_lr = 1e-5
@@ -52,3 +52,5 @@ class ExperimentConfig:
         self.codi_lr = 8e-4
         # Load config-specific settings
         # self._load_specific_config()
+
+        self.coconut_stage = None

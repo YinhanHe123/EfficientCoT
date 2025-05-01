@@ -23,7 +23,7 @@ def run_codi_baseline(train_dataset, eval_dataset, model_config, experiment_conf
     """
     # Check for trained models
     output_path = f"{experiment_config.model_save_path}/model_tokens={experiment_config.train_max_contemp_tokens}_lr={experiment_config.codi_lr}"
-        
+
     print("Training model...")
     if not os.path.exists(f"{output_path}/model.pt"):
         os.makedirs(output_path, exist_ok=True)
@@ -36,9 +36,9 @@ def run_codi_baseline(train_dataset, eval_dataset, model_config, experiment_conf
             learning_rate=experiment_config.codi_lr,
             device=experiment_config.device
         )
-    codi_model = CODIModel.from_pretrained(output_path)
+    s= = CODIModel.from_pretrained(output_path, experiment_config.device)
     codi_model.eval()
-    
+
     print("Predicting on evaluation dataset...")
     results, gen_time = [], []
     with torch.no_grad():
@@ -48,7 +48,7 @@ def run_codi_baseline(train_dataset, eval_dataset, model_config, experiment_conf
             end_time = time.time()
             generation_time = end_time - start_time
             gen_time.append(generation_time)
-            
+
             results.append({
                 "query": sample['query'],
                 "ground_truth": sample['answer'],

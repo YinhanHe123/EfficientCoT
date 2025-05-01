@@ -10,6 +10,7 @@ from .codi_baseline_runner import run_codi_baseline
 from .icot_kd_baseline_runner import run_icot_kd_baseline
 from .softcot_baseline_runner import run_softcot_baseline
 from .pause_baseline_runner import run_pause_baseline
+from .coconut_baseline_runner import run_coconut_baseline
 
 def run_baseline(baseline_name, train_dataset, eval_dataset, model_config, experiment_config, num_shots=0):
     """Run one of the baseline methods for comparison"""
@@ -26,6 +27,8 @@ def run_baseline(baseline_name, train_dataset, eval_dataset, model_config, exper
         return run_pause_baseline(train_dataset, eval_dataset, model_config, experiment_config)
     elif baseline_name == "icot_kd":
         return run_icot_kd_baseline(train_dataset, eval_dataset, model_config, experiment_config)
+    elif baseline_name == "coconut":
+        return run_coconut_baseline(train_dataset, eval_dataset, model_config, experiment_config)
     elif baseline_name == "cot":
         return run_cot_baseline(train_dataset, eval_dataset, model_config, experiment_config, num_shots)
     else:
