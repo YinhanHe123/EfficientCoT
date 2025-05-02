@@ -253,7 +253,7 @@ def run_ccot_baseline(train_dataset, eval_dataset, model_config, experiment_conf
                 contemplation_states = ccot_model(
                     inputs.input_ids,
                     attention_mask=inputs.attention_mask,
-                    max_contemplation_tokens=experiment_config.eval_max_contemp_tokens # This line should be removed after THE ARG IS REMOVED
+                    max_contemplation_tokens=experiment_config.eval_max_contemp_tokens, # This line should be removed after THE ARG IS REMOVED
                 )
                 end_time = time.time()
                 # print(f"Contemplation generation time: {end_time - start_time:.2f} seconds")

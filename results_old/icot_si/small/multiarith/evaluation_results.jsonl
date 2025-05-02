@@ -1,3 +1,0 @@
-{"numerical_accuracy": 0.01, "close_match_rate": 0.01, "mean_relative_error": 0.7503703703703704, "median_relative_error": 0.8, "dataset": "multiarith", "eval_temp": 0.7, "eval_max_contemp_tokens": 1}
-{"numerical_accuracy": 0.03, "close_match_rate": 0.03, "mean_relative_error": 0.8241691858556466, "median_relative_error": 0.9099025974025974, "exp_num": 0, "dataset": "multiarith", "eval_temp": 0.7, "eval_max_contemp_tokens": 1}
-{"summary_acc": "0.03 \u00b1 0.00", "summary_time": "2.49 \u00b1 0.00", "acc": [0.03], "ave_sample_time": [2.4934831428527833]}

@@ -131,7 +131,7 @@ def run_softcot_baseline(train_dataset, eval_dataset, model_config, experiment_c
                 inputs_embeds=combined_embeds,
                 attention_mask=attention_mask,
                 position_ids=position_ids,
-                max_length=50 + total_seq_length,
+                max_length=30 + total_seq_length,
                 temperature=experiment_config.eval_temp,
                 top_p=0.9,
                 do_sample=True,

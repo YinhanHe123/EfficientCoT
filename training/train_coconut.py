@@ -13,7 +13,7 @@ def train_coconut_model(
     eval_dataset,
     output_path,
     learning_rate=1e-5,
-    num_epochs=1,
+    num_epochs=5,
     batch_size=1,
     max_continuous_tokens=5,
     device="cuda"
@@ -68,13 +68,13 @@ def train_coconut_model(
     coconut_model.model = get_peft_model(coconut_model.model, peft_config)
     coconut_model.model.model.lm_head.weight.requires_grad = True
     coconut_model.model.model.model.embed_tokens.weight.requires_grad=True
-    
+
     def freeze_old_weights_hook(grad):
         return torch.nan_to_num(grad, nan=0, posinf=0, neginf=0) * torch.concat([torch.zeros_like(grad[:-1]), torch.ones_like(grad[-1:])], dim=0).to(grad.device)
-    
+
     lm_head_hook = coconut_model.model.model.lm_head.weight.register_hook(freeze_old_weights_hook)
     embed_tokens_hook = coconut_model.model.model.model.embed_tokens.weight.register_hook(freeze_old_weights_hook)
-    
+
     # Extract training data
     queries = [item["query"] for item in train_dataset]
     reasonings = [item["full_answer"] for item in train_dataset]

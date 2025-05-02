@@ -1,6 +1,0 @@
-{"numerical_accuracy": 0.06, "close_match_rate": 0.06, "mean_relative_error": 3.7265470110424883e+27, "median_relative_error": 8.153061224489797, "exp_num": 0, "dataset": "svamp", "eval_temp": 0.7, "eval_max_contemp_tokens": 1}
-{"numerical_accuracy": 0.2, "close_match_rate": 0.2, "mean_relative_error": 1.7035659971681494e+26, "median_relative_error": 0.7467885375494071, "exp_num": 1, "dataset": "svamp", "eval_temp": 0.7, "eval_max_contemp_tokens": 1}
-{"numerical_accuracy": 0.04, "close_match_rate": 0.04, "mean_relative_error": 2.5737395065578926e+27, "median_relative_error": 8.583333333333332, "exp_num": 2, "dataset": "svamp", "eval_temp": 0.7, "eval_max_contemp_tokens": 1}
-{"numerical_accuracy": 0.2, "close_match_rate": 0.2, "mean_relative_error": 1.7035659971681494e+26, "median_relative_error": 0.7467885375494071, "exp_num": 3, "dataset": "svamp", "eval_temp": 0.7, "eval_max_contemp_tokens": 1}
-{"numerical_accuracy": 0.04, "close_match_rate": 0.04, "mean_relative_error": 2.5737395065578926e+27, "median_relative_error": 8.583333333333332, "exp_num": 4, "dataset": "svamp", "eval_temp": 0.7, "eval_max_contemp_tokens": 1}
-{"summary_acc": "0.11 \u00b1 0.08", "summary_time": "2.91 \u00b1 0.02", "acc": [0.06, 0.2, 0.04, 0.2, 0.04], "ave_sample_time": [2.925790629386902, 2.897050449848175, 2.933610875606537, 2.8854612159729003, 2.932873957157135]}

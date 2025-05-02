@@ -1,3 +1,0 @@
-{"numerical_accuracy": 0.04, "close_match_rate": 0.04, "mean_relative_error": 0.7631888978077592, "median_relative_error": 0.8125, "dataset": "gsm8k", "eval_temp": 0.7, "eval_max_contemp_tokens": 1}
-{"numerical_accuracy": 0.08, "close_match_rate": 0.08, "mean_relative_error": 1.0252831542826653, "median_relative_error": 0.5398729710656316, "exp_num": 0, "dataset": "gsm8k", "eval_temp": 0.7, "eval_max_contemp_tokens": 1}
-{"summary_acc": "0.08 \u00b1 0.00", "summary_time": "2.24 \u00b1 0.00", "acc": [0.08], "ave_sample_time": [2.2420469307899475]}

@@ -17,7 +17,7 @@ import utils.utils as utils
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Contemplation Tokens with Reasoning Ability")
-    parser.add_argument("--num_exps", type=int, default=5, help="Number of experiments")
+    parser.add_argument("--num_exps", type=int, default=3, help="Number of experiments")
     parser.add_argument("--mode", type=str,
                         choices=["train_sentence_transformer", "train_contemp_generator",
                                  "evaluate", "baseline", "run_experiments", "train_ccot", "effi_cot"],

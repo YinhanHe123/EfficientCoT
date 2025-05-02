@@ -6,7 +6,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 import utils.utils as utils
 from utils.logging import Logger
 
-def compute_loss_ans(contemp_states, teacher_model, teacher_tokenizer, answer_loss_fn, combined_inputs, answer_inputs, exp_config, device, mode="train"):
+def compute_loss_ans(contemp_states, teacher_model, teacher_tokenizer, answer_loss_fn, combined_input_for_query, combined_input_for_answer, answer_inputs, exp_config, device, mode="train"):
     # Determine whether to compute gradients based on mode
     context_manager = torch.enable_grad() if mode == "train" else torch.no_grad()
 
@@ -16,7 +16,8 @@ def compute_loss_ans(contemp_states, teacher_model, teacher_tokenizer, answer_lo
 
         # Get the embeddings from the model's embedding layer (no gradients needed)
         with torch.no_grad():
-            inputs_embeds = teacher_model.get_input_embeddings()(combined_inputs.input_ids)
+            inputs_embeds_for_query = teacher_model.get_input_embeddings()(combined_input_for_query.input_ids)
+            inputs_embeds_for_answer = teacher_model.get_input_embeddings()(combined_input_for_answer.input_ids)
             # answer_embeds = teacher_model.get_input_embeddings()(answer_inputs.input_ids)
             underscore_tokens = (teacher_tokenizer.eos_token+' ')*(answer_inputs.input_ids.shape[1]-2)
             underscore_tokens = underscore_tokens.strip()
@@ -28,14 +29,25 @@ def compute_loss_ans(contemp_states, teacher_model, teacher_tokenizer, answer_lo
 
         # Create a new inputs_embeds by concatenating
         combined_embeds = torch.cat([
-            inputs_embeds,
+            inputs_embeds_for_query,
             contemp_states_to_use[:, -contemp_len:, :],
+            inputs_embeds_for_answer,
             answer_underscore[:,1:,:]
         ], dim=1)
-
+        att_size = inputs_embeds_for_query.size(1) + contemp_states_to_use[:, -contemp_len:, :].size(1) + inputs_embeds_for_answer.size(1)
         # Create proper attention mask and position ids
+        # attention_mask = torch.ones(
+        #     (combined_inputs.input_ids.size(0), combined_embeds.shape[1]),
+        #     dtype=torch.long,
+        #     device=device
+        # )
+        # position_ids = torch.arange(
+        #     combined_embeds.shape[1],
+        #     dtype=torch.long,
+        #     device=device
+        # ).unsqueeze(0).expand(combined_inputs.input_ids.size(0), -1)
         attention_mask = torch.ones(
-            (combined_inputs.input_ids.size(0), combined_embeds.shape[1]),
+            (att_size, combined_embeds.shape[1]),
             dtype=torch.long,
             device=device
         )
@@ -43,7 +55,7 @@ def compute_loss_ans(contemp_states, teacher_model, teacher_tokenizer, answer_lo
             combined_embeds.shape[1],
             dtype=torch.long,
             device=device
-        ).unsqueeze(0).expand(combined_inputs.input_ids.size(0), -1)
+        ).unsqueeze(0).expand(combined_input_for_query.input_ids.size(0), -1)
 
         # Forward pass with combined embeddings - conditionally use no_grad
         if mode == "train":
@@ -86,21 +98,25 @@ def format_query_for_model(query, teacher_model_name):
     Format query based on the model type
     """
     if "mistral" in teacher_model_name.lower():
-        # Mistral format
-        return f"<s>[INST] Question: {query}\n Answer: [/INST]"
+        # Mistral format - contemplation tokens will be added BEFORE "Answer:"
+        return f"<s>[INST] Question: {query}\n"  # "Answer:" will be added after contemplation tokens
     else:
-        # Llama format
-        return f"<<SYS>>You are an expert in math word problems<</SYS>>\nQuestion: {query}\n Answer: "
+        # Llama format - contemplation tokens will be added BEFORE "Answer:"
+        return f"<<SYS>>You are an expert in math word problems<</SYS>>\nQuestion: {query}\n"  # "Answer:" will be added after contemplation tokens
 
 def format_combined_input(query, teacher_model_name):
     """
     Format combined input based on the model type
     """
     if "mistral" in teacher_model_name.lower():
-        # return f"<s>[INST] Question: {query}\n Generate the answer directly: [/INST]"
-        return f"<s>[INST] Question: {query}\n Note that you are NOT allowed to write anything other than a number. Answer: [/INST]"
+        combined_input_for_query = f"<s>[INST] Question: {query}\n "
+        combined_input_for_answer = " Answer: [/INST]"
+        return (combined_input_for_query, combined_input_for_answer)
     else:
-        return f"Question: {query}\n Generate the answer directly: "
+        combined_input_for_query = f"Question: {query}\n"
+        combined_input_for_answer = "Generate the answer directly. Answer: "
+        return (combined_input_for_query, combined_input_for_answer)
+
 
 def train_contemplation_generator(
     contemp_generator,
@@ -143,7 +159,7 @@ def train_contemplation_generator(
     logger.log_hyperparams(exp_config.__dict__ | model_config.__dict__)
 
     # Training loop
-    
+
     best_state_dict = None
     print("Starting training contemplation generator...")
     for name, param in contemp_generator.student_model.named_parameters():
@@ -185,7 +201,7 @@ def train_contemplation_generator(
             avg_total_loss = total_loss / len(train_dataset)
             avg_reason_loss = reason_loss / len(train_dataset)
             avg_ans_loss = ans_loss / len(train_dataset)
-            
+
             eval_loss = evaluate(
                 teacher_model,
                 teacher_tokenizer,
@@ -196,7 +212,7 @@ def train_contemplation_generator(
                 exp_config,
                 variation
             )
-            
+
             # Log metrics
             logger.log_metrics({
                 "total_loss": avg_total_loss,
@@ -215,7 +231,7 @@ def train_contemplation_generator(
         print(f"Loading best validation loss = {best_val_loss}")
         for name, param in contemp_generator.student_model.named_parameters():
             param.requires_grad = True
-            
+
     model_path = f"{exp_config.model_save_path}/contemp_generator/{contemp_generator.student_model_name}"
     utils.create_directory(model_path)
     contemp_generator.save_pretrained(model_path)
@@ -262,12 +278,22 @@ def process_item(mode, item, contemp_generator, teacher_model, teacher_tokenizer
                 gt_reason_hidden_states
             )
 
-    # Format query based on model type
-    query_condensed_reasoning = format_query_for_model(query, teacher_model.config._name_or_path)
+    # Format query based on model type - get the base prompt without Answer:
+    if "mistral" in teacher_model.config._name_or_path.lower():
+        query_condensed_reasoning = f"<s>[INST] You are an expert in math word problems. Question: {query}\n"
+    else:
+        query_condensed_reasoning = f"<<SYS>>You are an expert in math word problems<</SYS>>\nQuestion: {query}\n"
 
+    # Add contemplation tokens BEFORE the "Answer:" part
     underscore_tokens = (contemp_generator.tokenizer.eos_token+' ')*exp_config.train_max_contemp_tokens
     underscore_tokens = underscore_tokens.strip()
     query_condensed_reasoning += underscore_tokens
+
+    # Now add "Answer:" after the contemplation tokens
+    if "mistral" in teacher_model.config._name_or_path.lower():
+        query_condensed_reasoning += " Answer: [/INST]"
+    else:
+        query_condensed_reasoning += " Answer: "
 
     contemp_inputs = contemp_generator.tokenizer(
         query_condensed_reasoning,
@@ -277,11 +303,28 @@ def process_item(mode, item, contemp_generator, teacher_model, teacher_tokenizer
         max_length=exp_config.max_seq_length
     ).to(device)
 
+    # Find position of contemplation tokens
+    if "mistral" in teacher_model.config._name_or_path.lower():
+        prefix = f"<s>[INST] You are an expert in math word problems. Question: {query}\n"
+    else:
+        prefix = f"<<SYS>>You are an expert in math word problems<</SYS>>\nQuestion: {query}\n"
+
+    prefix_tokens = contemp_generator.tokenizer(
+        prefix,
+        return_tensors="pt",
+        padding=False,
+        truncation=False
+    ).to(device)
+    prefix_length = prefix_tokens.input_ids.size(1)
+
     # Generate hidden states
-    contemp_states = contemp_generator(
+    all_contemp_states = contemp_generator(
         contemp_inputs.input_ids,
         attention_mask=contemp_inputs.attention_mask
-    )[:, -min(exp_config.train_max_contemp_tokens,contemp_inputs.input_ids.size(1)):, :]  # Get last N tokens
+    )
+
+    # Extract the contemplation tokens from the correct position (after prefix, before "Answer:")
+    contemp_states = all_contemp_states[:, prefix_length:prefix_length+exp_config.train_max_contemp_tokens, :]
 
     # Get contemplation embeddings using sentence transformer
     if variation == 'vanilla':
@@ -302,10 +345,18 @@ def process_item(mode, item, contemp_generator, teacher_model, teacher_tokenizer
         l_reason = 1 - similarity
 
     # Format combined input based on model type
-    combined_input = format_combined_input(query, teacher_model.config._name_or_path)
+    combined_input_for_query, combined_input_for_answer = format_combined_input(query, teacher_model.config._name_or_path)
 
-    combined_inputs = teacher_tokenizer(
-        combined_input,
+    combined_input_for_query = teacher_tokenizer(
+        combined_input_for_query,
+        return_tensors="pt",
+        padding=True,
+        truncation=True,
+        max_length=exp_config.max_seq_length
+    ).to(device)
+
+    combined_input_for_answer = teacher_tokenizer(
+        combined_input_for_answer,
         return_tensors="pt",
         padding=True,
         truncation=True,
@@ -323,7 +374,7 @@ def process_item(mode, item, contemp_generator, teacher_model, teacher_tokenizer
 
     # Compute loss using the modified function with mode="train"
     l_ans = compute_loss_ans(contemp_states, teacher_model, teacher_tokenizer,
-                       answer_loss_fn, combined_inputs, answer_inputs,
+                       answer_loss_fn, combined_input_for_query, combined_input_for_answer, answer_inputs,
                        exp_config, device, mode)
 
     # Combined loss
@@ -331,6 +382,7 @@ def process_item(mode, item, contemp_generator, teacher_model, teacher_tokenizer
         loss = l_ans
     else:
         loss = exp_config.alpha * l_reason + (1 - exp_config.alpha) * l_ans
+
     # Track losses
     total_loss += loss.item()
     if variation != 'no_l_reason':

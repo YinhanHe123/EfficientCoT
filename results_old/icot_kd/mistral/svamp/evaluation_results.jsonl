@@ -1,1 +1,0 @@
-{"numerical_accuracy": 0.04, "close_match_rate": 0.04, "mean_relative_error": 76.77735065931091, "median_relative_error": 0.819672131147541, "dataset": "svamp", "eval_temp": 0.7, "eval_max_contemp_tokens": 1}

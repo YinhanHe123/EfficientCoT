@@ -36,7 +36,7 @@ def run_codi_baseline(train_dataset, eval_dataset, model_config, experiment_conf
             learning_rate=experiment_config.codi_lr,
             device=experiment_config.device
         )
-    s= = CODIModel.from_pretrained(output_path, experiment_config.device)
+    codi_model = CODIModel.from_pretrained(output_path, experiment_config.device)
     codi_model.eval()
 
     print("Predicting on evaluation dataset...")

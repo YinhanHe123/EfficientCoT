@@ -135,7 +135,7 @@ class CoconutModel(nn.Module):
 
         return continuous_thoughts
 
-    def generate_with_continuous_thoughts(self, input_text, max_continuous_tokens=5, max_new_tokens=30):
+    def generate_with_continuous_thoughts(self, input_text, max_continuous_tokens=5, max_new_tokens=30, temperature=0.7):
         """
         Generate an answer using continuous thought reasoning.
 
@@ -196,7 +196,7 @@ class CoconutModel(nn.Module):
             max_new_tokens=max_new_tokens,
             num_beams=4,
             do_sample=True,
-            temperature=0.7,
+            temperature=temperature,
             top_p=0.9,
             pad_token_id=self.tokenizer.eos_token_id
         )

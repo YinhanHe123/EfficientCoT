@@ -409,7 +409,7 @@ def run_icot_si_baseline(train_dataset, eval_dataset, model_config, experiment_c
                 logits_processor=[logits_processor],
                 generation_config=generation_config,
                 do_sample=True,
-                temperature=0.7,
+                temperature=experiment_config.eval_temp,
                 top_p=0.9
             )
         end = time.time()

@@ -83,7 +83,7 @@ class CCoTModel(nn.Module):
             input_ids=input_ids,
             attention_mask=attention_mask,
             output_hidden_states=True,
-            return_dict=True
+            return_dict=True,
         )
 
         # Get the hidden state of the last token at the specified layer

@@ -11,12 +11,14 @@ def get_formatted_prompt(query, teacher_model_name):
     """
     if "mistral" in teacher_model_name.lower():
         # Mistral prompt format
-        prompt = f"<s>[INST] Question: {query}\n Note that you are NOT allowed to write anything other than a number. Answer: [/INST]"
+        prompt_query = f"<s>[INST] Question: {query}\n"
+        prompt_answer = "Note that you are NOT allowed to write anything other than a number. Answer: [/INST]"
     else:
         # Llama prompt format
-        prompt = f"Question: {query}\n Generate the answer directly. Answer:"
+        prompt_query = f"Question: {query}\n"
+        prompt_answer = "Generate the answer directly. Answer: "
 
-    return prompt
+    return (prompt_query, prompt_answer)
 
 
 def run_inference(contemp_generator, dataset, teacher_model_name, config):
@@ -44,12 +46,17 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
 
             # Format the prompt based on the model
             if "mistral" in teacher_model_name.lower():
-                query_condensed_reasoning = f"<s>[INST] You are an expert in math word problems. Question: {query}\nAnswer: [/INST]"
+                # Original: query_condensed_reasoning = f"<s>[INST] You are an expert in math word problems. Question: {query}\nAnswer: [/INST]"
+                query_condensed_reasoning = f"<s>[INST] You are an expert in math word problems. Question: {query}\n"
+                # Add contemplation tokens before "Answer:"
+                query_condensed_reasoning += f"{contemp_generator.tokenizer.eos_token} " * config.eval_max_contemp_tokens
+                query_condensed_reasoning += "Answer: [/INST]"
             else:
-                query_condensed_reasoning = f"<<SYS>>You are an expert in math word problems<</SYS>>\nQuestion: {query}\nAnswer: "
-
-            query_condensed_reasoning += f"{contemp_generator.tokenizer.eos_token} " * config.eval_max_contemp_tokens
-            query_condensed_reasoning = query_condensed_reasoning.strip()
+                # Original: query_condensed_reasoning = f"<<SYS>>You are an expert in math word problems<</SYS>>\nQuestion: {query}\nAnswer: "
+                query_condensed_reasoning = f"<<SYS>>You are an expert in math word problems<</SYS>>\nQuestion: {query}\n"
+                # Add contemplation tokens before "Answer:"
+                query_condensed_reasoning += f"{contemp_generator.tokenizer.eos_token} " * config.eval_max_contemp_tokens
+                query_condensed_reasoning += "Answer: "
 
             # Generate contemplation tokens hidden states
             query_inputs = contemp_generator.tokenizer(
@@ -61,42 +68,69 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
             ).to(device)
 
             contemp_start = time.time()
+            # CHANGED: Extract contemplation states from the correct position (no longer the last tokens)
+            # Find the position where we inserted the contemplation tokens
+            if "mistral" in teacher_model_name.lower():
+                # Calculate position based on the token sequence
+                prompt_prefix = f"<s>[INST] You are an expert in math word problems. Question: {query}\n"
+            else:
+                prompt_prefix = f"<<SYS>>You are an expert in math word problems<</SYS>>\nQuestion: {query}\n"
+
+            prefix_tokens = contemp_generator.tokenizer(
+                prompt_prefix,
+                return_tensors="pt",
+                padding=False,
+                truncation=False
+            ).to(device)
+            prefix_length = prefix_tokens.input_ids.size(1)
+
+            # Get contemplation states from the correct position
             contemp_states = contemp_generator(
                 query_inputs.input_ids,
                 attention_mask=query_inputs.attention_mask
-            )[:, -config.eval_max_contemp_tokens:, :]
+            )[:, prefix_length:prefix_length+config.eval_max_contemp_tokens, :]
+
             contemp_end = time.time()
             contemp_time = contemp_end - contemp_start
             contemp_time_list.append(contemp_time)
 
             # Prepare prompt with query based on model
-            prompt = get_formatted_prompt(query, teacher_model_name)
+            prompt_query, prompt_answer = get_formatted_prompt(query, teacher_model_name)
 
             # Tokenize the prompt
-            prompt_tokens = teacher_tokenizer(
-                prompt,
+            prompt_tokens_query = teacher_tokenizer(
+                prompt_query,
                 return_tensors="pt",
                 padding=False,
                 truncation=True,
                 max_length=config.max_seq_length
             ).to(device)
 
+            prompt_tokens_answer = teacher_tokenizer(
+                prompt_answer,
+                return_tensors="pt",
+                padding=False,
+                truncation=True,
+                max_length=config.max_seq_length
+            ).to(device)
             # Instead of modifying prepare_inputs_for_generation,
             # directly create input embeddings and concatenate with contemplation states
-            prompt_embeds = teacher_model.get_input_embeddings()(prompt_tokens.input_ids)
+            prompt_embeds_query = teacher_model.get_input_embeddings()(prompt_tokens_query.input_ids)
+            prompt_embeds_answer = teacher_model.get_input_embeddings()(prompt_tokens_answer.input_ids)
 
             # Get dimensions for proper positioning
             contemp_len = min(contemp_states.size(1), config.eval_max_contemp_tokens)
 
             # Create combined embeddings
             combined_embeds = torch.cat([
-                prompt_embeds,
-                contemp_states[:, -contemp_len:, :]
+                prompt_embeds_query,
+                contemp_states[:, -contemp_len:, :],
+                prompt_embeds_answer
             ], dim=1)
 
             # Create proper attention mask that covers both parts
             attention_mask = torch.ones(
-                (1, prompt_embeds.size(1) + contemp_len),
+                (1, combined_embeds.size(1)),
                 dtype=torch.long,
                 device=device
             )
@@ -113,11 +147,11 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
                 pad_token_id=teacher_tokenizer.eos_token_id,
             )
             gen_end = time.time()
-            print(f"Generation time: {gen_end - gen_start}")
+            # print(f"Generation time: {gen_end - gen_start}")
             gen_time = gen_end - gen_start
 
             # Decode only the generated part (skip the prompt and contemplation tokens)
-            answer = teacher_tokenizer.decode(outputs[0][prompt_tokens.input_ids.size(1):], skip_special_tokens=True)
+            answer = teacher_tokenizer.decode(outputs[0][combined_embeds.size(1)-1:], skip_special_tokens=True)
 
             result = {
                 "query": query,
@@ -129,7 +163,8 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
             results.append(result)
 
             # Clean up memory
-            del query_inputs, prompt_tokens, prompt_embeds, combined_embeds, contemp_states, outputs
+            # del query_inputs, prompt_tokens, prompt_embeds, combined_embeds, contemp_states, outputs
+            del query_inputs, prompt_tokens_query, prompt_tokens_answer, prompt_embeds_query, prompt_embeds_answer, combined_embeds, contemp_states, outputs
             torch.cuda.empty_cache()
 
     print(f"Average time taken for each sample: {sum(time_list)/len(time_list)}, Average time taken for contemplation: {sum(contemp_time_list)/len(contemp_time_list)}")
