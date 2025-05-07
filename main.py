@@ -1,7 +1,5 @@
 import argparse
 import os
-
-import numpy as np
 os.environ['HF_HOME'] = '/data/nee7ne/huggingface'
 from models.sentence_transformer import CustomizedSentenceTransformer
 from config.model_config import ModelConfig
@@ -13,6 +11,7 @@ from training.train_sent_trans import train_sentence_transformer, prepare_reason
 from inference.inference import run_inference
 from evaluation.metrics import evaluate_model
 from baselines.baselines import run_baseline
+from utils.logging import Logger
 import utils.utils as utils
 
 def parse_args():
@@ -100,6 +99,8 @@ def parse_args():
                         help="LLM weight decay  for contemp generator")
     parser.add_argument("--cg_llm_epochs", "-cgllme", type=int, default=5,
                         help="LLM number of epochs for contemp generator")
+    parser.add_argument("--train_sentence_transformer", "-train_st", type=str, default="True",
+                        help="train sentence transformer")
     return parser.parse_args()
 
 
@@ -180,7 +181,7 @@ def main():
     if not os.path.exists(experiment_config.result_path):
         os.makedirs(experiment_config.result_path)
 
-    reasoning_pairs_path = os.path.join(experiment_config.reasoning_pairs_path, f"{model_config.teacher_model_name}/{args.dataset}/reasoning_pairs_{args.seed}.json")
+    reasoning_pairs_path = os.path.join(experiment_config.reasoning_pairs_path, f"{args.dataset}/reasoning_pairs_{args.seed}.json")
 
     # Load dataset
     if args.dataset == 'gsm8k':
@@ -195,47 +196,48 @@ def main():
         model_config.data_path = 'skrishna/coin_flip'
 
     train_dataset, eval_dataset = load_raw_dataset(model_config.data_path)
+    if args.mode == "effi_cot":
+        logger = Logger(
+            log_dir=experiment_config.log_dir,
+            experiment_name=f"{experiment_config.experiment_name}"
+        )
+        logger.log_hyperparams(experiment_config.__dict__ | model_config.__dict__)
+        # Prepare reasoning pairs dataset
+        if os.path.exists(reasoning_pairs_path):
+            pairs_dataset = utils.load_json(reasoning_pairs_path)
+        else:
+            # Extract queries from the dataset
+            reasonings = None
+            if "full_answer" in train_dataset[0].keys() and train_dataset[0]["full_answer"] != "":
+                reasonings = [item["full_answer"] for item in train_dataset][:experiment_config.max_reasoning_pairs]
+            pairs_dataset = prepare_reasoning_pairs_dataset(
+                [item["query"] for item in train_dataset][:experiment_config.max_reasoning_pairs],
+                reasonings,
+                [item["answer"] for item in train_dataset][:experiment_config.max_reasoning_pairs],
+                reasoning_pairs_path,
+                max_pairs=experiment_config.max_reasoning_pairs
+            )
     acc, ave_sample_time = [], []
     for i in range(args.num_exps):
         if args.mode == "effi_cot":
+            cur_train_dataset, cur_val_dataset = load_raw_dataset(model_config.data_path)
+            # add to train dataset items with condensed reasoning of pairs_dataset
+            for idx in range(len(pairs_dataset)):
+                cur_train_dataset.update_item(idx, "condensed_reasoning", pairs_dataset[idx]["condensed_reasoning"])
             sentence_transformer = None
             if args.variation != "no_sentence_transformer":
-                # Extract queries from the dataset
-                queries = [item["query"] for item in train_dataset][:experiment_config.max_reasoning_pairs]
-                if "full_answer" in train_dataset[0].keys() and train_dataset[0]["full_answer"] != "":
-                    reasonings = [item["full_answer"] for item in train_dataset][:experiment_config.max_reasoning_pairs]
-                else:
-                    reasonings = None
-                answers = [item["answer"] for item in train_dataset][:experiment_config.max_reasoning_pairs]
-                # Prepare reasoning pairs dataset
-                from training.train_sent_trans import prepare_reasoning_pairs_dataset
-                if os.path.exists(reasoning_pairs_path):
-                    pairs_dataset = utils.load_json(reasoning_pairs_path)
-                else:
-                    pairs_dataset = prepare_reasoning_pairs_dataset(
-                        queries,
-                        reasonings,
-                        answers,
-                        reasoning_pairs_path,
-                        max_pairs=experiment_config.max_reasoning_pairs
-                    )
-
                 # Train sentence transformer
-                from training.train_sent_trans import train_sentence_transformer
-                # sentence_transformer = train_sentence_transformer(
-                #     model_config.teacher_model_name,
-                #     experiment_config.start_layer_idx,
-                #     experiment_config.end_layer_idx,
-                #     pairs_dataset,
-                #     experiment_config
-                # )
+                if args.train_sentence_transformer == "True": 
+                    sentence_transformer = train_sentence_transformer(
+                        model_config.teacher_model_name,
+                        experiment_config.start_layer_idx,
+                        experiment_config.end_layer_idx,
+                        cur_train_dataset,
+                        experiment_config
+                    )
                 sentence_transformer = CustomizedSentenceTransformer.from_pretrained(
                     experiment_config.model_save_path+"/sentence_transformer"
                 ).to(args.device)
-            pairs_dataset = utils.load_json(reasoning_pairs_path)
-            # add to train dataset items with condensed reasoning of pairs_dataset
-            for i in range(len(pairs_dataset)):
-                train_dataset.update_item(i, "condensed_reasoning", pairs_dataset[i]["condensed_reasoning"])
 
             # Initialize contemplation generator
             contemp_generator = ContemplationGenerator(
@@ -246,48 +248,51 @@ def main():
             )
 
             # Train the contemplation generator
-            # train_contemplation_generator(
-            #     contemp_generator,
-            #     sentence_transformer,
-            #     train_dataset,
-            #     eval_dataset,
-            #     model_config,
-            #     experiment_config,
-            #     args.variation
-            # )
+            train_contemplation_generator(
+                contemp_generator,
+                sentence_transformer,
+                cur_train_dataset,
+                cur_val_dataset,
+                model_config,
+                experiment_config,
+                args.variation
+            )
             contemp_generator = ContemplationGenerator.from_pretrained(
-                experiment_config.model_save_path+"/contemp_generator/"+model_config.student_model_name+"/"
+                experiment_config.model_save_path+"/contemp_generator/"
             ).to(args.device)
             results = run_inference(
                 contemp_generator,
-                eval_dataset,
+                cur_val_dataset,
                 model_config.teacher_model_name,
                 experiment_config
             )
             # Evaluate results
-            metrics = evaluate_model(results, eval_dataset)
-
-            metrics.update({
-                'exp_num': i,
-                'dataset': args.dataset,
-                'student': model_config.student_model_name,
-                'teacher': model_config.teacher_model_name,
-                'sent_trans_lr': experiment_config.sent_trans_lr,
-                'sent_trans_weight_decay': experiment_config.sent_trans_weight_decay,
-                'sent_trans_epochs': experiment_config.sent_trans_epochs,
-                'contemp_gen_lr': experiment_config.contemp_gen_lr,
-                'contemp_gen_epochs': experiment_config.contemp_gen_epochs,
-                'contemp_gen_lin_layer_lr': experiment_config.contemp_gen_lin_layer_lr,
-                'contemp_gen_lin_layer_epochs': experiment_config.contemp_gen_lin_layer_epochs,
-                'contemp_gen_lin_layer_weight_decay': experiment_config.contemp_gen_lin_layer_weight_decay,
-                'contemp_gen_weight_decay': experiment_config.contemp_gen_weight_decay,
-                'eval_temp': experiment_config.eval_temp,
-                'train_max_contemp_tokens': experiment_config.train_max_contemp_tokens,
-                'eval_max_contemp_tokens': experiment_config.eval_max_contemp_tokens,
-            })
-
-            utils.append_to_jsonl_file(f"{experiment_config.result_path}/evaluation_results.jsonl", metrics)
-            print(f"Evaluation results: {metrics}")
+            for temp, res in results:
+                metrics = evaluate_model(res, eval_dataset)
+                metrics.update({
+                    'exp_num': i,
+                    'dataset': args.dataset,
+                    'eval_temp': temp,
+                    'ave_sample_time': sum([r['sample_time'] for r in res]) / len(res),
+                    'student': model_config.student_model_name,
+                    'teacher': model_config.teacher_model_name,
+                    'st_linear_lr': experiment_config.st_linear_lr,
+                    'st_linear_wd': experiment_config.st_linear_wd,
+                    'st_linear_epochs': experiment_config.st_linear_epochs,
+                    'st_llm_lr': experiment_config.st_llm_lr,
+                    'st_llm_wd': experiment_config.st_llm_wd,
+                    'st_llm_epochs': experiment_config.st_llm_epochs,
+                    'cg_linear_lr': experiment_config.cg_linear_lr,
+                    'cg_linear_wd': experiment_config.cg_linear_wd,
+                    'cg_linear_epochs': experiment_config.cg_linear_epochs,
+                    'cg_llm_lr': experiment_config.cg_llm_lr,
+                    'cg_llm_wd': experiment_config.cg_llm_wd,
+                    'cg_llm_epochs': experiment_config.cg_llm_epochs,
+                    'train_max_contemp_tokens': experiment_config.train_max_contemp_tokens,
+                    'eval_max_contemp_tokens': experiment_config.eval_max_contemp_tokens,
+                })
+                utils.append_to_jsonl_file(f"{experiment_config.result_path}/evaluation_results.jsonl", metrics)
+                print(f"Evaluation results: {metrics}")
         elif args.mode == "baseline":
             # Run baseline method
             results = run_baseline(
@@ -299,19 +304,20 @@ def main():
                 num_shots=args.cot_bsl_shot
             )
             # Evaluate results
-            metrics = evaluate_model(results, eval_dataset)
-            metrics.update({
-                'exp_num': i,
-                'dataset': args.dataset,
-                'eval_temp': experiment_config.eval_temp,
-                'eval_max_contemp_tokens': experiment_config.eval_max_contemp_tokens,
-            })
-            # save
-            utils.append_to_jsonl_file(f"{experiment_config.result_path}/evaluation_results.jsonl", metrics)
-            print(f"Baseline {args.baseline} results: {metrics}")
-        acc.append(metrics["numerical_accuracy"])
-        ave_sample_time.append(sum([r['sample_time'] for r in results]) / len(results))
-    summary = {"summary_acc": f"{np.mean(acc):.2f} ± {np.std(acc):.2f}", "summary_time": f"{np.mean(ave_sample_time):.2f} ± {np.std(ave_sample_time):.2f}", "acc": acc, "ave_sample_time": ave_sample_time }
-    utils.append_to_jsonl_file(f"{experiment_config.result_path}/evaluation_results.jsonl", summary)
+            for temp, res in results:
+                metrics = evaluate_model(res, eval_dataset)
+                metrics.update({
+                    'exp_num': i,
+                    'dataset': args.dataset,
+                    'eval_temp': temp,
+                    'eval_max_contemp_tokens': experiment_config.eval_max_contemp_tokens,
+                    'ave_sample_time': sum([r['sample_time'] for r in res]) / len(res)
+                })
+                utils.append_to_jsonl_file(f"{experiment_config.result_path}/evaluation_results.jsonl", metrics)
+                print(f"Baseline {args.baseline} results: {metrics}")
+        # acc.append(metrics["numerical_accuracy"])
+        # ave_sample_time.append(sum([r['sample_time'] for r in results]) / len(results))
+    # summary = {"summary_acc": f"{np.mean(acc):.2f} ± {np.std(acc):.2f}", "summary_time": f"{np.mean(ave_sample_time):.2f} ± {np.std(ave_sample_time):.2f}", "acc": acc, "ave_sample_time": ave_sample_time }
+    # utils.append_to_jsonl_file(f"{experiment_config.result_path}/evaluation_results.jsonl", summary)
 if __name__ == "__main__":
     main()

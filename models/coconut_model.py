@@ -202,7 +202,7 @@ class CoconutModel(nn.Module):
         )
 
         # Decode only the generated text (after <eot>)
-        eot_position = combined_embeds.size(1)
+        eot_position = combined_embeds.size(1) if outputs.shape[-1] > combined_embeds.size(1) else 0
         generated_text = self.tokenizer.decode(
             outputs[0][eot_position:],
             skip_special_tokens=True

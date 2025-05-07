@@ -220,14 +220,18 @@ class RawDataset(Dataset):
 
             full_answer = item.get('full_answer', '')
             condensed_reasoning = item.get('condensed_reasoning', None)
-
-        return {
+        sample = {
             "query": question,
             "reasoning": reasoning,
             "answer": final_answer,
             "full_answer": full_answer,
             "condensed_reasoning": condensed_reasoning
         }
+        if "gt_reason_hidden" in item:
+            sample["gt_reason_hidden"] = item["gt_reason_hidden"]
+        if "condensed_reason_hidden" in item:
+            sample["condensed_reason_hidden"] = item["condensed_reason_hidden"]
+        return sample
 
     def update_item(self, idx, key, value):
         """Add or update a field in the dataset at the specified index"""

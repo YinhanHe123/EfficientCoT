@@ -65,121 +65,118 @@ def run_softcot_baseline(train_dataset, eval_dataset, model_config, experiment_c
     # Create output directory for results
     results_dir = os.path.join(experiment_config.result_path, "softcot")
     os.makedirs(results_dir, exist_ok=True)
+    all_res, all_summ = [], []
+    for temp in [0.1, 0.3, 0.5, 0.7, 0.9]:
+        results = []
+        softcot_time_list = []
+        inference_time_list = []
 
-    results = []
-    softcot_time_list = []
-    inference_time_list = []
+        print("Running inference...")
+        with torch.no_grad():
+            for sample in tqdm(eval_dataset, desc="Running SoftCoT inference"):
+                query = sample["query"]
 
-    print("Running inference...")
-    with torch.no_grad():
-        for sample in tqdm(eval_dataset, desc="Running SoftCoT inference"):
-            query = sample["query"]
+                # Format the prompt based on the model type
+                if "mistral" in model_config.teacher_model_name.lower():
+                    prompt = f"<s>[INST] Question: {query}\n Answer: [/INST]"
+                else:
+                    prompt = f"Question: {query}\n Answer:"
 
-            # Format the prompt based on the model type
-            if "mistral" in model_config.teacher_model_name.lower():
-                prompt = f"<s>[INST] Question: {query}\n Answer: [/INST]"
-            else:
-                prompt = f"Question: {query}\n Answer:"
+                # Tokenize the prompt
+                prompt_tokens = softcot_model.llm_tokenizer(
+                    prompt,
+                    return_tensors="pt",
+                    padding=False,
+                    truncation=True,
+                    max_length=experiment_config.max_seq_length
+                ).to(device)
 
-            # Tokenize the prompt
-            prompt_tokens = softcot_model.llm_tokenizer(
-                prompt,
-                return_tensors="pt",
-                padding=False,
-                truncation=True,
-                max_length=experiment_config.max_seq_length
-            ).to(device)
+                # Generate soft thought tokens
+                start_time = time.time()
+                num_soft_tokens = experiment_config.eval_max_contemp_tokens
+                soft_thought_tokens = softcot_model.generate_soft_thoughts(query, num_soft_tokens)
 
-            # Generate soft thought tokens
-            start_time = time.time()
-            sample_start = start_time
-            num_soft_tokens = experiment_config.eval_max_contemp_tokens
-            soft_thought_tokens = softcot_model.generate_soft_thoughts(query, num_soft_tokens)
+                # Project to LLM space
+                projected_soft_thoughts = softcot_model.project_soft_thoughts(soft_thought_tokens)
+                softcot_time = time.time() - start_time
+                softcot_time_list.append(softcot_time)
 
-            # Project to LLM space
-            projected_soft_thoughts = softcot_model.project_soft_thoughts(soft_thought_tokens)
-            softcot_time = time.time() - start_time
-            softcot_time_list.append(softcot_time)
+                # Get the embeddings from LLM's embedding layer
+                inputs_embeds = llm_model.get_input_embeddings()(prompt_tokens.input_ids)
 
-            # Get the embeddings from LLM's embedding layer
-            inputs_embeds = llm_model.get_input_embeddings()(prompt_tokens.input_ids)
+                # Concatenate with projected soft thoughts
+                total_seq_length = prompt_tokens.input_ids.size(1) + projected_soft_thoughts.size(1)
+                combined_embeds = torch.cat([
+                    inputs_embeds,
+                    projected_soft_thoughts
+                ], dim=1)
 
-            # Concatenate with projected soft thoughts
-            total_seq_length = prompt_tokens.input_ids.size(1) + projected_soft_thoughts.size(1)
-            combined_embeds = torch.cat([
-                inputs_embeds,
-                projected_soft_thoughts
-            ], dim=1)
+                # Create proper attention mask
+                attention_mask = torch.ones(
+                    (1, total_seq_length),
+                    dtype=torch.long,
+                    device=device
+                )
 
-            # Create proper attention mask
-            attention_mask = torch.ones(
-                (1, total_seq_length),
-                dtype=torch.long,
-                device=device
-            )
+                # Create position ids
+                position_ids = torch.arange(
+                    total_seq_length,
+                    dtype=torch.long,
+                    device=device
+                ).unsqueeze(0)
 
-            # Create position ids
-            position_ids = torch.arange(
-                total_seq_length,
-                dtype=torch.long,
-                device=device
-            ).unsqueeze(0)
+                # Generate answer
+                start_time = time.time()
+                outputs = llm_model.generate(
+                    inputs_embeds=combined_embeds,
+                    attention_mask=attention_mask,
+                    position_ids=position_ids,
+                    max_length=30 + total_seq_length,
+                    temperature=temp,
+                    top_p=0.9,
+                    do_sample=True,
+                    pad_token_id=softcot_model.llm_tokenizer.eos_token_id
+                )
+                inference_time = time.time() - start_time
+                inference_time_list.append(inference_time)
 
-            # Generate answer
-            start_time = time.time()
-            outputs = llm_model.generate(
-                inputs_embeds=combined_embeds,
-                attention_mask=attention_mask,
-                position_ids=position_ids,
-                max_length=30 + total_seq_length,
-                temperature=experiment_config.eval_temp,
-                top_p=0.9,
-                do_sample=True,
-                pad_token_id=softcot_model.llm_tokenizer.eos_token_id
-            )
-            inference_time = time.time() - start_time
-            sample_end = inference_time
-            inference_time_list.append(inference_time)
+                # Extract the answer (skip the initial prompt and projected soft thoughts)
+                prefix = prompt_tokens.input_ids.size(1) if outputs.shape[-1] > prompt_tokens.input_ids.size(1) else 0
+                answer_ids = outputs[0][prefix:]
+                answer = softcot_model.llm_tokenizer.decode(answer_ids, skip_special_tokens=True)
 
-            # Extract the answer (skip the initial prompt and projected soft thoughts)
-            answer_ids = outputs[0][prompt_tokens.input_ids.size(1):]
-            answer = softcot_model.llm_tokenizer.decode(answer_ids, skip_special_tokens=True)
+                # Record the result
+                result = {
+                    "query": query,
+                    "ground_truth": sample.get("answer", ""),
+                    "prediction": answer,
+                    "softcot_time": softcot_time,
+                    "inference_time": inference_time,
+                    "total_time": softcot_time + inference_time,
+                    "sample_time": softcot_time + inference_time
+                }
+                results.append(result)
 
-            # Record the result
-            result = {
-                "query": query,
-                "ground_truth": sample.get("answer", ""),
-                "prediction": answer,
-                "softcot_time": softcot_time,
-                "inference_time": inference_time,
-                "total_time": softcot_time + inference_time,
-                "sample_time": sample_end - sample_start
-            }
-            results.append(result)
+        # Calculate average times
+        avg_softcot_time = sum(softcot_time_list) / len(softcot_time_list)
+        avg_inference_time = sum(inference_time_list) / len(inference_time_list)
+        avg_total_time = avg_softcot_time + avg_inference_time
 
-    # Calculate average times
-    avg_softcot_time = sum(softcot_time_list) / len(softcot_time_list)
-    avg_inference_time = sum(inference_time_list) / len(inference_time_list)
-    avg_total_time = avg_softcot_time + avg_inference_time
-
-    # Add summary statistics
-    summary = {
-        "avg_softcot_time": avg_softcot_time,
-        "avg_inference_time": avg_inference_time,
-        "avg_total_time": avg_total_time,
-        "num_samples": len(eval_dataset),
-        "num_soft_tokens": experiment_config.eval_max_contemp_tokens
-    }
-
-    # Save results with summary
-    utils.save_json({"results": results, "summary": summary},
-                    f"{results_dir}/inference_results.json")
-
-    print(f"SoftCoT baseline completed. Average generation time: {avg_total_time:.2f} seconds")
-
+        # Add summary statistics
+        summary = {
+            "avg_softcot_time": avg_softcot_time,
+            "avg_inference_time": avg_inference_time,
+            "avg_total_time": avg_total_time,
+            "num_samples": len(eval_dataset),
+            "num_soft_tokens": experiment_config.eval_max_contemp_tokens
+        }
+        all_summ.append(summary)
+        all_res.append((temp, results))
+        
+        print(f"SoftCoT baseline completed. Average generation time: {avg_total_time:.2f} seconds")
+    utils.save_json([{"summary": summary} for summary in all_summ], f"{results_dir}/inference_results.json")
     # Clean up
     del llm_model
     gc.collect()
     torch.cuda.empty_cache()
-
-    return results
+    return all_res

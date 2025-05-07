@@ -33,7 +33,7 @@ class ExperimentConfig:
         self.seed=42
         # self.max_reasoning_pairs = 1000  # Maximum reasoning pairs to generate
         # self.max_reasoning_pairs = 7473
-        self.max_reasoning_pairs = 400
+        self.max_reasoning_pairs = 800
         self.train_max_contemp_tokens = 5
         self.eval_max_contemp_tokens = 1
 

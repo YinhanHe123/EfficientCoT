@@ -50,41 +50,56 @@ def run_pause_baseline(train_dataset, eval_dataset, model_config, experiment_con
     pause_token_id = tokenizer.convert_tokens_to_ids(pause_token)
     num_pause_tokens = experiment_config.eval_max_contemp_tokens
     pause_tokens = torch.tensor([[pause_token_id] * num_pause_tokens], device=device)
-    results = []
-    with torch.no_grad():
-        for sample in tqdm(eval_dataset, desc="Running Pause baseline"):
-            query = sample["query"]
+    all_res, all_summ = [], []
+    for temp in [0.1, 0.3, 0.5, 0.7, 0.9]:
+        results, gen_time = [], []
+        with torch.no_grad():
+            for sample in tqdm(eval_dataset, desc="Running Pause baseline"):
+                query = sample["query"]
 
-            # Format the prompt based on model type
-            if "mistral" in model_config.teacher_model_name.lower():
-                prompt = f"<s>[INST] Question: {query}\nAnswer: [/INST]"
-            else:
-                prompt = f"Question: {query}\nAnswer:"
+                # Format the prompt based on model type
+                if "mistral" in model_config.teacher_model_name.lower():
+                    prompt = f"<s>[INST] Question: {query}\nAnswer: [/INST]"
+                else:
+                    prompt = f"Question: {query}\nAnswer:"
 
-            # Tokenize the input
-            input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(device)
+                # Tokenize the input
+                input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(device)
 
-            start = time.time()
-            # Append pause tokens to the input (the paper's core idea)
-            modified_input_ids = torch.cat([input_ids, pause_tokens], dim=1)
-            
-            # Generate the response, ignoring the pause tokens
-            outputs = model.generate(
-                modified_input_ids,
-                max_length=30 + modified_input_ids.size(1),
-                temperature=experiment_config.eval_temp,
-                top_p=0.9,
-                do_sample=True
-            )
-            end = time.time()
+                start = time.time()
+                # Append pause tokens to the input (the paper's core idea)
+                modified_input_ids = torch.cat([input_ids, pause_tokens], dim=1)
+                
+                # Generate the response, ignoring the pause tokens
+                outputs = model.generate(
+                    modified_input_ids,
+                    max_length=30 + modified_input_ids.size(1),
+                    temperature=temp,
+                    top_p=0.9,
+                    do_sample=True
+                )
+                end = time.time()
 
-            # Skip input prompt and pause tokens to get just the answer
-            answer_ids = outputs[0][input_ids.size(1) + num_pause_tokens:]
-            answer = tokenizer.decode(answer_ids, skip_special_tokens=True).strip()
-            results.append({
-                "query": query,
-                "ground_truth": sample.get("answer", ""),
-                "prediction": answer,
-                "sample_time": end - start
-            })
-    return results
+                # Skip input prompt and pause tokens to get just the answer
+                answer_ids = outputs[0][input_ids.size(1) + num_pause_tokens:]
+                answer = tokenizer.decode(answer_ids, skip_special_tokens=True).strip()
+                results.append({
+                    "query": query,
+                    "ground_truth": sample.get("answer", ""),
+                    "prediction": answer,
+                    "sample_time": end - start
+                })
+                gen_time.append(end - start)
+        summary = {
+            "avg_generation_time": sum(gen_time) / len(eval_dataset),
+            "num_samples": len(eval_dataset),
+            "num_continuous_tokens": experiment_config.eval_max_contemp_tokens
+        }
+        all_summ.append(summary)
+        all_res.append((temp, results))
+    
+    results_dir = os.path.join(experiment_config.result_path, "pause")
+    if not os.path.exists(results_dir):
+        os.makedirs(results_dir)
+    utils.save_json([{"summary": summary} for summary in all_summ], f"{results_dir}/inference_results.json")
+    return all_res

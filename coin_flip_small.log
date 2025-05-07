@@ -1,0 +1,10 @@
+2025-05-06 06:59:07,712 - INFO - Run grid search
+2025-05-06 06:59:07,712 - INFO - Training sentence transformer - llr = 0.001 | lwd = 0.0001 | le = 3 | llmlr = 1e-05 | llmwd = 0.001 | llme = 1
+2025-05-06 06:59:07,712 - INFO - Training contemp generator - llr = 0.001 | lwd = 0.001 | le = 5 | llmlr = 1e-05 | llmwd = 0.001 | llme = 2
+2025-05-06 07:57:13,464 - INFO - Found best acc = 0.89 | stllr = 0.001 | stlwd = 0.0001 | stle = 3 | stllmlr = 1e-05 | stllmwd = 0.001 | stllme = 1 | cgllr = 0.001 | cgle = 5 | cglwd = 0.001 | cgllmlr = 1e-05 | cgllmwd = 0.001 | cgllme = 2
+2025-05-06 07:57:13,465 - INFO - Training contemp generator - llr = 0.01 | lwd = 0.01 | le = 1 | llmlr = 1e-07 | llmwd = 0.001 | llme = 2
+2025-05-06 08:38:23,708 - INFO - Found best acc = 0.945 | stllr = 0.001 | stlwd = 0.0001 | stle = 3 | stllmlr = 1e-05 | stllmwd = 0.001 | stllme = 1 | cgllr = 0.01 | cgle = 1 | cglwd = 0.01 | cgllmlr = 1e-07 | cgllmwd = 0.001 | cgllme = 2
+2025-05-06 08:38:23,708 - INFO - Training contemp generator - llr = 0.001 | lwd = 0.01 | le = 1 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 1
+2025-05-06 09:12:03,995 - INFO - Training contemp generator - llr = 0.0001 | lwd = 0.01 | le = 3 | llmlr = 1e-07 | llmwd = 0.001 | llme = 2
+2025-05-06 09:59:46,244 - INFO - Training contemp generator - llr = 0.01 | lwd = 0.01 | le = 3 | llmlr = 1e-07 | llmwd = 1e-05 | llme = 1
+complete

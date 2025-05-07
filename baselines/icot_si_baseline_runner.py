@@ -386,51 +386,62 @@ def run_icot_si_baseline(train_dataset, eval_dataset, model_config, experiment_c
     generation_config.eos_token_id = -1
 
     # Prepare inference results
-    results = []
-    # Run inference on evaluation dataset
-    for item in tqdm(eval_dataset, desc="Running Implicit CoT inference"):
-        # Tokenize input
-        input_text = f"{item['query']} {tokenizer.eos_token}"
-        inputs = tokenizer(
-            input_text,
-            return_tensors="pt",
-            padding=True,
-            truncation=True,
-            max_length=experiment_config.max_seq_length
-        ).to(experiment_config.device)
+    all_res, all_summ = [], []
+    for temp in [0.1, 0.3, 0.5, 0.7, 0.9]:
+        results, gen_time = [], []
+        # Run inference on evaluation dataset
+        for item in tqdm(eval_dataset, desc="Running Implicit CoT inference"):
+            # Tokenize input
+            input_text = f"{item['query']} {tokenizer.eos_token}"
+            inputs = tokenizer(
+                input_text,
+                return_tensors="pt",
+                padding=True,
+                truncation=True,
+                max_length=experiment_config.max_seq_length
+            ).to(experiment_config.device)
 
-        # Generate answer
-        start = time.time()
-        with torch.no_grad():
-            outputs = model.generate(
-                input_ids=inputs['input_ids'],
-                max_new_tokens=30,
-                stopping_criteria=[stopping_criteria],
-                logits_processor=[logits_processor],
-                generation_config=generation_config,
-                do_sample=True,
-                temperature=experiment_config.eval_temp,
-                top_p=0.9
-            )
-        end = time.time()
+            # Generate answer
+            start = time.time()
+            with torch.no_grad():
+                outputs = model.generate(
+                    input_ids=inputs['input_ids'],
+                    max_new_tokens=30,
+                    stopping_criteria=[stopping_criteria],
+                    logits_processor=[logits_processor],
+                    generation_config=generation_config,
+                    do_sample=True,
+                    temperature=temp,
+                    top_p=0.9
+                )
+            end = time.time()
 
-        # Decode and extract answer
-        generated_text = tokenizer.decode(outputs[0])
-        answer = extract_answer(generated_text, tokenizer.eos_token)
+            # Decode and extract answer
+            generated_text = tokenizer.decode(outputs[0])
+            answer = extract_answer(generated_text, tokenizer.eos_token)
 
-        # Store result
-        results.append({
-            "query": item['query'],
-            "ground_truth": item.get("answer", ""),
-            "prediction": answer,
-            "sample_time": end - start
-        })
+            # Store result
+            results.append({
+                "query": item['query'],
+                "ground_truth": item.get("answer", ""),
+                "prediction": answer,
+                "sample_time": end - start
+            })
+            gen_time.append(end - start)
+            
+        summary = {
+            "avg_generation_time": sum(gen_time) / len(eval_dataset),
+            "num_samples": len(eval_dataset),
+            "num_continuous_tokens": experiment_config.eval_max_contemp_tokens
+        }
+        all_summ.append(summary)
+        all_res.append((temp, results))
 
     # Save results
     results_dir = os.path.join(experiment_config.result_path, "icot_si")
     if not os.path.exists(results_dir):
         os.makedirs(results_dir)
-    utils.save_json(results, f"{results_dir}/inference_results.json")
+    utils.save_json([{"summary": summary} for summary in all_summ], f"{results_dir}/inference_results.json")
     os.remove(f"{output_path}/adapter_config.json")
     os.remove(f"{output_path}/adapter_model.safetensors")
-    return results
+    return all_res
