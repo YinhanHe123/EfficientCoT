@@ -46,8 +46,7 @@ for llr in linears:
                         combinations.append((llr, lwd, llmlr, llmwd, le, llme))
 
 for (st_llr, st_lwd, st_llmlr, st_llmwd, st_le, st_llme) in random.sample(combinations, len(combinations)):
-    train_st = True
-    early_stop, max_tries = 0, 0
+    max_tries = 0
     logging.info(f"Training sentence transformer - llr = {st_llr} | lwd = {st_lwd} | le = {st_le} | llmlr = {st_llmlr} | llmwd = {st_llmwd} | llme = {st_llme}")
     for (cg_llr, cg_lwd, cg_llmlr, cg_llmwd, cg_le, cg_llme) in random.sample(combinations, len(combinations)):
         logging.info(f"Training contemp generator - llr = {cg_llr} | lwd = {cg_lwd} | le = {cg_le} | llmlr = {cg_llmlr} | llmwd = {cg_llmwd} | llme = {cg_llme}")
@@ -55,19 +54,16 @@ for (st_llr, st_lwd, st_llmlr, st_llmwd, st_le, st_llme) in random.sample(combin
         while return_code != 0:
             result = subprocess.run(['python', 'main.py', '--config', args.config, '--mode', 'effi_cot', '--dataset', args.dataset, '--device', args.device, '--variation', 'vanilla', '-stllr', str(st_llr), '-stlwd', str(st_lwd), '-stle', str(st_le), '-stllmlr', str(st_llmlr), '-stllmwd', str(st_llmwd), '-stllme', str(st_llme), '-cgllr', str(cg_llr), '-cglwd', str(cg_lwd), '-cgle', str(cg_le), '-cgllmlr', str(cg_llmlr), '-cgllmwd', str(cg_llmwd), '-cgllme', str(cg_llme), '--num_exps', '1'], capture_output=True, text=True)
             return_code = result.returncode
-        if train_st:
-            train_st = False
         acc = get_max_acc(res_path)
         if acc > max_acc:
             max_acc = acc
+            max_tries = 0
             logging.info(f"Found best acc = {acc} | stllr = {st_llr} | stlwd = {st_lwd} | stle = {st_le} | stllmlr = {st_llmlr} | stllmwd = {st_llmwd} | stllme = {st_llme} | cgllr = {cg_llr} | cgle = {cg_le} | cglwd = {cg_lwd} | cgllmlr = {cg_llmlr} | cgllmwd = {cg_llmwd} | cgllme = {cg_llme}")
             logging.info("Python command - " + " ".join(['python', 'main.py', '--config', args.config, '--mode', 'effi_cot', '--dataset', args.dataset, '--device', args.device, '--variation', 'vanilla', '-stllr', str(st_llr), '-stlwd', str(st_lwd), '-stle', str(st_le), '-stllmlr', str(st_llmlr), '-stllmwd', str(st_llmwd), '-stllme', str(st_llme), '-cgllr', str(cg_llr), '-cglwd', str(cg_lwd), '-cgle', str(cg_le), '-cgllmlr', str(cg_llmlr), '-cgllmwd', str(cg_llmwd), '-cgllme', str(cg_llme), '--num_exps', '1']))
         elif (max_acc - acc) > 0.05:
             early_stop += 1
         max_tries += 1
-        if early_stop > 5:
-            break
-        elif max_tries > 10:
+        if max_tries > 3:
             break
 
 # for st_llr in linear:

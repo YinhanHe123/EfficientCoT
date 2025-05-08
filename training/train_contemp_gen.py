@@ -113,28 +113,29 @@ def train_contemplation_generator(
         for param in sentence_transformer.parameters():
             param.requires_grad = False
         
-        for data in [train_dataset, eval_dataset]:
-            for idx in tqdm(range(len(data))):
-                if 'gt_reason_hidden' not in data[idx]:
-                    original_inputs = teacher_tokenizer(
-                        data[idx]["reasoning"],
-                        return_tensors="pt",
-                        padding=True,
-                        truncation=True,
-                        max_length=exp_config.max_seq_length
-                    ).to(device)
-                    with torch.no_grad():
-                        original_outputs = teacher_model(
-                            **original_inputs,
-                            output_hidden_states=True
-                        )
-                    gt_reason_hidden = original_outputs.hidden_states[exp_config.start_layer_idx]
-                else:
-                    gt_reason_hidden = data[idx]['gt_reason_hidden'].to(device)
-                gt_hidden_emb = sentence_transformer(gt_reason_hidden)
-                data.update_item(idx, "gt_reason_hidden", gt_hidden_emb.cpu())
-                del gt_hidden_emb, gt_reason_hidden
-                torch.cuda.empty_cache()
+    for data in [train_dataset, eval_dataset]:
+        for idx in tqdm(range(len(data))):
+            if 'gt_reason_hidden' not in data[idx]:
+                original_inputs = teacher_tokenizer(
+                    data[idx]["reasoning"],
+                    return_tensors="pt",
+                    padding=True,
+                    truncation=True,
+                    max_length=exp_config.max_seq_length
+                ).to(device)
+                with torch.no_grad():
+                    original_outputs = teacher_model(
+                        **original_inputs,
+                        output_hidden_states=True
+                    )
+                gt_reason_hidden = original_outputs.hidden_states[exp_config.start_layer_idx]
+            else:
+                gt_reason_hidden = data[idx]['gt_reason_hidden'].to(device)
+            if variation == "vanilla":
+                gt_reason_hidden = sentence_transformer(gt_reason_hidden)
+            data.update_item(idx, "gt_reason_hidden", gt_reason_hidden.cpu())
+            del gt_reason_hidden
+            torch.cuda.empty_cache()
         
     # Initialize answer loss function
     answer_loss_fn = nn.CrossEntropyLoss(ignore_index=teacher_tokenizer.pad_token_id)
@@ -220,7 +221,6 @@ def process_item(mode, item, contemp_generator, teacher_model, teacher_tokenizer
     query = item["query"]
     ground_truth_answer = item["answer"]
     gt_reason = item['gt_reason_hidden'].to(device)
-    
     query_prompt, answer_prompt = format_combined_input(query)
 
     # Find position of contemplation tokens
