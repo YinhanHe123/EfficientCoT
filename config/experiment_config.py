@@ -26,7 +26,7 @@ class ExperimentConfig:
         self.contemp_gen_lin_layer_epochs = 10
 
         self.batch_size = 4
-        self.alpha = 0.5  # Weight for Lreason in total loss
+        self.alpha = 0.25  # Weight for Lreason in total loss
         self.save_interval = 1  # Save model every N epochs
         self.max_seq_length = 512
         self.embedding_dim = 768  # Dimension for embeddings
