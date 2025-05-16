@@ -6,7 +6,8 @@ export CUDA_VISIBLE_DEVICES=1
 methods=("coconut" "coconut" "coconut" "coconut" "coconut" "coconut" "coconut" "coconut")
 datasets=("gsm8k" "svamp" "multiarith" "commonsense_qa" "coin_flip" "multiarith" "commonsense_qa" "coin_flip")
 configs=("small" "small" "small" "small" "small" "mistral" "mistral" "mistral")
-datasets2=("gsm8k" "svamp" "multiarith" "commonsense_qa" "coin_flip")
+# datasets2=("gsm8k" "svamp" "multiarith" "commonsense_qa" "coin_flip")
+datasets2=("coin_flip")
 
 # Function to run a command on a specific GPU
 run_on_gpu() {
@@ -31,22 +32,22 @@ declare -a gpu2_queue
 
 # Distribute tasks between GPUs
 for dataset in "${datasets2[@]}"; do
-    gpu0_queue+=("run_method 0 softcot $dataset mistral")
+    gpu0_queue+=("run_method 0 nocot $dataset mistral")
 done
 
 for dataset in "${datasets2[@]}"; do
-    gpu2_queue+=("run_method 2 coconut $dataset mistral")
+    gpu2_queue+=("run_method 0 nocot $dataset small")
 done
 
-gpu0_queue+=("run_method 0 codi coin_flip mistral")
-gpu2_queue+=("run_method 0 codi commonsense_qa mistral")
+# gpu0_queue+=("run_method 0 codi coin_flip mistral")
+# gpu2_queue+=("run_method 0 codi commonsense_qa mistral")
 
 # Run tasks on GPU 0
 for cmd in "${gpu0_queue[@]}"; do
     eval "$cmd"
 done &
 
-# Run tasks on GPU 2
+# # Run tasks on GPU 2
 for cmd in "${gpu2_queue[@]}"; do
     eval "$cmd"
 done &

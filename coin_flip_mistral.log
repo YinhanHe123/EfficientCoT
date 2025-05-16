@@ -19,3 +19,8 @@
 2025-05-08 08:23:45,646 - INFO - Run grid search
 2025-05-08 08:23:45,646 - INFO - Training sentence transformer - llr = 0.0001 | lwd = 0.0001 | le = 5 | llmlr = 1e-05 | llmwd = 0.001 | llme = 1
 2025-05-08 08:23:45,646 - INFO - Training contemp generator - llr = 0.0001 | lwd = 0.001 | le = 3 | llmlr = 1e-07 | llmwd = 0.001 | llme = 1
+2025-05-08 09:11:02,676 - INFO - Found best acc = 0.83 | stllr = 0.0001 | stlwd = 0.0001 | stle = 5 | stllmlr = 1e-05 | stllmwd = 0.001 | stllme = 1 | cgllr = 0.0001 | cgle = 3 | cglwd = 0.001 | cgllmlr = 1e-07 | cgllmwd = 0.001 | cgllme = 1
+2025-05-08 09:11:02,677 - INFO - Python command - python main.py --config mistral --mode effi_cot --dataset coin_flip --device 1 --variation vanilla -stllr 0.0001 -stlwd 0.0001 -stle 5 -stllmlr 1e-05 -stllmwd 0.001 -stllme 1 -cgllr 0.0001 -cglwd 0.001 -cgle 3 -cgllmlr 1e-07 -cgllmwd 0.001 -cgllme 1 --num_exps 1
+2025-05-08 09:11:02,677 - INFO - Training contemp generator - llr = 0.001 | lwd = 0.01 | le = 3 | llmlr = 1e-07 | llmwd = 0.001 | llme = 2
+2025-05-08 10:02:58,994 - INFO - Training contemp generator - llr = 0.001 | lwd = 0.01 | le = 1 | llmlr = 1e-05 | llmwd = 0.001 | llme = 1
+complete

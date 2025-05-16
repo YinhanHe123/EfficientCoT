@@ -31,3 +31,175 @@
 2025-05-08 08:49:13,001 - INFO - Run grid search
 2025-05-08 08:49:13,001 - INFO - Training sentence transformer - llr = 0.01 | lwd = 0.01 | le = 1 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 1
 2025-05-08 08:49:13,001 - INFO - Training contemp generator - llr = 0.01 | lwd = 0.001 | le = 3 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 1
+2025-05-08 09:38:25,967 - INFO - Found best acc = 0.58 | stllr = 0.01 | stlwd = 0.01 | stle = 1 | stllmlr = 1e-05 | stllmwd = 1e-05 | stllme = 1 | cgllr = 0.01 | cgle = 3 | cglwd = 0.001 | cgllmlr = 1e-05 | cgllmwd = 1e-05 | cgllme = 1
+2025-05-08 09:38:25,968 - INFO - Python command - python main.py --config small --mode effi_cot --dataset commonsense_qa --device 3 --variation vanilla -stllr 0.01 -stlwd 0.01 -stle 1 -stllmlr 1e-05 -stllmwd 1e-05 -stllme 1 -cgllr 0.01 -cglwd 0.001 -cgle 3 -cgllmlr 1e-05 -cgllmwd 1e-05 -cgllme 1 --num_exps 1
+2025-05-08 09:38:25,968 - INFO - Training contemp generator - llr = 0.0001 | lwd = 0.0001 | le = 3 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 1
+2025-05-08 10:27:47,646 - INFO - Found best acc = 0.62 | stllr = 0.01 | stlwd = 0.01 | stle = 1 | stllmlr = 1e-05 | stllmwd = 1e-05 | stllme = 1 | cgllr = 0.0001 | cgle = 3 | cglwd = 0.0001 | cgllmlr = 1e-05 | cgllmwd = 1e-05 | cgllme = 1
+2025-05-08 10:27:47,646 - INFO - Python command - python main.py --config small --mode effi_cot --dataset commonsense_qa --device 3 --variation vanilla -stllr 0.01 -stlwd 0.01 -stle 1 -stllmlr 1e-05 -stllmwd 1e-05 -stllme 1 -cgllr 0.0001 -cglwd 0.0001 -cgle 3 -cgllmlr 1e-05 -cgllmwd 1e-05 -cgllme 1 --num_exps 1
+2025-05-08 10:27:47,646 - INFO - Training contemp generator - llr = 0.001 | lwd = 0.01 | le = 3 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 1
+2025-05-08 11:52:57,777 - INFO - Run grid search
+2025-05-08 11:52:57,777 - INFO - Training sentence transformer - llr = 0.001 | lwd = 0.001 | le = 1 | llmlr = 1e-07 | llmwd = 0.001 | llme = 2
+2025-05-08 11:52:57,778 - INFO - Training contemp generator - llr = 0.01 | lwd = 0.001 | le = 5 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 2
+2025-05-08 12:57:51,727 - INFO - Found best acc = 0.83 | stllr = 0.001 | stlwd = 0.001 | stle = 1 | stllmlr = 1e-07 | stllmwd = 0.001 | stllme = 2 | cgllr = 0.01 | cgle = 5 | cglwd = 0.001 | cgllmlr = 1e-05 | cgllmwd = 1e-05 | cgllme = 2
+2025-05-08 12:57:51,727 - INFO - Python command - python main.py --config small --mode effi_cot --dataset commonsense_qa --device 3 --variation vanilla -stllr 0.001 -stlwd 0.001 -stle 1 -stllmlr 1e-07 -stllmwd 0.001 -stllme 2 -cgllr 0.01 -cglwd 0.001 -cgle 5 -cgllmlr 1e-05 -cgllmwd 1e-05 -cgllme 2 --num_exps 1
+2025-05-08 12:57:51,727 - INFO - Training contemp generator - llr = 0.01 | lwd = 0.0001 | le = 3 | llmlr = 1e-07 | llmwd = 1e-05 | llme = 2
+2025-05-08 13:54:34,522 - INFO - Training contemp generator - llr = 0.001 | lwd = 0.01 | le = 1 | llmlr = 1e-07 | llmwd = 0.001 | llme = 2
+2025-05-08 18:41:23,613 - INFO - Run grid search
+2025-05-08 18:41:23,614 - INFO - Training sentence transformer - llr = 0.01 | lwd = 0.0001 | le = 1 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 1
+2025-05-08 18:41:23,614 - INFO - Training contemp generator - llr = 0.001 | lwd = 0.001 | le = 1 | llmlr = 1e-05 | llmwd = 0.001 | llme = 2
+2025-05-08 19:30:34,918 - INFO - Found best acc = 0.68 | stllr = 0.01 | stlwd = 0.0001 | stle = 1 | stllmlr = 1e-05 | stllmwd = 1e-05 | stllme = 1 | cgllr = 0.001 | cgle = 1 | cglwd = 0.001 | cgllmlr = 1e-05 | cgllmwd = 0.001 | cgllme = 2
+2025-05-08 19:30:34,918 - INFO - Python command - python main.py --config small --mode effi_cot --dataset commonsense_qa --device 3 --variation vanilla -stllr 0.01 -stlwd 0.0001 -stle 1 -stllmlr 1e-05 -stllmwd 1e-05 -stllme 1 -cgllr 0.001 -cglwd 0.001 -cgle 1 -cgllmlr 1e-05 -cgllmwd 0.001 -cgllme 2 --num_exps 1
+2025-05-08 19:30:34,918 - INFO - Training contemp generator - llr = 0.0001 | lwd = 0.001 | le = 5 | llmlr = 1e-07 | llmwd = 0.001 | llme = 2
+2025-05-08 21:55:45,293 - INFO - Training contemp generator - llr = 0.001 | lwd = 0.01 | le = 3 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 2
+2025-05-08 22:10:43,375 - INFO - Run grid search
+2025-05-08 22:10:43,376 - INFO - Training sentence transformer - llr = 0.0001 | lwd = 0.001 | le = 1 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 2
+2025-05-08 22:10:43,376 - INFO - Training contemp generator - llr = 0.0001 | lwd = 0.01 | le = 1 | llmlr = 1e-05 | llmwd = 0.001 | llme = 1
+2025-05-08 23:12:28,906 - INFO - Found best acc = 0.67 | stllr = 0.0001 | stlwd = 0.001 | stle = 1 | stllmlr = 1e-05 | stllmwd = 1e-05 | stllme = 2 | cgllr = 0.0001 | cgle = 1 | cglwd = 0.01 | cgllmlr = 1e-05 | cgllmwd = 0.001 | cgllme = 1
+2025-05-08 23:12:28,907 - INFO - Python command - python main.py --config small --mode effi_cot --dataset commonsense_qa --device 3 --variation vanilla -stllr 0.0001 -stlwd 0.001 -stle 1 -stllmlr 1e-05 -stllmwd 1e-05 -stllme 2 -cgllr 0.0001 -cglwd 0.01 -cgle 1 -cgllmlr 1e-05 -cgllmwd 0.001 -cgllme 1 --num_exps 1
+2025-05-08 23:12:28,907 - INFO - Training contemp generator - llr = 0.01 | lwd = 0.0001 | le = 5 | llmlr = 1e-07 | llmwd = 1e-05 | llme = 1
+2025-05-09 00:16:04,766 - INFO - Found best acc = 0.91 | stllr = 0.0001 | stlwd = 0.001 | stle = 1 | stllmlr = 1e-05 | stllmwd = 1e-05 | stllme = 2 | cgllr = 0.01 | cgle = 5 | cglwd = 0.0001 | cgllmlr = 1e-07 | cgllmwd = 1e-05 | cgllme = 1
+2025-05-09 00:16:04,767 - INFO - Python command - python main.py --config small --mode effi_cot --dataset commonsense_qa --device 3 --variation vanilla -stllr 0.0001 -stlwd 0.001 -stle 1 -stllmlr 1e-05 -stllmwd 1e-05 -stllme 2 -cgllr 0.01 -cglwd 0.0001 -cgle 5 -cgllmlr 1e-07 -cgllmwd 1e-05 -cgllme 1 --num_exps 1
+2025-05-09 00:16:04,767 - INFO - Training contemp generator - llr = 0.0001 | lwd = 0.001 | le = 1 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 2
+2025-05-09 01:07:46,586 - INFO - Training contemp generator - llr = 0.0001 | lwd = 0.01 | le = 5 | llmlr = 1e-07 | llmwd = 0.001 | llme = 2
+2025-05-09 02:12:39,392 - INFO - Training contemp generator - llr = 0.01 | lwd = 0.01 | le = 5 | llmlr = 1e-05 | llmwd = 0.001 | llme = 2
+2025-05-09 03:16:08,220 - INFO - Training sentence transformer - llr = 0.0001 | lwd = 0.01 | le = 5 | llmlr = 1e-05 | llmwd = 0.001 | llme = 2
+2025-05-09 03:16:08,220 - INFO - Training contemp generator - llr = 0.01 | lwd = 0.0001 | le = 5 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 2
+2025-05-09 04:56:44,760 - INFO - Training contemp generator - llr = 0.01 | lwd = 0.0001 | le = 5 | llmlr = 1e-05 | llmwd = 0.001 | llme = 2
+2025-05-09 13:49:08,621 - INFO - Run grid search
+2025-05-09 13:49:08,622 - INFO - Training sentence transformer - llr = 0.01 | lwd = 0.01 | le = 3 | llmlr = 1e-07 | llmwd = 1e-05 | llme = 2
+2025-05-09 13:49:08,622 - INFO - Training contemp generator - llr = 0.0001 | lwd = 0.01 | le = 5 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 2
+2025-05-09 14:51:23,313 - INFO - Found best acc = 0.515 | stllr = 0.01 | stlwd = 0.01 | stle = 3 | stllmlr = 1e-07 | stllmwd = 1e-05 | stllme = 2 | cgllr = 0.0001 | cgle = 5 | cglwd = 0.01 | cgllmlr = 1e-05 | cgllmwd = 1e-05 | cgllme = 2
+2025-05-09 14:51:23,313 - INFO - Python command - python main.py --config small --mode effi_cot --dataset commonsense_qa --device 3 --variation vanilla -stllr 0.01 -stlwd 0.01 -stle 3 -stllmlr 1e-07 -stllmwd 1e-05 -stllme 2 -cgllr 0.0001 -cglwd 0.01 -cgle 5 -cgllmlr 1e-05 -cgllmwd 1e-05 -cgllme 2 --num_exps 1
+2025-05-09 14:51:23,314 - INFO - Training contemp generator - llr = 0.0001 | lwd = 0.01 | le = 1 | llmlr = 1e-07 | llmwd = 0.001 | llme = 1
+2025-05-09 15:33:35,513 - INFO - Training contemp generator - llr = 0.001 | lwd = 0.0001 | le = 3 | llmlr = 1e-05 | llmwd = 0.001 | llme = 1
+2025-05-09 16:25:39,393 - INFO - Found best acc = 0.725 | stllr = 0.01 | stlwd = 0.01 | stle = 3 | stllmlr = 1e-07 | stllmwd = 1e-05 | stllme = 2 | cgllr = 0.001 | cgle = 3 | cglwd = 0.0001 | cgllmlr = 1e-05 | cgllmwd = 0.001 | cgllme = 1
+2025-05-09 16:25:39,393 - INFO - Python command - python main.py --config small --mode effi_cot --dataset commonsense_qa --device 3 --variation vanilla -stllr 0.01 -stlwd 0.01 -stle 3 -stllmlr 1e-07 -stllmwd 1e-05 -stllme 2 -cgllr 0.001 -cglwd 0.0001 -cgle 3 -cgllmlr 1e-05 -cgllmwd 0.001 -cgllme 1 --num_exps 1
+2025-05-09 16:25:39,393 - INFO - Training contemp generator - llr = 0.0001 | lwd = 0.01 | le = 3 | llmlr = 1e-07 | llmwd = 1e-05 | llme = 1
+2025-05-09 17:15:33,828 - INFO - Training contemp generator - llr = 0.0001 | lwd = 0.0001 | le = 5 | llmlr = 1e-07 | llmwd = 1e-05 | llme = 1
+2025-05-09 18:12:10,126 - INFO - Training contemp generator - llr = 0.0001 | lwd = 0.0001 | le = 3 | llmlr = 1e-07 | llmwd = 1e-05 | llme = 2
+2025-05-09 19:05:43,212 - INFO - Training sentence transformer - llr = 0.01 | lwd = 0.01 | le = 3 | llmlr = 1e-07 | llmwd = 0.001 | llme = 2
+2025-05-09 19:05:43,212 - INFO - Training contemp generator - llr = 0.0001 | lwd = 0.0001 | le = 1 | llmlr = 1e-05 | llmwd = 0.001 | llme = 2
+2025-05-09 19:51:58,604 - INFO - Training contemp generator - llr = 0.01 | lwd = 0.0001 | le = 3 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 2
+2025-05-09 23:28:08,451 - INFO - Run grid search
+2025-05-09 23:28:08,452 - INFO - Training sentence transformer - llr = 0.001 | lwd = 0.01 | le = 3 | llmlr = 1e-07 | llmwd = 0.001 | llme = 2
+2025-05-09 23:28:08,452 - INFO - Training contemp generator - llr = 0.01 | lwd = 0.001 | le = 1 | llmlr = 1e-07 | llmwd = 1e-05 | llme = 2
+2025-05-10 00:15:45,696 - INFO - Found best acc = 0.75 | stllr = 0.001 | stlwd = 0.01 | stle = 3 | stllmlr = 1e-07 | stllmwd = 0.001 | stllme = 2 | cgllr = 0.01 | cgle = 1 | cglwd = 0.001 | cgllmlr = 1e-07 | cgllmwd = 1e-05 | cgllme = 2
+2025-05-10 00:15:45,696 - INFO - Python command - python main.py --config small --mode effi_cot --dataset commonsense_qa --device 3 --variation vanilla -stllr 0.001 -stlwd 0.01 -stle 3 -stllmlr 1e-07 -stllmwd 0.001 -stllme 2 -cgllr 0.01 -cglwd 0.001 -cgle 1 -cgllmlr 1e-07 -cgllmwd 1e-05 -cgllme 2 --num_exps 1
+2025-05-10 00:15:45,696 - INFO - Training contemp generator - llr = 0.001 | lwd = 0.01 | le = 5 | llmlr = 1e-07 | llmwd = 0.001 | llme = 2
+2025-05-10 01:16:43,275 - INFO - Training contemp generator - llr = 0.01 | lwd = 0.0001 | le = 3 | llmlr = 1e-07 | llmwd = 1e-05 | llme = 1
+2025-05-10 02:06:06,934 - INFO - Training contemp generator - llr = 0.0001 | lwd = 0.001 | le = 5 | llmlr = 1e-07 | llmwd = 1e-05 | llme = 2
+2025-05-10 03:06:28,255 - INFO - Training sentence transformer - llr = 0.0001 | lwd = 0.001 | le = 1 | llmlr = 1e-07 | llmwd = 1e-05 | llme = 1
+2025-05-10 03:06:28,255 - INFO - Training contemp generator - llr = 0.01 | lwd = 0.0001 | le = 1 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 2
+2025-05-10 03:49:11,420 - INFO - Training contemp generator - llr = 0.01 | lwd = 0.001 | le = 1 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 1
+2025-05-10 04:28:24,924 - INFO - Training contemp generator - llr = 0.001 | lwd = 0.001 | le = 5 | llmlr = 1e-07 | llmwd = 0.001 | llme = 1
+2025-05-10 05:20:31,347 - INFO - Training contemp generator - llr = 0.001 | lwd = 0.01 | le = 1 | llmlr = 1e-07 | llmwd = 0.001 | llme = 2
+2025-05-10 06:02:51,166 - INFO - Training sentence transformer - llr = 0.0001 | lwd = 0.01 | le = 3 | llmlr = 1e-07 | llmwd = 1e-05 | llme = 1
+2025-05-10 06:02:51,166 - INFO - Training contemp generator - llr = 0.01 | lwd = 0.01 | le = 3 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 2
+2025-05-10 06:49:50,296 - INFO - Training contemp generator - llr = 0.001 | lwd = 0.001 | le = 5 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 2
+2025-05-10 07:46:09,088 - INFO - Training contemp generator - llr = 0.001 | lwd = 0.0001 | le = 5 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 2
+2025-05-10 08:42:25,001 - INFO - Training contemp generator - llr = 0.0001 | lwd = 0.01 | le = 5 | llmlr = 1e-05 | llmwd = 0.001 | llme = 2
+2025-05-10 15:28:57,916 - INFO - Run grid search
+2025-05-10 15:28:57,916 - INFO - Training sentence transformer - llr = 0.001 | lwd = 0.0001 | le = 3 | llmlr = 1e-07 | llmwd = 0.001 | llme = 1
+2025-05-10 15:28:57,916 - INFO - Training contemp generator - llr = 0.01 | lwd = 0.01 | le = 1 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 2
+2025-05-10 17:53:02,667 - INFO - Run grid search
+2025-05-10 17:53:02,668 - INFO - Training sentence transformer - llr = 0.001 | lwd = 0.0001 | le = 5 | llmlr = 1e-07 | llmwd = 1e-05 | llme = 1
+2025-05-10 17:53:02,668 - INFO - Training contemp generator - llr = 0.0001 | lwd = 0.01 | le = 3 | llmlr = 1e-07 | llmwd = 0.001 | llme = 1
+2025-05-10 18:40:52,147 - INFO - Found best acc = 0.435 | stllr = 0.001 | stlwd = 0.0001 | stle = 5 | stllmlr = 1e-07 | stllmwd = 1e-05 | stllme = 1 | cgllr = 0.0001 | cgle = 3 | cglwd = 0.01 | cgllmlr = 1e-07 | cgllmwd = 0.001 | cgllme = 1
+2025-05-10 18:40:52,147 - INFO - Python command - python main.py --config small --mode effi_cot --dataset commonsense_qa --device 3 --variation vanilla -stllr 0.001 -stlwd 0.0001 -stle 5 -stllmlr 1e-07 -stllmwd 1e-05 -stllme 1 -cgllr 0.0001 -cglwd 0.01 -cgle 3 -cgllmlr 1e-07 -cgllmwd 0.001 -cgllme 1 --num_exps 1
+2025-05-10 18:40:52,148 - INFO - Training contemp generator - llr = 0.0001 | lwd = 0.0001 | le = 3 | llmlr = 1e-07 | llmwd = 1e-05 | llme = 1
+2025-05-10 19:04:20,596 - INFO - Run grid search
+2025-05-10 19:04:20,596 - INFO - Training sentence transformer - llr = 0.0001 | lwd = 0.01 | le = 1 | llmlr = 1e-07 | llmwd = 0.001 | llme = 1
+2025-05-10 19:04:20,597 - INFO - Training contemp generator - llr = 0.001 | lwd = 0.0001 | le = 5 | llmlr = 1e-07 | llmwd = 1e-05 | llme = 2
+2025-05-10 19:04:58,887 - INFO - Run grid search
+2025-05-10 19:04:58,887 - INFO - Training sentence transformer - llr = 0.01 | lwd = 0.0001 | le = 3 | llmlr = 1e-07 | llmwd = 1e-05 | llme = 2
+2025-05-10 19:04:58,888 - INFO - Training contemp generator - llr = 0.01 | lwd = 0.0001 | le = 1 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 1
+2025-05-10 19:48:23,580 - INFO - Found best acc = 0.535 | stllr = 0.01 | stlwd = 0.0001 | stle = 3 | stllmlr = 1e-07 | stllmwd = 1e-05 | stllme = 2 | cgllr = 0.01 | cgle = 1 | cglwd = 0.0001 | cgllmlr = 1e-05 | cgllmwd = 1e-05 | cgllme = 1
+2025-05-10 19:48:23,580 - INFO - Python command - python main.py --config small --mode effi_cot --dataset commonsense_qa --device 3 --variation vanilla -stllr 0.01 -stlwd 0.0001 -stle 3 -stllmlr 1e-07 -stllmwd 1e-05 -stllme 2 -cgllr 0.01 -cglwd 0.0001 -cgle 1 -cgllmlr 1e-05 -cgllmwd 1e-05 -cgllme 1 --num_exps 1
+2025-05-10 19:48:23,580 - INFO - Training contemp generator - llr = 0.01 | lwd = 0.01 | le = 3 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 2
+2025-05-10 20:42:28,184 - INFO - Found best acc = 0.56 | stllr = 0.01 | stlwd = 0.0001 | stle = 3 | stllmlr = 1e-07 | stllmwd = 1e-05 | stllme = 2 | cgllr = 0.01 | cgle = 3 | cglwd = 0.01 | cgllmlr = 1e-05 | cgllmwd = 1e-05 | cgllme = 2
+2025-05-10 20:42:28,184 - INFO - Python command - python main.py --config small --mode effi_cot --dataset commonsense_qa --device 3 --variation vanilla -stllr 0.01 -stlwd 0.0001 -stle 3 -stllmlr 1e-07 -stllmwd 1e-05 -stllme 2 -cgllr 0.01 -cglwd 0.01 -cgle 3 -cgllmlr 1e-05 -cgllmwd 1e-05 -cgllme 2 --num_exps 1
+2025-05-10 20:42:28,184 - INFO - Training contemp generator - llr = 0.01 | lwd = 0.001 | le = 3 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 1
+2025-05-10 21:33:51,816 - INFO - Found best acc = 0.575 | stllr = 0.01 | stlwd = 0.0001 | stle = 3 | stllmlr = 1e-07 | stllmwd = 1e-05 | stllme = 2 | cgllr = 0.01 | cgle = 3 | cglwd = 0.001 | cgllmlr = 1e-05 | cgllmwd = 1e-05 | cgllme = 1
+2025-05-10 21:33:51,816 - INFO - Python command - python main.py --config small --mode effi_cot --dataset commonsense_qa --device 3 --variation vanilla -stllr 0.01 -stlwd 0.0001 -stle 3 -stllmlr 1e-07 -stllmwd 1e-05 -stllme 2 -cgllr 0.01 -cglwd 0.001 -cgle 3 -cgllmlr 1e-05 -cgllmwd 1e-05 -cgllme 1 --num_exps 1
+2025-05-10 21:33:51,816 - INFO - Training contemp generator - llr = 0.0001 | lwd = 0.01 | le = 3 | llmlr = 1e-07 | llmwd = 1e-05 | llme = 2
+2025-05-10 22:26:09,668 - INFO - Training contemp generator - llr = 0.0001 | lwd = 0.0001 | le = 1 | llmlr = 1e-07 | llmwd = 1e-05 | llme = 1
+2025-05-10 23:13:45,287 - INFO - Training contemp generator - llr = 0.001 | lwd = 0.0001 | le = 1 | llmlr = 1e-07 | llmwd = 0.001 | llme = 1
+2025-05-10 23:39:18,657 - INFO - Run grid search
+2025-05-10 23:39:18,657 - INFO - Training sentence transformer - llr = 0.0001 | lwd = 0.0001 | le = 1 | llmlr = 1e-05 | llmwd = 0.001 | llme = 1
+2025-05-10 23:39:18,657 - INFO - Training contemp generator - llr = 0.001 | lwd = 0.001 | le = 1 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 1
+2025-05-11 00:18:04,513 - INFO - Found best acc = 0.52 | stllr = 0.0001 | stlwd = 0.0001 | stle = 1 | stllmlr = 1e-05 | stllmwd = 0.001 | stllme = 1 | cgllr = 0.001 | cgle = 1 | cglwd = 0.001 | cgllmlr = 1e-05 | cgllmwd = 1e-05 | cgllme = 1
+2025-05-11 00:18:04,513 - INFO - Python command - python main.py --config small --mode effi_cot --dataset commonsense_qa --device 3 --variation vanilla -stllr 0.0001 -stlwd 0.0001 -stle 1 -stllmlr 1e-05 -stllmwd 0.001 -stllme 1 -cgllr 0.001 -cglwd 0.001 -cgle 1 -cgllmlr 1e-05 -cgllmwd 1e-05 -cgllme 1 --num_exps 1
+2025-05-11 00:18:04,513 - INFO - Training contemp generator - llr = 0.001 | lwd = 0.01 | le = 3 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 1
+2025-05-11 01:02:54,777 - INFO - Training contemp generator - llr = 0.0001 | lwd = 0.0001 | le = 1 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 1
+2025-05-11 01:43:39,105 - INFO - Found best acc = 0.545 | stllr = 0.0001 | stlwd = 0.0001 | stle = 1 | stllmlr = 1e-05 | stllmwd = 0.001 | stllme = 1 | cgllr = 0.0001 | cgle = 1 | cglwd = 0.0001 | cgllmlr = 1e-05 | cgllmwd = 1e-05 | cgllme = 1
+2025-05-11 01:43:39,106 - INFO - Python command - python main.py --config small --mode effi_cot --dataset commonsense_qa --device 3 --variation vanilla -stllr 0.0001 -stlwd 0.0001 -stle 1 -stllmlr 1e-05 -stllmwd 0.001 -stllme 1 -cgllr 0.0001 -cglwd 0.0001 -cgle 1 -cgllmlr 1e-05 -cgllmwd 1e-05 -cgllme 1 --num_exps 1
+2025-05-11 01:43:39,106 - INFO - Training contemp generator - llr = 0.0001 | lwd = 0.01 | le = 1 | llmlr = 1e-07 | llmwd = 1e-05 | llme = 1
+2025-05-11 02:42:42,528 - INFO - Training contemp generator - llr = 0.001 | lwd = 0.01 | le = 1 | llmlr = 1e-05 | llmwd = 0.001 | llme = 2
+2025-05-11 03:53:24,640 - INFO - Found best acc = 0.61 | stllr = 0.0001 | stlwd = 0.0001 | stle = 1 | stllmlr = 1e-05 | stllmwd = 0.001 | stllme = 1 | cgllr = 0.001 | cgle = 1 | cglwd = 0.01 | cgllmlr = 1e-05 | cgllmwd = 0.001 | cgllme = 2
+2025-05-11 03:53:24,640 - INFO - Python command - python main.py --config small --mode effi_cot --dataset commonsense_qa --device 3 --variation vanilla -stllr 0.0001 -stlwd 0.0001 -stle 1 -stllmlr 1e-05 -stllmwd 0.001 -stllme 1 -cgllr 0.001 -cglwd 0.01 -cgle 1 -cgllmlr 1e-05 -cgllmwd 0.001 -cgllme 2 --num_exps 1
+2025-05-11 03:53:24,640 - INFO - Training contemp generator - llr = 0.0001 | lwd = 0.01 | le = 3 | llmlr = 1e-07 | llmwd = 1e-05 | llme = 2
+2025-05-11 04:47:23,312 - INFO - Training contemp generator - llr = 0.0001 | lwd = 0.001 | le = 1 | llmlr = 1e-05 | llmwd = 0.001 | llme = 1
+2025-05-11 05:28:10,389 - INFO - Training contemp generator - llr = 0.0001 | lwd = 0.0001 | le = 3 | llmlr = 1e-05 | llmwd = 0.001 | llme = 1
+2025-05-11 06:15:38,196 - INFO - Found best acc = 0.63 | stllr = 0.0001 | stlwd = 0.0001 | stle = 1 | stllmlr = 1e-05 | stllmwd = 0.001 | stllme = 1 | cgllr = 0.0001 | cgle = 3 | cglwd = 0.0001 | cgllmlr = 1e-05 | cgllmwd = 0.001 | cgllme = 1
+2025-05-11 06:15:38,197 - INFO - Python command - python main.py --config small --mode effi_cot --dataset commonsense_qa --device 3 --variation vanilla -stllr 0.0001 -stlwd 0.0001 -stle 1 -stllmlr 1e-05 -stllmwd 0.001 -stllme 1 -cgllr 0.0001 -cglwd 0.0001 -cgle 3 -cgllmlr 1e-05 -cgllmwd 0.001 -cgllme 1 --num_exps 1
+2025-05-11 06:15:38,197 - INFO - Training contemp generator - llr = 0.001 | lwd = 0.01 | le = 5 | llmlr = 1e-05 | llmwd = 0.001 | llme = 1
+2025-05-11 07:07:16,856 - INFO - Training contemp generator - llr = 0.01 | lwd = 0.0001 | le = 3 | llmlr = 1e-07 | llmwd = 0.001 | llme = 1
+2025-05-11 07:52:40,794 - INFO - Training contemp generator - llr = 0.001 | lwd = 0.0001 | le = 3 | llmlr = 1e-07 | llmwd = 1e-05 | llme = 2
+2025-05-11 08:41:00,221 - INFO - Training sentence transformer - llr = 0.01 | lwd = 0.001 | le = 5 | llmlr = 1e-07 | llmwd = 1e-05 | llme = 1
+2025-05-11 08:41:00,224 - INFO - Training contemp generator - llr = 0.0001 | lwd = 0.0001 | le = 3 | llmlr = 1e-07 | llmwd = 0.001 | llme = 2
+2025-05-11 08:56:34,457 - INFO - Run grid search
+2025-05-11 08:56:34,457 - INFO - Training sentence transformer - llr = 0.0001 | lwd = 0.001 | le = 1 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 2
+2025-05-11 08:56:34,457 - INFO - Training contemp generator - llr = 0.01 | lwd = 0.0001 | le = 3 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 2
+2025-05-11 09:50:28,324 - INFO - Found best acc = 0.93 | stllr = 0.0001 | stlwd = 0.001 | stle = 1 | stllmlr = 1e-05 | stllmwd = 1e-05 | stllme = 2 | cgllr = 0.01 | cgle = 3 | cglwd = 0.0001 | cgllmlr = 1e-05 | cgllmwd = 1e-05 | cgllme = 2
+2025-05-11 09:50:28,324 - INFO - Python command - python main.py --config small --mode effi_cot --dataset commonsense_qa --device 3 --variation vanilla -stllr 0.0001 -stlwd 0.001 -stle 1 -stllmlr 1e-05 -stllmwd 1e-05 -stllme 2 -cgllr 0.01 -cglwd 0.0001 -cgle 3 -cgllmlr 1e-05 -cgllmwd 1e-05 -cgllme 2 --num_exps 1
+2025-05-11 09:50:28,324 - INFO - Training contemp generator - llr = 0.001 | lwd = 0.001 | le = 5 | llmlr = 1e-05 | llmwd = 0.001 | llme = 1
+2025-05-11 13:17:24,248 - INFO - Run grid search
+2025-05-11 13:17:24,248 - INFO - Training sentence transformer - llr = 0.0001 | lwd = 0.001 | le = 1 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 2
+2025-05-11 13:17:24,248 - INFO - Training contemp generator - llr = 0.01 | lwd = 0.0001 | le = 1 | llmlr = 1e-07 | llmwd = 0.001 | llme = 1
+2025-05-11 14:00:21,514 - INFO - Found best acc = 0.625 | stllr = 0.0001 | stlwd = 0.001 | stle = 1 | stllmlr = 1e-05 | stllmwd = 1e-05 | stllme = 2 | cgllr = 0.01 | cgle = 1 | cglwd = 0.0001 | cgllmlr = 1e-07 | cgllmwd = 0.001 | cgllme = 1
+2025-05-11 14:00:21,515 - INFO - Python command - python main.py --config small --mode effi_cot --dataset commonsense_qa --device 3 --variation vanilla -stllr 0.0001 -stlwd 0.001 -stle 1 -stllmlr 1e-05 -stllmwd 1e-05 -stllme 2 -cgllr 0.01 -cglwd 0.0001 -cgle 1 -cgllmlr 1e-07 -cgllmwd 0.001 -cgllme 1 --num_exps 1
+2025-05-11 14:00:21,515 - INFO - Training contemp generator - llr = 0.01 | lwd = 0.001 | le = 5 | llmlr = 1e-07 | llmwd = 1e-05 | llme = 2
+2025-05-11 15:00:32,724 - INFO - Found best acc = 0.92 | stllr = 0.0001 | stlwd = 0.001 | stle = 1 | stllmlr = 1e-05 | stllmwd = 1e-05 | stllme = 2 | cgllr = 0.01 | cgle = 5 | cglwd = 0.001 | cgllmlr = 1e-07 | cgllmwd = 1e-05 | cgllme = 2
+2025-05-11 15:00:32,724 - INFO - Python command - python main.py --config small --mode effi_cot --dataset commonsense_qa --device 3 --variation vanilla -stllr 0.0001 -stlwd 0.001 -stle 1 -stllmlr 1e-05 -stllmwd 1e-05 -stllme 2 -cgllr 0.01 -cglwd 0.001 -cgle 5 -cgllmlr 1e-07 -cgllmwd 1e-05 -cgllme 2 --num_exps 1
+2025-05-11 15:00:32,724 - INFO - Training contemp generator - llr = 0.0001 | lwd = 0.001 | le = 1 | llmlr = 1e-07 | llmwd = 1e-05 | llme = 1
+2025-05-11 23:12:02,080 - INFO - Run grid search
+2025-05-11 23:12:02,080 - INFO - Training sentence transformer - llr = 0.0001 | lwd = 0.001 | le = 1 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 2
+2025-05-11 23:12:02,080 - INFO - Training contemp generator - llr = 0.01 | lwd = 0.0001 | le = 1 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 2
+2025-05-12 00:00:23,557 - INFO - Found best acc = 0.55 | stllr = 0.0001 | stlwd = 0.001 | stle = 1 | stllmlr = 1e-05 | stllmwd = 1e-05 | stllme = 2 | cgllr = 0.01 | cgle = 1 | cglwd = 0.0001 | cgllmlr = 1e-05 | cgllmwd = 1e-05 | cgllme = 2
+2025-05-12 00:00:23,557 - INFO - Python command - python main.py --config small --mode effi_cot --dataset commonsense_qa --device 0 --variation vanilla -stllr 0.0001 -stlwd 0.001 -stle 1 -stllmlr 1e-05 -stllmwd 1e-05 -stllme 2 -cgllr 0.01 -cglwd 0.0001 -cgle 1 -cgllmlr 1e-05 -cgllmwd 1e-05 -cgllme 2 --num_exps 1
+2025-05-12 00:00:23,557 - INFO - Training contemp generator - llr = 0.01 | lwd = 0.01 | le = 3 | llmlr = 1e-07 | llmwd = 0.001 | llme = 1
+2025-05-12 00:50:14,488 - INFO - Found best acc = 0.925 | stllr = 0.0001 | stlwd = 0.001 | stle = 1 | stllmlr = 1e-05 | stllmwd = 1e-05 | stllme = 2 | cgllr = 0.01 | cgle = 3 | cglwd = 0.01 | cgllmlr = 1e-07 | cgllmwd = 0.001 | cgllme = 1
+2025-05-12 00:50:14,488 - INFO - Python command - python main.py --config small --mode effi_cot --dataset commonsense_qa --device 0 --variation vanilla -stllr 0.0001 -stlwd 0.001 -stle 1 -stllmlr 1e-05 -stllmwd 1e-05 -stllme 2 -cgllr 0.01 -cglwd 0.01 -cgle 3 -cgllmlr 1e-07 -cgllmwd 0.001 -cgllme 1 --num_exps 1
+2025-05-12 00:50:14,488 - INFO - Training contemp generator - llr = 0.01 | lwd = 0.01 | le = 5 | llmlr = 1e-07 | llmwd = 1e-05 | llme = 2
+2025-05-12 01:48:24,723 - INFO - Training contemp generator - llr = 0.001 | lwd = 0.01 | le = 1 | llmlr = 1e-05 | llmwd = 0.001 | llme = 2
+2025-05-12 02:34:26,878 - INFO - Training contemp generator - llr = 0.001 | lwd = 0.001 | le = 3 | llmlr = 1e-05 | llmwd = 0.001 | llme = 2
+2025-05-12 03:27:45,348 - INFO - Training sentence transformer - llr = 0.0001 | lwd = 0.001 | le = 1 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 2
+2025-05-12 03:27:45,349 - INFO - Training contemp generator - llr = 0.001 | lwd = 0.001 | le = 1 | llmlr = 1e-07 | llmwd = 1e-05 | llme = 2
+2025-05-12 04:13:22,149 - INFO - Training contemp generator - llr = 0.01 | lwd = 0.01 | le = 5 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 2
+2025-05-12 05:11:12,208 - INFO - Training contemp generator - llr = 0.001 | lwd = 0.0001 | le = 3 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 2
+2025-05-12 06:04:15,911 - INFO - Training contemp generator - llr = 0.0001 | lwd = 0.01 | le = 1 | llmlr = 1e-07 | llmwd = 1e-05 | llme = 1
+2025-05-12 06:46:48,322 - INFO - Training sentence transformer - llr = 0.0001 | lwd = 0.001 | le = 1 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 2
+2025-05-12 06:46:48,322 - INFO - Training contemp generator - llr = 0.001 | lwd = 0.0001 | le = 5 | llmlr = 1e-05 | llmwd = 0.001 | llme = 2
+2025-05-12 13:35:18,556 - INFO - Run grid search
+2025-05-12 13:35:18,556 - INFO - Training sentence transformer - llr = 0.0001 | lwd = 0.001 | le = 1 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 2
+2025-05-12 13:35:18,556 - INFO - Training contemp generator - llr = 0.0001 | lwd = 0.0001 | le = 1 | llmlr = 1e-07 | llmwd = 1e-05 | llme = 2
+2025-05-12 14:21:30,703 - INFO - Found best acc = 0.635 | stllr = 0.0001 | stlwd = 0.001 | stle = 1 | stllmlr = 1e-05 | stllmwd = 1e-05 | stllme = 2 | cgllr = 0.0001 | cgle = 1 | cglwd = 0.0001 | cgllmlr = 1e-07 | cgllmwd = 1e-05 | cgllme = 2
+2025-05-12 14:21:30,703 - INFO - Python command - python main.py --config small --mode effi_cot --dataset commonsense_qa --device 3 --variation vanilla -stllr 0.0001 -stlwd 0.001 -stle 1 -stllmlr 1e-05 -stllmwd 1e-05 -stllme 2 -cgllr 0.0001 -cglwd 0.0001 -cgle 1 -cgllmlr 1e-07 -cgllmwd 1e-05 -cgllme 2 --num_exps 1
+2025-05-12 14:21:30,703 - INFO - Training contemp generator - llr = 0.0001 | lwd = 0.001 | le = 1 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 2
+2025-05-12 15:08:00,158 - INFO - Found best acc = 0.665 | stllr = 0.0001 | stlwd = 0.001 | stle = 1 | stllmlr = 1e-05 | stllmwd = 1e-05 | stllme = 2 | cgllr = 0.0001 | cgle = 1 | cglwd = 0.001 | cgllmlr = 1e-05 | cgllmwd = 1e-05 | cgllme = 2
+2025-05-12 15:08:00,158 - INFO - Python command - python main.py --config small --mode effi_cot --dataset commonsense_qa --device 3 --variation vanilla -stllr 0.0001 -stlwd 0.001 -stle 1 -stllmlr 1e-05 -stllmwd 1e-05 -stllme 2 -cgllr 0.0001 -cglwd 0.001 -cgle 1 -cgllmlr 1e-05 -cgllmwd 1e-05 -cgllme 2 --num_exps 1
+2025-05-12 15:08:00,158 - INFO - Training contemp generator - llr = 0.01 | lwd = 0.0001 | le = 5 | llmlr = 1e-05 | llmwd = 0.001 | llme = 1
+2025-05-12 16:04:59,835 - INFO - Found best acc = 0.91 | stllr = 0.0001 | stlwd = 0.001 | stle = 1 | stllmlr = 1e-05 | stllmwd = 1e-05 | stllme = 2 | cgllr = 0.01 | cgle = 5 | cglwd = 0.0001 | cgllmlr = 1e-05 | cgllmwd = 0.001 | cgllme = 1
+2025-05-12 16:04:59,835 - INFO - Python command - python main.py --config small --mode effi_cot --dataset commonsense_qa --device 3 --variation vanilla -stllr 0.0001 -stlwd 0.001 -stle 1 -stllmlr 1e-05 -stllmwd 1e-05 -stllme 2 -cgllr 0.01 -cglwd 0.0001 -cgle 5 -cgllmlr 1e-05 -cgllmwd 0.001 -cgllme 1 --num_exps 1
+2025-05-12 16:04:59,835 - INFO - Training contemp generator - llr = 0.0001 | lwd = 0.001 | le = 3 | llmlr = 1e-05 | llmwd = 0.001 | llme = 1
+2025-05-12 16:53:57,646 - INFO - Training contemp generator - llr = 0.01 | lwd = 0.0001 | le = 3 | llmlr = 1e-07 | llmwd = 0.001 | llme = 2
+2025-05-12 19:48:25,041 - INFO - Run grid search
+2025-05-12 19:48:25,041 - INFO - Training sentence transformer - llr = 0.0001 | lwd = 0.001 | le = 1 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 2
+2025-05-12 19:48:25,041 - INFO - Training contemp generator - llr = 0.01 | lwd = 0.01 | le = 3 | llmlr = 1e-05 | llmwd = 0.001 | llme = 1
+2025-05-12 20:37:35,386 - INFO - Found best acc = 0.905 | stllr = 0.0001 | stlwd = 0.001 | stle = 1 | stllmlr = 1e-05 | stllmwd = 1e-05 | stllme = 2 | cgllr = 0.01 | cgle = 3 | cglwd = 0.01 | cgllmlr = 1e-05 | cgllmwd = 0.001 | cgllme = 1
+2025-05-12 20:37:35,386 - INFO - Python command - python main.py --config small --mode effi_cot --dataset commonsense_qa --device 3 --variation vanilla -stllr 0.0001 -stlwd 0.001 -stle 1 -stllmlr 1e-05 -stllmwd 1e-05 -stllme 2 -cgllr 0.01 -cglwd 0.01 -cgle 3 -cgllmlr 1e-05 -cgllmwd 0.001 -cgllme 1 --num_exps 1
+2025-05-12 20:37:35,386 - INFO - Training contemp generator - llr = 0.001 | lwd = 0.0001 | le = 1 | llmlr = 1e-07 | llmwd = 1e-05 | llme = 1
+2025-05-12 21:19:58,253 - INFO - Training contemp generator - llr = 0.01 | lwd = 0.001 | le = 3 | llmlr = 1e-07 | llmwd = 0.001 | llme = 2
+2025-05-13 00:02:29,355 - INFO - Run grid search
+2025-05-13 00:02:29,355 - INFO - Training sentence transformer - llr = 0.0001 | lwd = 0.001 | le = 1 | llmlr = 1e-05 | llmwd = 1e-05 | llme = 2
+2025-05-13 00:02:29,355 - INFO - Training contemp generator - llr = 0.001 | lwd = 0.001 | le = 5 | llmlr = 1e-05 | llmwd = 0.001 | llme = 1

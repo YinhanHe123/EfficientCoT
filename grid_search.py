@@ -5,6 +5,10 @@ import random
 import subprocess
 import sys
 
+rand_seed = random.sample(range(1000), 1)[0]
+print(rand_seed)
+random.seed(rand_seed)
+
 def get_max_acc(file):
     with open(file) as f:
         lines = f.readlines()
@@ -46,6 +50,34 @@ for llr in linears:
                         combinations.append((llr, lwd, llmlr, llmwd, le, llme))
 
 for (st_llr, st_lwd, st_llmlr, st_llmwd, st_le, st_llme) in random.sample(combinations, len(combinations)):
+    # if args.dataset == 'gsm8k':
+    #     st_llr = 0.001
+    #     st_lwd = 0.001
+    #     st_le = 1
+    #     st_llmlr = 1e-07
+    #     st_llmwd = 1e-05
+    #     st_llme = 1
+    if args.dataset == "commonsense_qa" and args.config == "small":
+        st_llr = 0.0001
+        st_lwd = 0.001
+        st_le = 1
+        st_llmlr = 1e-05
+        st_llmwd = 1e-05
+        st_llme = 2
+    elif args.dataset == "commonsense_qa" and args.config == "mistral":
+        st_llr = 0.01
+        st_lwd = 0.001
+        st_le = 1
+        st_llmlr = 1e-05
+        st_llmwd = 0.001
+        st_llme = 1
+    elif args.dataset == "multiarith":
+        st_llr = 0.0001
+        st_lwd = 0.01
+        st_le = 1
+        st_llmlr = 1e-07
+        st_llmwd = 0.001
+        st_llme = 2 
     max_tries = 0
     logging.info(f"Training sentence transformer - llr = {st_llr} | lwd = {st_lwd} | le = {st_le} | llmlr = {st_llmlr} | llmwd = {st_llmwd} | llme = {st_llme}")
     for (cg_llr, cg_lwd, cg_llmlr, cg_llmwd, cg_le, cg_llme) in random.sample(combinations, len(combinations)):
@@ -60,8 +92,6 @@ for (st_llr, st_lwd, st_llmlr, st_llmwd, st_le, st_llme) in random.sample(combin
             max_tries = 0
             logging.info(f"Found best acc = {acc} | stllr = {st_llr} | stlwd = {st_lwd} | stle = {st_le} | stllmlr = {st_llmlr} | stllmwd = {st_llmwd} | stllme = {st_llme} | cgllr = {cg_llr} | cgle = {cg_le} | cglwd = {cg_lwd} | cgllmlr = {cg_llmlr} | cgllmwd = {cg_llmwd} | cgllme = {cg_llme}")
             logging.info("Python command - " + " ".join(['python', 'main.py', '--config', args.config, '--mode', 'effi_cot', '--dataset', args.dataset, '--device', args.device, '--variation', 'vanilla', '-stllr', str(st_llr), '-stlwd', str(st_lwd), '-stle', str(st_le), '-stllmlr', str(st_llmlr), '-stllmwd', str(st_llmwd), '-stllme', str(st_llme), '-cgllr', str(cg_llr), '-cglwd', str(cg_lwd), '-cgle', str(cg_le), '-cgllmlr', str(cg_llmlr), '-cgllmwd', str(cg_llmwd), '-cgllme', str(cg_llme), '--num_exps', '1']))
-        elif (max_acc - acc) > 0.05:
-            early_stop += 1
         max_tries += 1
         if max_tries > 3:
             break
