@@ -5,8 +5,6 @@ from tqdm import tqdm
 import os
 from models.softcot_model import SoftCoTModel
 from utils.logging import Logger
-import utils.utils as utils
-import gc
 
 def train_softcot_model(
     llm_model_name,
@@ -22,7 +20,7 @@ def train_softcot_model(
     device="cuda"
 ):
     """
-    Train the SoftCoT model's projection module.
+    Train the SoftCoT model's projection module. 
 
     Args:
         llm_model_name: Name of the backbone LLM

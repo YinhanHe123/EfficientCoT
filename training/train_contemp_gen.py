@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForCausalLM
+from models.contemp_generator import ContemplationGenerator
 import utils.utils as utils
 from utils.logging import Logger
 
@@ -90,7 +91,7 @@ def train_contemplation_generator(
         log_dir=exp_config.log_dir,
         experiment_name=exp_config.experiment_name
     )
-    logger.logger.info("Training contemplation generator")
+    logger.logger.info(f"Training contemplation generator with variation: {variation}")
     
     device = exp_config.device
     contemp_generator = contemp_generator.to(device)
@@ -106,12 +107,13 @@ def train_contemplation_generator(
     teacher_tokenizer = AutoTokenizer.from_pretrained(model_config.teacher_model_name)
     teacher_tokenizer.pad_token = teacher_tokenizer.eos_token
 
-    # Ensure sentence transformer is in evaluation mode
-    if variation == 'vanilla':
-        sentence_transformer = sentence_transformer.to(device)
-        sentence_transformer.eval()
-        for param in sentence_transformer.parameters():
-            param.requires_grad = False
+    # Ensure sentence transformer is in evaluation mode if needed
+    if variation in ['vanilla', 'no_small_contemp_gen']:
+        if sentence_transformer is not None:
+            sentence_transformer = sentence_transformer.to(device)
+            sentence_transformer.eval()
+            for param in sentence_transformer.parameters():
+                param.requires_grad = False
         
     for data in [train_dataset, eval_dataset]:
         for idx in tqdm(range(len(data))):
@@ -131,7 +133,7 @@ def train_contemplation_generator(
                 gt_reason_hidden = original_outputs.hidden_states[exp_config.start_layer_idx]
             else:
                 gt_reason_hidden = data[idx]['gt_reason_hidden'].to(device)
-            if variation == "vanilla":
+            if variation in ["vanilla", "no_small_contemp_gen"] and sentence_transformer is not None:
                 gt_reason_hidden = sentence_transformer(gt_reason_hidden)
             data.update_item(idx, "gt_reason_hidden", gt_reason_hidden.cpu())
             del gt_reason_hidden
@@ -141,15 +143,28 @@ def train_contemplation_generator(
     answer_loss_fn = nn.CrossEntropyLoss(ignore_index=teacher_tokenizer.pad_token_id)
 
     # Training loop
-    print("Starting training contemplation generator...")
-    for param in contemp_generator.student_model.parameters():
-        param.requires_grad = False
-    for (lr, wd, ne) in [(exp_config.cg_linear_lr, exp_config.cg_linear_wd, exp_config.cg_linear_epochs), (exp_config.cg_llm_lr, exp_config.cg_llm_wd, exp_config.cg_llm_epochs)]:
+    print(f"Starting training contemplation generator with variation: {variation}...")
+    
+    # Two-stage training loop (linear layer first, then LLM)
+    for (lr, wd, ne) in [(exp_config.cg_linear_lr, exp_config.cg_linear_wd, exp_config.cg_linear_epochs), 
+                         (exp_config.cg_llm_lr, exp_config.cg_llm_wd, exp_config.cg_llm_epochs)]:
+        # For no_small_contemp_gen variation, we're using LoRA so handle parameters differently
+        if variation == "no_small_contemp_gen":
+            # Only train the LoRA parameters to keep training efficient
+            trainable_params = [p for n, p in contemp_generator.model.named_parameters() if 'lora' in n]
+            optimizer_params = trainable_params
+        else:
+            # Use original approach - freeze student model first, train projection layer
+            for param in contemp_generator.model.parameters():
+                param.requires_grad = False
+            optimizer_params = [p for p in contemp_generator.parameters()]
         best_val_loss = float('inf')
-        optimizer = optim.AdamW(contemp_generator.parameters(), lr=lr, weight_decay=wd)
+        optimizer = optim.AdamW(optimizer_params, lr=lr, weight_decay=wd)
+        
         for epoch in (range(ne)):
             contemp_generator.train()
             total_loss, reason_loss, ans_loss = 0, 0, 0
+            
             for idx in tqdm(random.sample(range(len(train_dataset)), len(train_dataset)), desc=f"Epoch {epoch+1}/{ne}"): 
                 item = train_dataset[idx]
                 optimizer.zero_grad()                
@@ -206,11 +221,17 @@ def train_contemplation_generator(
                 utils.create_directory(model_path)
                 contemp_generator.save_pretrained(model_path)
                 print(f"Saved best model with validation loss: {best_val_loss:.4f}")
-        contemp_generator = contemp_generator.from_pretrained(model_path).to(device)
+                
+        # Load best model from disk for next stage if this isn't the last loop iteration
+        contemp_generator = ContemplationGenerator.from_pretrained(model_path).to(device)
         logger.logger.info(f"Loading best validation loss = {best_val_loss}")
         print(f"Loading best validation loss = {best_val_loss}")
-        for param in contemp_generator.student_model.parameters():
-            param.requires_grad = True
+        
+        # If this is no_small_contemp_gen, don't unfreeze for second stage training
+        # Otherwise use the original approach
+        if variation != "no_small_contemp_gen":
+            for param in contemp_generator.model.parameters():
+                param.requires_grad = True       
     logger.close()
     del teacher_model
     torch.cuda.empty_cache()
@@ -255,21 +276,29 @@ def process_item(mode, item, contemp_generator, teacher_model, teacher_tokenizer
     # Extract the contemplation tokens from the correct position (after prefix, before "Answer:")
     contemp_states = all_contemp_states[:, prefix_length:prefix_length+exp_config.train_max_contemp_tokens, :]
 
-    # Get contemplation embeddings using sentence transformer
-    if variation == 'vanilla':
-        contemp_embeddings = sentence_transformer(contemp_states)
-
-        # Reasoning loss (1 - similarity)
-        similarity = sentence_transformer.compute_similarity(gt_reason, contemp_embeddings)
-        l_reason = 1 - similarity.mean()
+    # Calculate reasoning loss based on variation
+    if variation == 'vanilla' or variation == 'no_small_contemp_gen':
+        # Get contemplation embeddings using sentence transformer if available
+        if sentence_transformer is not None:
+            contemp_embeddings = sentence_transformer(contemp_states)
+            # Reasoning loss (1 - similarity)
+            similarity = sentence_transformer.compute_similarity(gt_reason, contemp_embeddings)
+            l_reason = 1 - similarity.mean()
+        else:
+            # Fallback to cosine similarity if no sentence transformer
+            similarity = torch.nn.functional.cosine_similarity(torch.mean(contemp_states, 1).squeeze(),
+                                                            torch.mean(gt_reason, 1).squeeze(), dim=-1)
+            l_reason = 1 - similarity
     elif variation == 'no_l_reason':
-        pass
+        # Skip reasoning loss
+        l_reason = torch.tensor(0.0, device=device)
     elif variation == 'no_sentence_transformer':
-        # cosine similarity of the hidden states
+        # Use cosine similarity of the hidden states
         similarity = torch.nn.functional.cosine_similarity(torch.mean(contemp_states, 1).squeeze(),
-                                                          torch.mean(gt_reason, 1).squeeze(), dim=-1)
+                                                        torch.mean(gt_reason, 1).squeeze(), dim=-1)
         l_reason = 1 - similarity
 
+    # Get tokenized inputs for teacher model
     query_inputs = teacher_tokenizer(
         query_prompt,
         return_tensors="pt",

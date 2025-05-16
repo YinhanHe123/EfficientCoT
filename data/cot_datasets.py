@@ -185,7 +185,7 @@ class RawDataset(Dataset):
             final_answer = item['Answer']
         elif self.name == 'MultiArith': # gt reasoning not available.
             question = item['question']
-            reasoning = ""
+            reasoning = item['answer'].split("###")[0].strip()
             full_answer = item['answer']
             condensed_reasoning = item['condensed_reasoning'] if 'condensed_reasoning' in item else None
             final_answer = item['final_answer']

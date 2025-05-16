@@ -1,5 +1,7 @@
 import argparse
 import os
+
+import torch
 os.environ['HF_HOME'] = '/data/nee7ne/huggingface'
 from models.sentence_transformer import CustomizedSentenceTransformer
 from config.model_config import ModelConfig
@@ -26,7 +28,7 @@ def parse_args():
     parser.add_argument("--dataset", type=str, default="gsm8k", choices=["gsm8k", "svamp", "multiarith", "commonsense_qa", "coin_flip"],
                         help="Dataset to use")
     parser.add_argument("--baseline", type=str, default="effi_cot",
-                        choices=["cot", "ccot", "pause", "icot_kd", "zero_shot_cot", "effi_cot", "icot_si", "codi", "softcot", "coconut"],
+                        choices=["cot", "ccot", "pause", "icot_kd", "nocot", "effi_cot", "icot_si", "codi", "softcot", "coconut"],
                         help="Baseline to run if mode is baseline")
     parser.add_argument("--ccot_stage", type=str, default="encode",choices=["encode", "decode", "prepare_decode_data", "evaluate", "cotrain_encode_decode"],
                         help="Stage for CCoT")
@@ -41,7 +43,8 @@ def parse_args():
     parser.add_argument("--device", type=int, default=0)
     parser.add_argument("--seed", type=int, default=42,
                         help="Random seed for reproducibility")
-    parser.add_argument("--variation", type=str, default="vanilla", choices=["vanilla", "no_sentence_transformer", "no_l_reason", "no_warmup"],
+    parser.add_argument("--variation", type=str, default="vanilla", 
+                        choices=["vanilla", "no_sentence_transformer", "no_l_reason", "no_warmup", "no_small_contemp_gen"],
                         help="Variation of the effi_cot model to use")
     parser.add_argument("--compression_ratio", type=float, default=0.05,
                         help="Compression ratio for CCoT (ratio of compressed tokens to full chain)")
@@ -99,8 +102,14 @@ def parse_args():
                         help="LLM weight decay  for contemp generator")
     parser.add_argument("--cg_llm_epochs", "-cgllme", type=int, default=5,
                         help="LLM number of epochs for contemp generator")
-    parser.add_argument("--train_sentence_transformer", "-train_st", type=str, default="True",
-                        help="train sentence transformer")
+    # Add LoRA specific arguments
+    parser.add_argument("--lora_rank", type=int, default=16,
+                        help="Rank for LoRA adapter")
+    parser.add_argument("--lora_alpha", type=float, default=32,
+                        help="Alpha scaling factor for LoRA")
+    parser.add_argument("--lora_dropout", type=float, default=0.1,
+                        help="Dropout probability for LoRA layers")
+    
     return parser.parse_args()
 
 
@@ -227,25 +236,36 @@ def main():
             sentence_transformer = None
             if args.variation != "no_sentence_transformer":
                 # Train sentence transformer
-                if args.train_sentence_transformer == "True": 
-                    sentence_transformer = train_sentence_transformer(
-                        model_config.teacher_model_name,
-                        experiment_config.start_layer_idx,
-                        experiment_config.end_layer_idx,
-                        cur_train_dataset,
-                        experiment_config
-                    )
+                sentence_transformer = train_sentence_transformer(
+                    model_config.teacher_model_name,
+                    experiment_config.start_layer_idx,
+                    experiment_config.end_layer_idx,
+                    cur_train_dataset,
+                    experiment_config
+                )
                 sentence_transformer = CustomizedSentenceTransformer.from_pretrained(
                     experiment_config.model_save_path+"/sentence_transformer"
                 ).to(args.device)
 
             # Initialize contemplation generator
-            contemp_generator = ContemplationGenerator(
-                model_config.student_model_name,
-                model_config.teacher_model_name,
-                model_config.teacher_hidden_dim,
-                device=args.device
-            )
+            if args.variation == "no_small_contemp_gen":
+                # For this variation, we use the teacher model with LoRA adapter
+                contemp_generator = ContemplationGenerator(
+                    model_config.student_model_name,
+                    model_config.teacher_model_name,
+                    model_config.teacher_hidden_dim,
+                    device=args.device,
+                    variation="no_small_contemp_gen"
+                )
+            else:
+                # Use the standard approach with student model
+                contemp_generator = ContemplationGenerator(
+                    model_config.student_model_name,
+                    model_config.teacher_model_name,
+                    model_config.teacher_hidden_dim,
+                    device=args.device,
+                    variation=args.variation
+                )
 
             # Train the contemplation generator
             train_contemplation_generator(
@@ -293,6 +313,8 @@ def main():
                 })
                 utils.append_to_jsonl_file(f"{experiment_config.result_path}/evaluation_results.jsonl", metrics)
                 print(f"Evaluation results: {metrics}")
+            del contemp_generator, sentence_transformer
+            torch.cuda.empty_cache()
         elif args.mode == "baseline":
             # Run baseline method
             results = run_baseline(

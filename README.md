@@ -53,9 +53,17 @@ python main.py --mode evaluate --config default
 python main.py --config small --mode effi_cot --dataset svamp -stllr 0.0001 -stlwd 0.001 -stle 5 -stllmlr 1e-7 -stllmwd 1e-5 -stllme 2 -cgllr 0.0001 -cglwd 0.001 -cgle 5 -cgllmlr 1e-7 -cgllmwd 1e-5 -cgllme 2
 ```
 
+```bash
+python main.py --config mistral --mode effi_cot --dataset svamp --variation vanilla -stllr 0.01 -stlwd 0.0001 -stle 3 -stllmlr 1e-05 -stllmwd 1e-05 -stllme 2 -cgllr 0.0001 -cglwd 0.01 -cgle 3 -cgllmlr 1e-05 -cgllmwd 0.001 -cgllme 1
+```
+
 ### Multiarith
 ```bash
 python main.py --config small --mode effi_cot --dataset multiarith --variation vanilla -stllr 0.0001 -stlwd 0.001 -stle 5 -stllmlr 1e-07 -stllmwd 0.001 -stllme 1 -cgllr 0.001 -cglwd 0.01 -cgle 3 -cgllmlr 1e-05 -cgllmwd 0.001 -cgllme 2
+```
+
+```bash
+python main.py --config mistral --mode effi_cot --dataset multiarith --variation vanilla -stllr 0.0001 -stlwd 0.01 -stle 1 -stllmlr 1e-07 -stllmwd 0.001 -stllme 2 -cgllr 0.001 -cglwd 0.0001 -cgle 5 -cgllmlr 1e-07 -cgllmwd 0.001 -cgllme 2
 ```
 
 ### Coin_flip
@@ -63,7 +71,24 @@ python main.py --config small --mode effi_cot --dataset multiarith --variation v
 python main.py --config small --mode effi_cot --dataset coin_flip --variation vanilla -stllr 0.001 -stlwd 0.0001 -stle 3 -stllmlr 1e-05 -stllmwd 0.001 -stllme 1 -cgllr 0.01 -cglwd 0.01 -cgle 1 -cgllmlr 1e-07 -cgllmwd 0.001 -cgllme 2
 ```
 
+```bash
+python main.py --config mistral --mode effi_cot --dataset coin_flip --variation vanilla -stllr 0.0001 -stlwd 0.001 -stle 5 -stllmlr 1e-05 -stllmwd 0.001 -stllme 1 -cgllr 0.001 -cglwd 0.001 -cgle 3 -cgllmlr 1e-05 -cgllmwd 0.001 -cgllme 1
+```
+
 ### GSM8K
 ```bash
 python main.py --config small --mode effi_cot --dataset gsm8k --variation vanilla -stllr 0.001 -stlwd 0.01 -stle 3 -stllmlr 1e-05 -stllmwd 0.001 -stllme 1 -cgllr 0.0001 -cglwd 0.01 -cgle 3 -cgllmlr 1e-05 -cgllmwd 0.001 -cgllme 1
+```
+
+```bash
+python main.py --config mistral --mode effi_cot --dataset gsm8k --variation vanilla -stllr 0.001 -stlwd 0.001 -stle 1 -stllmlr 1e-07 -stllmwd 1e-05 -stllme 1 -cgllr 0.01 -cglwd 0.01 -cgle 3 -cgllmlr 1e-07 -cgllmwd 0.001 -cgllme 2
+```
+
+### Commonsense_qa
+```bash
+python main.py --config small --mode effi_cot --dataset commonsense_qa --variation vanilla -stllr 0.0001 -stlwd 0.001 -stle 1 -stllmlr 1e-05 -stllmwd 1e-05 -stllme 2 -cgllr 0.01 -cglwd 0.01 -cgle 3 -cgllmlr 1e-05 -cgllmwd 0.001 -cgllme 1
+```
+
+```bash
+python main.py --config mistral --mode effi_cot --dataset commonsense_qa --variation vanilla -stllr 0.01 -stlwd 0.001 -stle 1 -stllmlr 1e-05 -stllmwd 0.001 -stllme 1 -cgllr 0.01 -cglwd 0.01 -cgle 3 -cgllmlr 1e-05 -cgllmwd 0.001 -cgllme 1
 ```

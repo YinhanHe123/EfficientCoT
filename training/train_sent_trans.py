@@ -186,9 +186,10 @@ def train_sentence_transformer(
                 utils.create_directory(model_path)
                 sentence_transformer.save_pretrained(model_path)
                 print(f"Saved best model with validation loss: {best_val_loss:.4f}")
-        sentence_transformer = sentence_transformer.from_pretrained(model_path).to(device)
-        logger.logger.info(f"Loading best validation loss = {best_val_loss}")
-        print(f"Loading best validation loss = {best_val_loss}")
+        if ne > 0:
+            sentence_transformer = sentence_transformer.from_pretrained(model_path).to(device)
+            logger.logger.info(f"Loading best validation loss = {best_val_loss}")
+            print(f"Loading best validation loss = {best_val_loss}")
         for param in sentence_transformer.parameters():
             param.requires_grad = True
     logger.close()

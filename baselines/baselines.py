@@ -1,3 +1,4 @@
+import time
 import torch
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -31,8 +32,18 @@ def run_baseline(baseline_name, train_dataset, eval_dataset, model_config, exper
         return run_coconut_baseline(train_dataset, eval_dataset, model_config, experiment_config)
     elif baseline_name == "cot":
         return run_cot_baseline(train_dataset, eval_dataset, model_config, experiment_config, num_shots)
+    elif baseline_name == "nocot":
+        return run_nocot_baseline(eval_dataset, model_config, experiment_config, num_shots)
     else:
         raise ValueError(f"Unknown baseline: {baseline_name}")
+
+def get_formatted_prompt(query):
+    """
+    Format the prompt based on the teacher model used
+    """
+    combined_input_for_query = f"[INST] Question: {query}"
+    combined_input_for_answer = "Answer: "
+    return (combined_input_for_query, combined_input_for_answer)
 
 def run_cot_baseline(dataset, model_config, experiment_config, num_shots):
     # results is in shape of  = {"query": query, "ground_truth": sample.get("answer", ""),"prediction": answer}
@@ -144,4 +155,91 @@ def run_cot_baseline(dataset, model_config, experiment_config, num_shots):
     utils.save_json(results, f"{results_dir}/inference_results.json")
     return results
 
+def run_nocot_baseline(dataset, model_config, experiment_config, num_shots):
+    device = experiment_config.device
 
+    # Load teacher LLM for generating answers
+    teacher_tokenizer = AutoTokenizer.from_pretrained(model_config.teacher_model_name)
+    teacher_tokenizer.pad_token = teacher_tokenizer.eos_token
+    teacher_model = AutoModelForCausalLM.from_pretrained(model_config.teacher_model_name).to(device)
+    teacher_model.eval()
+    
+    results_dir = experiment_config.result_path+"/nocot"
+    if not os.path.exists(results_dir):
+        os.makedirs(results_dir)
+    all_res, all_summ = [], []
+    for temp in [0.1, 0.3, 0.5, 0.7, 0.9]:
+        results, time_list, contemp_time_list = [], [], []
+        with torch.no_grad():
+            for sample in tqdm(dataset, desc="Running inference"):            
+                query_prompt, answer_prompt = get_formatted_prompt(sample["query"])
+                query_inputs = teacher_tokenizer(
+                    query_prompt,
+                    return_tensors="pt",
+                    padding=False,
+                    truncation=False,
+                    max_length=experiment_config.max_seq_length
+                ).to(device)                
+                answer_inputs = teacher_tokenizer(
+                    answer_prompt,
+                    return_tensors="pt",
+                    padding=False,
+                    truncation=True,
+                    max_length=experiment_config.max_seq_length,
+                    add_special_tokens=False
+                ).to(device)
+                
+                prompt_embeds_query = teacher_model.get_input_embeddings()(query_inputs.input_ids)
+                prompt_embeds_answer = teacher_model.get_input_embeddings()(answer_inputs.input_ids)
+
+                # Create combined embeddings
+                combined_embeds = torch.cat([
+                    prompt_embeds_query,
+                    prompt_embeds_answer
+                ], dim=1)
+
+                # Create proper attention mask that covers both parts
+                attention_mask = torch.ones(
+                    (1, combined_embeds.size(1)),
+                    dtype=torch.long,
+                    device=device
+                )
+                
+                gen_start = time.time()
+                outputs = teacher_model.generate(
+                    inputs_embeds=combined_embeds,
+                    attention_mask=attention_mask,
+                    max_length=30 + combined_embeds.size(1),
+                    temperature=temp,
+                    top_p=0.9,
+                    do_sample=True,
+                    pad_token_id=teacher_tokenizer.eos_token_id,
+                )
+                gen_end = time.time()
+                # print(f"Generation time: {gen_end - gen_start}")
+                gen_time = gen_end - gen_start
+
+                # Decode only the generated part (skip the prompt and contemplation tokens)
+                prefix_length = combined_embeds.size(1)-1 if len(outputs) > combined_embeds.size(1) else 0
+                answer = teacher_tokenizer.decode(outputs[0][prefix_length:], skip_special_tokens=True)
+
+                result = {
+                    "query": sample["query"],
+                    "ground_truth": sample.get("answer", ""),
+                    "prediction": answer,
+                    "sample_time": gen_time
+                }
+                time_list.append(gen_time)
+                results.append(result)
+            
+            print(f"Average time taken for each sample: {sum(time_list)/len(time_list)}")
+            all_res.append((temp, results))
+            summary = {
+                "avg_total_time": sum(time_list)/len(time_list),
+                "num_samples": len(dataset),
+                "num_contemp_tokens": 0
+            }
+            all_summ.append(summary)
+    utils.create_directory(f"{results_dir}/inference_results.json")
+    utils.save_json([{"summary": summary} for summary in all_summ], f"{results_dir}/inference_results.json")
+    return all_res
