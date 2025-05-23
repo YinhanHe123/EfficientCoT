@@ -64,7 +64,7 @@ project_root/
 ```
 
 
-## Hyperparameter configs
+## Run SemCoT
 
 ### SVAMP
 ```bash
@@ -110,3 +110,6 @@ python main.py --config small --mode effi_cot --dataset commonsense_qa --variati
 ```bash
 python main.py --config mistral --mode effi_cot --dataset commonsense_qa --variation vanilla -stllr 0.01 -stlwd 0.001 -stle 1 -stllmlr 1e-05 -stllmwd 0.001 -stllme 1 -cgllr 0.01 -cglwd 0.01 -cgle 3 -cgllmlr 1e-05 -cgllmwd 0.001 -cgllme 1
 ```
+
+## Run Baselines
+
