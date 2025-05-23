@@ -1,5 +1,7 @@
 # SemCoT
-This is the official code project for the paper ""
+
+This is the official code project for the paper "SemCoT: Accelerating Chain-of-Thought Reasoning through Semantically-Aligned Implicit Tokens"
+
 ## Project Structure
 ```
 project_root/
