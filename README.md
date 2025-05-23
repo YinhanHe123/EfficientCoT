@@ -52,16 +52,7 @@ project_root/
 │
 └── main.py                             # Main entry point for running experiments
 ```
-## Run the code
 
-### Step 1: Train the sentence transformer
-python main.py --mode train_sentence_transformer --config default
-
-### Step 2: Train the contemplation generator
-python main.py --mode train_contemp_generator --config default
-
-### Step 3: Evaluate the model
-python main.py --mode evaluate --config default
 
 ## Hyperparameter configs
 
