@@ -1,5 +1,5 @@
 # SemCoT
-
+This is the official code project for the paper ""
 ## Project Structure
 ```
 project_root/
