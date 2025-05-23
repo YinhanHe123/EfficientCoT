@@ -1,0 +1,15 @@
+{"numerical_accuracy": 0.025, "exp_num": 0, "dataset": "coin_flip", "eval_temp": 0.1, "eval_max_contemp_tokens": 1, "ave_sample_time": 1.6813629353046418}
+{"numerical_accuracy": 0.025, "exp_num": 0, "dataset": "coin_flip", "eval_temp": 0.3, "eval_max_contemp_tokens": 1, "ave_sample_time": 1.6728225767612457}
+{"numerical_accuracy": 0.025, "exp_num": 0, "dataset": "coin_flip", "eval_temp": 0.5, "eval_max_contemp_tokens": 1, "ave_sample_time": 1.6718090784549713}
+{"numerical_accuracy": 0.025, "exp_num": 0, "dataset": "coin_flip", "eval_temp": 0.7, "eval_max_contemp_tokens": 1, "ave_sample_time": 1.6725641202926635}
+{"numerical_accuracy": 0.02, "exp_num": 0, "dataset": "coin_flip", "eval_temp": 0.9, "eval_max_contemp_tokens": 1, "ave_sample_time": 1.6736557984352112}
+{"numerical_accuracy": 0.035, "exp_num": 1, "dataset": "coin_flip", "eval_temp": 0.1, "eval_max_contemp_tokens": 1, "ave_sample_time": 1.678636519908905}
+{"numerical_accuracy": 0.03, "exp_num": 1, "dataset": "coin_flip", "eval_temp": 0.3, "eval_max_contemp_tokens": 1, "ave_sample_time": 1.6843518030643463}
+{"numerical_accuracy": 0.02, "exp_num": 1, "dataset": "coin_flip", "eval_temp": 0.5, "eval_max_contemp_tokens": 1, "ave_sample_time": 1.672544813156128}
+{"numerical_accuracy": 0.02, "exp_num": 1, "dataset": "coin_flip", "eval_temp": 0.7, "eval_max_contemp_tokens": 1, "ave_sample_time": 1.6730718231201172}
+{"numerical_accuracy": 0.02, "exp_num": 1, "dataset": "coin_flip", "eval_temp": 0.9, "eval_max_contemp_tokens": 1, "ave_sample_time": 1.671321165561676}
+{"numerical_accuracy": 0.005, "exp_num": 2, "dataset": "coin_flip", "eval_temp": 0.1, "eval_max_contemp_tokens": 1, "ave_sample_time": 1.678837170600891}
+{"numerical_accuracy": 0.005, "exp_num": 2, "dataset": "coin_flip", "eval_temp": 0.3, "eval_max_contemp_tokens": 1, "ave_sample_time": 1.6725394701957703}
+{"numerical_accuracy": 0.005, "exp_num": 2, "dataset": "coin_flip", "eval_temp": 0.5, "eval_max_contemp_tokens": 1, "ave_sample_time": 1.673710696697235}
+{"numerical_accuracy": 0.005, "exp_num": 2, "dataset": "coin_flip", "eval_temp": 0.7, "eval_max_contemp_tokens": 1, "ave_sample_time": 1.67054532289505}
+{"numerical_accuracy": 0.01, "exp_num": 2, "dataset": "coin_flip", "eval_temp": 0.9, "eval_max_contemp_tokens": 1, "ave_sample_time": 1.6725637876987458}

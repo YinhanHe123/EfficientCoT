@@ -32,29 +32,29 @@ def run_coconut_baseline(train_dataset, eval_dataset, model_config, experiment_c
     from training.train_coconut import train_coconut_model
 
     # Train the Coconut model
-    os.makedirs(coconut_model_path, exist_ok=True)
+    # os.makedirs(coconut_model_path, exist_ok=True)
 
-    coconut_model = train_coconut_model(
-        base_model_name=model_config.teacher_model_name,
-        train_dataset=train_dataset,
-        eval_dataset=eval_dataset,
-        output_path=coconut_model_path,
-        learning_rate=experiment_config.ccot_lr,  # Reuse CCOT learning rate
-        num_epochs=1,
-        batch_size=1,  # Coconut can be memory intensive
-        max_continuous_tokens=experiment_config.train_max_contemp_tokens,
-        device=device
-    )
+    # coconut_model = train_coconut_model(
+    #     base_model_name=model_config.teacher_model_name,
+    #     train_dataset=train_dataset,
+    #     eval_dataset=eval_dataset,
+    #     output_path=coconut_model_path,
+    #     learning_rate=experiment_config.ccot_lr,  # Reuse CCOT learning rate
+    #     num_epochs=1,
+    #     batch_size=1,  # Coconut can be memory intensive
+    #     max_continuous_tokens=experiment_config.train_max_contemp_tokens,
+    #     device=device
+    # )
 
-    print("Coconut model training completed!")
+    # print("Coconut model training completed!")
 
 
 
-    # elif experiment_config.coconut_stage == "evaluate":
-        # Check if model exists
-    if not os.path.exists(os.path.join(coconut_model_path, "model.pt")):
-        print("No trained Coconut model found. Please train the model first (coconut_stage=train).")
-        return None
+    # # elif experiment_config.coconut_stage == "evaluate":
+    #     # Check if model exists
+    # if not os.path.exists(os.path.join(coconut_model_path, "model.pt")):
+    #     print("No trained Coconut model found. Please train the model first (coconut_stage=train).")
+    #     return None
 
     print("Evaluating with Coconut model...")
     all_res, all_summ = [], []

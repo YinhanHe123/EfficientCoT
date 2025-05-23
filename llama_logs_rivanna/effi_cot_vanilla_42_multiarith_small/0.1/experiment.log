@@ -1,0 +1,59 @@
+2025-05-16 23:09:25,539 [INFO] Logging to ./logs/effi_cot_vanilla_42_multiarith_small/0.1
+2025-05-16 23:09:25,539 [INFO] Hyperparameters: {'config_name': 'small', 'log_dir': './logs', 'model_save_path': '/scratch/nee7ne/effi_cot/saved_models/effi_cot/vanilla/small/multiarith/0.1', 'checkpoint_path': './checkpoints/effi_cot/vanilla/small/multiarith/0.1', 'result_path': './results/effi_cot/vanilla/small/multiarith/0.1', 'experiment_name': 'effi_cot_vanilla_42_multiarith_small/0.1', 'sent_trans_lr': 1e-05, 'sent_trans_weight_decay': 0.01, 'sent_trans_epochs': 15, 'contemp_gen_lr': 1e-07, 'contemp_gen_weight_decay': 1e-05, 'contemp_gen_epochs': 2, 'contemp_gen_lin_layer_lr': 0.001, 'contemp_gen_lin_layer_weight_decay': 0.001, 'contemp_gen_lin_layer_epochs': 10, 'batch_size': 4, 'alpha': 0.1, 'save_interval': 1, 'max_seq_length': 512, 'embedding_dim': 768, 'seed': 42, 'max_reasoning_pairs': 800, 'train_max_contemp_tokens': 5, 'eval_max_contemp_tokens': 1, 'start_layer_idx': 16, 'end_layer_idx': 20, 'reasoning_pairs_path': '/sfs/gpfs/tardis/home/nee7ne/EfficientCoT/gen_datasets', 'device': 0, 'ccot_stage': 'encode', 'ccot_lr': 1e-05, 'eval_temp': 0.7, 'codi_lr': 0.0008, 'coconut_stage': None, 'st_linear_lr': 0.0001, 'st_linear_wd': 0.001, 'st_linear_epochs': 5, 'st_llm_lr': 1e-07, 'st_llm_wd': 0.001, 'st_llm_epochs': 1, 'cg_linear_lr': 0.001, 'cg_linear_wd': 0.01, 'cg_linear_epochs': 3, 'cg_llm_lr': 1e-05, 'cg_llm_wd': 0.001, 'cg_llm_epochs': 2, 'teacher_model_name': 'meta-llama/Llama-2-7b-chat-hf', 'student_model_name': 'princeton-nlp/Sheared-LLaMA-1.3B', 'student_model_path': './saved_models/contemp_generator', 'sentence_transformer_path': './saved_models/sentence_transformer', 'data_path': 'ChilleD/MultiArith', 'teacher_hidden_dim': 4096, 'contemp_seq_length': 32, 'contemp_layer_index': 16}
+2025-05-16 23:09:25,593 [INFO] Logging to ./logs/effi_cot_vanilla_42_multiarith_small/0.1
+2025-05-16 23:09:25,594 [INFO] Training sentence transformer
+2025-05-16 23:12:47,523 [INFO] Step 0 - train_loss: 1.0177, val_loss: 0.9310
+2025-05-16 23:13:10,343 [INFO] Step 1 - train_loss: 0.8672, val_loss: 0.8763
+2025-05-16 23:13:33,448 [INFO] Step 2 - train_loss: 0.8490, val_loss: 0.8764
+2025-05-16 23:13:52,711 [INFO] Step 3 - train_loss: 0.8291, val_loss: 0.8607
+2025-05-16 23:14:15,727 [INFO] Step 4 - train_loss: 0.8128, val_loss: 0.8509
+2025-05-16 23:14:43,876 [INFO] Loading best validation loss = 0.8508716679754711
+2025-05-16 23:15:37,884 [INFO] Step 0 - train_loss: 0.7951, val_loss: 0.8397
+2025-05-16 23:16:02,127 [INFO] Loading best validation loss = 0.8397188498860314
+2025-05-16 23:16:33,419 [INFO] Logging to ./logs/effi_cot_vanilla_42_multiarith_small/0.1
+2025-05-16 23:16:33,419 [INFO] Training contemplation generator with variation: vanilla
+2025-05-16 23:20:22,810 [INFO] Step 0 - total_loss: 1.7518, reason_loss: 0.9746, ans_loss: 1.8382, eval_loss: 1.4878
+2025-05-16 23:22:42,291 [INFO] Step 1 - total_loss: 1.4830, reason_loss: 0.9506, ans_loss: 1.5421, eval_loss: 1.3823
+2025-05-16 23:25:02,226 [INFO] Step 2 - total_loss: 1.3879, reason_loss: 0.9289, ans_loss: 1.4389, eval_loss: 1.4514
+2025-05-16 23:25:13,019 [INFO] Loading best validation loss = 1.3823148121436437
+2025-05-16 23:27:28,464 [INFO] Step 0 - total_loss: 1.2931, reason_loss: 0.9349, ans_loss: 1.3329, eval_loss: 1.3566
+2025-05-16 23:29:48,976 [INFO] Step 1 - total_loss: 1.2581, reason_loss: 0.9333, ans_loss: 1.2942, eval_loss: 1.3505
+2025-05-16 23:30:03,927 [INFO] Loading best validation loss = 1.3504507114489874
+2025-05-16 23:57:25,947 [INFO] Logging to ./logs/effi_cot_vanilla_42_multiarith_small/0.1
+2025-05-16 23:57:25,947 [INFO] Training sentence transformer
+2025-05-17 00:00:24,107 [INFO] Step 0 - train_loss: 1.0057, val_loss: 0.9259
+2025-05-17 00:00:47,059 [INFO] Step 1 - train_loss: 0.8799, val_loss: 0.8792
+2025-05-17 00:01:10,272 [INFO] Step 2 - train_loss: 0.8461, val_loss: 0.8645
+2025-05-17 00:01:33,182 [INFO] Step 3 - train_loss: 0.8353, val_loss: 0.8520
+2025-05-17 00:01:57,052 [INFO] Step 4 - train_loss: 0.8081, val_loss: 0.8517
+2025-05-17 00:02:19,390 [INFO] Loading best validation loss = 0.8517278631528219
+2025-05-17 00:03:13,198 [INFO] Step 0 - train_loss: 0.8140, val_loss: 0.8347
+2025-05-17 00:03:36,329 [INFO] Loading best validation loss = 0.834709556329818
+2025-05-17 00:03:58,526 [INFO] Logging to ./logs/effi_cot_vanilla_42_multiarith_small/0.1
+2025-05-17 00:03:58,527 [INFO] Training contemplation generator with variation: vanilla
+2025-05-17 00:07:36,385 [INFO] Step 0 - total_loss: 1.7724, reason_loss: 0.9911, ans_loss: 1.8592, eval_loss: 1.6817
+2025-05-17 00:09:57,460 [INFO] Step 1 - total_loss: 1.4777, reason_loss: 0.9616, ans_loss: 1.5350, eval_loss: 1.4213
+2025-05-17 00:12:17,498 [INFO] Step 2 - total_loss: 1.3620, reason_loss: 0.9356, ans_loss: 1.4094, eval_loss: 1.3994
+2025-05-17 00:12:32,450 [INFO] Loading best validation loss = 1.3994496997859742
+2025-05-17 00:14:52,069 [INFO] Step 0 - total_loss: 1.1956, reason_loss: 0.9217, ans_loss: 1.2260, eval_loss: 1.3142
+2025-05-17 00:17:14,717 [INFO] Step 1 - total_loss: 1.1398, reason_loss: 0.9201, ans_loss: 1.1642, eval_loss: 1.3197
+2025-05-17 00:17:25,644 [INFO] Loading best validation loss = 1.3141906208462186
+2025-05-17 00:44:10,664 [INFO] Logging to ./logs/effi_cot_vanilla_42_multiarith_small/0.1
+2025-05-17 00:44:10,665 [INFO] Training sentence transformer
+2025-05-17 00:47:06,737 [INFO] Step 0 - train_loss: 0.9927, val_loss: 0.9115
+2025-05-17 00:47:29,460 [INFO] Step 1 - train_loss: 0.8700, val_loss: 0.9108
+2025-05-17 00:47:52,351 [INFO] Step 2 - train_loss: 0.8362, val_loss: 0.8705
+2025-05-17 00:48:15,346 [INFO] Step 3 - train_loss: 0.8185, val_loss: 0.8579
+2025-05-17 00:48:38,306 [INFO] Step 4 - train_loss: 0.8170, val_loss: 0.8690
+2025-05-17 00:48:56,294 [INFO] Loading best validation loss = 0.8579295760109311
+2025-05-17 00:49:50,000 [INFO] Step 0 - train_loss: 0.8175, val_loss: 0.8505
+2025-05-17 00:50:11,274 [INFO] Loading best validation loss = 0.8504539274034046
+2025-05-17 00:50:30,406 [INFO] Logging to ./logs/effi_cot_vanilla_42_multiarith_small/0.1
+2025-05-17 00:50:30,406 [INFO] Training contemplation generator with variation: vanilla
+2025-05-17 00:54:05,460 [INFO] Step 0 - total_loss: 1.6380, reason_loss: 0.9840, ans_loss: 1.7107, eval_loss: 1.4219
+2025-05-17 00:56:24,010 [INFO] Step 1 - total_loss: 1.4419, reason_loss: 0.9569, ans_loss: 1.4957, eval_loss: 1.4020
+2025-05-17 00:58:42,897 [INFO] Step 2 - total_loss: 1.3549, reason_loss: 0.9342, ans_loss: 1.4017, eval_loss: 1.3651
+2025-05-17 00:58:57,654 [INFO] Loading best validation loss = 1.3651303701930575
+2025-05-17 01:01:12,347 [INFO] Step 0 - total_loss: 1.2433, reason_loss: 0.9211, ans_loss: 1.2791, eval_loss: 1.3258
+2025-05-17 01:03:31,102 [INFO] Step 1 - total_loss: 1.2108, reason_loss: 0.9199, ans_loss: 1.2431, eval_loss: 1.3234
+2025-05-17 01:03:46,152 [INFO] Loading best validation loss = 1.3234257005982928

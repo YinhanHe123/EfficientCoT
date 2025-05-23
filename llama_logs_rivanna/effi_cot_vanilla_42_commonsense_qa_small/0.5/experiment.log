@@ -1,0 +1,51 @@
+2025-05-16 23:07:35,876 [INFO] Logging to ./logs/effi_cot_vanilla_42_commonsense_qa_small/0.5
+2025-05-16 23:07:35,877 [INFO] Hyperparameters: {'config_name': 'small', 'log_dir': './logs', 'model_save_path': '/scratch/nee7ne/effi_cot/saved_models/effi_cot/vanilla/small/commonsense_qa/0.5', 'checkpoint_path': './checkpoints/effi_cot/vanilla/small/commonsense_qa/0.5', 'result_path': './results/effi_cot/vanilla/small/commonsense_qa/0.5', 'experiment_name': 'effi_cot_vanilla_42_commonsense_qa_small/0.5', 'sent_trans_lr': 1e-05, 'sent_trans_weight_decay': 0.01, 'sent_trans_epochs': 15, 'contemp_gen_lr': 1e-07, 'contemp_gen_weight_decay': 1e-05, 'contemp_gen_epochs': 2, 'contemp_gen_lin_layer_lr': 0.001, 'contemp_gen_lin_layer_weight_decay': 0.001, 'contemp_gen_lin_layer_epochs': 10, 'batch_size': 4, 'alpha': 0.5, 'save_interval': 1, 'max_seq_length': 512, 'embedding_dim': 768, 'seed': 42, 'max_reasoning_pairs': 800, 'train_max_contemp_tokens': 5, 'eval_max_contemp_tokens': 1, 'start_layer_idx': 16, 'end_layer_idx': 20, 'reasoning_pairs_path': '/sfs/gpfs/tardis/home/nee7ne/EfficientCoT/gen_datasets', 'device': 0, 'ccot_stage': 'encode', 'ccot_lr': 1e-05, 'eval_temp': 0.7, 'codi_lr': 0.0008, 'coconut_stage': None, 'st_linear_lr': 0.0001, 'st_linear_wd': 0.001, 'st_linear_epochs': 1, 'st_llm_lr': 1e-05, 'st_llm_wd': 1e-05, 'st_llm_epochs': 2, 'cg_linear_lr': 0.01, 'cg_linear_wd': 0.01, 'cg_linear_epochs': 3, 'cg_llm_lr': 1e-05, 'cg_llm_wd': 0.001, 'cg_llm_epochs': 1, 'teacher_model_name': 'meta-llama/Llama-2-7b-chat-hf', 'student_model_name': 'princeton-nlp/Sheared-LLaMA-1.3B', 'student_model_path': './saved_models/contemp_generator', 'sentence_transformer_path': './saved_models/sentence_transformer', 'data_path': 'tau/commonsense_qa', 'teacher_hidden_dim': 4096, 'contemp_seq_length': 32, 'contemp_layer_index': 16}
+2025-05-16 23:07:36,024 [INFO] Logging to ./logs/effi_cot_vanilla_42_commonsense_qa_small/0.5
+2025-05-16 23:07:36,024 [INFO] Training sentence transformer
+2025-05-16 23:08:52,153 [INFO] Logging to ./logs/effi_cot_vanilla_42_commonsense_qa_small/0.5
+2025-05-16 23:08:52,153 [INFO] Hyperparameters: {'config_name': 'small', 'log_dir': './logs', 'model_save_path': '/scratch/nee7ne/effi_cot/saved_models/effi_cot/vanilla/small/commonsense_qa/0.5', 'checkpoint_path': './checkpoints/effi_cot/vanilla/small/commonsense_qa/0.5', 'result_path': './results/effi_cot/vanilla/small/commonsense_qa/0.5', 'experiment_name': 'effi_cot_vanilla_42_commonsense_qa_small/0.5', 'sent_trans_lr': 1e-05, 'sent_trans_weight_decay': 0.01, 'sent_trans_epochs': 15, 'contemp_gen_lr': 1e-07, 'contemp_gen_weight_decay': 1e-05, 'contemp_gen_epochs': 2, 'contemp_gen_lin_layer_lr': 0.001, 'contemp_gen_lin_layer_weight_decay': 0.001, 'contemp_gen_lin_layer_epochs': 10, 'batch_size': 4, 'alpha': 0.5, 'save_interval': 1, 'max_seq_length': 512, 'embedding_dim': 768, 'seed': 42, 'max_reasoning_pairs': 800, 'train_max_contemp_tokens': 5, 'eval_max_contemp_tokens': 1, 'start_layer_idx': 16, 'end_layer_idx': 20, 'reasoning_pairs_path': '/sfs/gpfs/tardis/home/nee7ne/EfficientCoT/gen_datasets', 'device': 0, 'ccot_stage': 'encode', 'ccot_lr': 1e-05, 'eval_temp': 0.7, 'codi_lr': 0.0008, 'coconut_stage': None, 'st_linear_lr': 0.0001, 'st_linear_wd': 0.001, 'st_linear_epochs': 1, 'st_llm_lr': 1e-05, 'st_llm_wd': 1e-05, 'st_llm_epochs': 2, 'cg_linear_lr': 0.01, 'cg_linear_wd': 0.01, 'cg_linear_epochs': 3, 'cg_llm_lr': 1e-05, 'cg_llm_wd': 0.001, 'cg_llm_epochs': 1, 'teacher_model_name': 'meta-llama/Llama-2-7b-chat-hf', 'student_model_name': 'princeton-nlp/Sheared-LLaMA-1.3B', 'student_model_path': './saved_models/contemp_generator', 'sentence_transformer_path': './saved_models/sentence_transformer', 'data_path': 'tau/commonsense_qa', 'teacher_hidden_dim': 4096, 'contemp_seq_length': 32, 'contemp_layer_index': 16}
+2025-05-16 23:08:52,302 [INFO] Logging to ./logs/effi_cot_vanilla_42_commonsense_qa_small/0.5
+2025-05-16 23:08:52,302 [INFO] Training sentence transformer
+2025-05-16 23:15:48,144 [INFO] Step 0 - train_loss: 1.0071, val_loss: 0.9482
+2025-05-16 23:16:17,181 [INFO] Loading best validation loss = 0.9481542468070984
+2025-05-16 23:18:33,818 [INFO] Step 0 - train_loss: 0.8491, val_loss: 0.8528
+2025-05-16 23:20:55,139 [INFO] Step 1 - train_loss: 0.8067, val_loss: 0.8302
+2025-05-16 23:21:23,351 [INFO] Loading best validation loss = 0.8302357286214829
+2025-05-16 23:21:51,861 [INFO] Logging to ./logs/effi_cot_vanilla_42_commonsense_qa_small/0.5
+2025-05-16 23:21:51,861 [INFO] Training contemplation generator with variation: vanilla
+2025-05-16 23:28:49,580 [INFO] Step 0 - total_loss: 1.0857, reason_loss: 0.9852, ans_loss: 1.1861, eval_loss: 0.9853
+2025-05-16 23:33:36,063 [INFO] Step 1 - total_loss: 0.9373, reason_loss: 0.9074, ans_loss: 0.9673, eval_loss: 0.9406
+2025-05-16 23:38:23,014 [INFO] Step 2 - total_loss: 0.8668, reason_loss: 0.8352, ans_loss: 0.8984, eval_loss: 0.8498
+2025-05-16 23:38:40,174 [INFO] Loading best validation loss = 0.8498160894215107
+2025-05-16 23:43:22,798 [INFO] Step 0 - total_loss: 0.7701, reason_loss: 0.7672, ans_loss: 0.7731, eval_loss: 0.8473
+2025-05-16 23:43:33,076 [INFO] Loading best validation loss = 0.8473127822577954
+2025-05-17 00:14:19,723 [INFO] Logging to ./logs/effi_cot_vanilla_42_commonsense_qa_small/0.5
+2025-05-17 00:14:19,723 [INFO] Training sentence transformer
+2025-05-17 00:21:11,055 [INFO] Step 0 - train_loss: 0.9983, val_loss: 0.9459
+2025-05-17 00:21:36,607 [INFO] Loading best validation loss = 0.9459194138646125
+2025-05-17 00:23:53,281 [INFO] Step 0 - train_loss: 0.8485, val_loss: 0.8454
+2025-05-17 00:26:14,192 [INFO] Step 1 - train_loss: 0.8020, val_loss: 0.8299
+2025-05-17 00:26:41,172 [INFO] Loading best validation loss = 0.8299040928483009
+2025-05-17 00:27:05,420 [INFO] Logging to ./logs/effi_cot_vanilla_42_commonsense_qa_small/0.5
+2025-05-17 00:27:05,420 [INFO] Training contemplation generator with variation: vanilla
+2025-05-17 00:34:04,120 [INFO] Step 0 - total_loss: 1.2928, reason_loss: 0.9582, ans_loss: 1.6275, eval_loss: 1.0360
+2025-05-17 00:38:53,010 [INFO] Step 1 - total_loss: 0.9291, reason_loss: 0.8604, ans_loss: 0.9978, eval_loss: 0.8394
+2025-05-17 00:43:41,550 [INFO] Step 2 - total_loss: 0.7559, reason_loss: 0.6026, ans_loss: 0.9092, eval_loss: 0.6962
+2025-05-17 00:43:58,981 [INFO] Loading best validation loss = 0.6961609522253275
+2025-05-17 00:48:43,164 [INFO] Step 0 - total_loss: 0.5854, reason_loss: 0.4482, ans_loss: 0.7226, eval_loss: 0.6731
+2025-05-17 00:48:59,621 [INFO] Loading best validation loss = 0.6730850045382977
+2025-05-17 01:23:12,666 [INFO] Logging to ./logs/effi_cot_vanilla_42_commonsense_qa_small/0.5
+2025-05-17 01:23:12,667 [INFO] Training sentence transformer
+2025-05-17 01:30:02,631 [INFO] Step 0 - train_loss: 1.0060, val_loss: 0.9449
+2025-05-17 01:30:28,882 [INFO] Loading best validation loss = 0.9449324086308479
+2025-05-17 01:32:44,995 [INFO] Step 0 - train_loss: 0.8498, val_loss: 0.8350
+2025-05-17 01:35:05,240 [INFO] Step 1 - train_loss: 0.8072, val_loss: 0.8270
+2025-05-17 01:35:28,646 [INFO] Loading best validation loss = 0.8269963666796685
+2025-05-17 01:35:51,663 [INFO] Logging to ./logs/effi_cot_vanilla_42_commonsense_qa_small/0.5
+2025-05-17 01:35:51,663 [INFO] Training contemplation generator with variation: vanilla
+2025-05-17 01:42:47,161 [INFO] Step 0 - total_loss: 1.0041, reason_loss: 0.9548, ans_loss: 1.0535, eval_loss: 0.9441
+2025-05-17 01:47:34,943 [INFO] Step 1 - total_loss: 0.9151, reason_loss: 0.8909, ans_loss: 0.9393, eval_loss: 0.9010
+2025-05-17 01:52:22,914 [INFO] Step 2 - total_loss: 0.8642, reason_loss: 0.8485, ans_loss: 0.8799, eval_loss: 0.9130
+2025-05-17 01:52:34,613 [INFO] Loading best validation loss = 0.9010260352492332
+2025-05-17 01:57:19,318 [INFO] Step 0 - total_loss: 0.8524, reason_loss: 0.8679, ans_loss: 0.8368, eval_loss: 0.8930
+2025-05-17 01:57:36,024 [INFO] Loading best validation loss = 0.8930162879824638

@@ -7,6 +7,7 @@ def evaluate_model(results, dataset):
     data_path = getattr(dataset, 'name', '').lower()
     is_commonsense_qa = 'commonsense_qa' in data_path
     is_coin_flip = 'coin_flip' in data_path
+    correct_queries = []
 
     if is_commonsense_qa:
         # For CommonsenseQA, check if prediction matches the correct answer label (A, B, C, D, E)
@@ -23,8 +24,10 @@ def evaluate_model(results, dataset):
                 ground_truth in prediction.split() or
                 ground_truth + '.' in prediction.split()):
                 num_correct += 1
+                correct_queries.append(result['query'])
 
         metrics["numerical_accuracy"] = round(num_correct / len(results), 3) if results else 0
+        metrics["correct_queries"] = correct_queries
         return metrics
 
     elif is_coin_flip:
@@ -40,8 +43,10 @@ def evaluate_model(results, dataset):
                 (ground_truth == 'yes' and ('yes' in prediction.lower() or 'still heads' in prediction.lower())) or
                 (ground_truth == 'no' and ('no' in prediction.lower() or 'not heads' in prediction.lower()))):
                 num_correct += 1
+                correct_queries.append(result['query'])
 
         metrics["numerical_accuracy"] = round(num_correct / len(results), 3) if results else 0
+        metrics["correct_queries"] = correct_queries
         return metrics
 
     else:
@@ -60,6 +65,7 @@ def evaluate_model(results, dataset):
                 # Check for exact match among any of the extracted numbers
                 if any(abs(pred - gt_num) < 1e-6 for pred in pred_nums):  # Allow for small floating point differences
                     num_correct += 1
+                    correct_queries.append(result['query'])
 
                 # Find the closest match and calculate relative error
                 if pred_nums:
@@ -80,6 +86,7 @@ def evaluate_model(results, dataset):
             if relative_errors:
                 metrics["mean_relative_error"] = np.mean(relative_errors)
                 metrics["median_relative_error"] = np.median(relative_errors)
+            metrics["correct_queries"] = correct_queries
 
     return metrics
 

@@ -7,7 +7,7 @@ class ExperimentConfig:
 
         # Paths
         self.log_dir = "./logs"
-        self.model_save_path = "/data/nee7ne/effi_cot/saved_models"
+        self.model_save_path = "/data/nee7ne/effi_cot2/saved_models"
         self.checkpoint_path = "./checkpoints"
         self.result_path = "./results"
         self.experiment_name = "default_experiment"

@@ -60,7 +60,7 @@ def run_codi_baseline(train_dataset, eval_dataset, model_config, experiment_conf
 
         # Calculate total time
         ave_gen_time = sum(gen_time) / len(eval_dataset)
-        
+
         # Add summary statistics
         summary = {
             "avg_generation_time": ave_gen_time,
@@ -71,12 +71,12 @@ def run_codi_baseline(train_dataset, eval_dataset, model_config, experiment_conf
         all_res.append((temp, results))
 
         print(f"CODI baseline completed. Average generation time: {ave_gen_time:.2f} seconds")
-    
+
     results_dir = os.path.join(experiment_config.result_path, "codi")
     if not os.path.exists(results_dir):
         os.makedirs(results_dir)
     utils.save_json([{"summary": summary} for summary in all_summ], f"{results_dir}/inference_results.json")
-    os.remove(f"{output_path}/model.pt")
-    os.remove(f"{output_path}/config.pt")
-    os.removedirs(f"{output_path}/checkpoints")
+    # os.remove(f"{output_path}/model.pt")
+    # os.remove(f"{output_path}/config.pt")
+    # os.removedirs(f"{output_path}/checkpoints")
     return all_res

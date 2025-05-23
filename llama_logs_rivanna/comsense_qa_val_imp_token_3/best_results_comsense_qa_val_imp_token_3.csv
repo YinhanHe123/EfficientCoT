@@ -1,0 +1,2 @@
+log_file,best_temp,num_acc_mean,num_acc_std,ave_time_mean,ave_time_std
+output.log,0.7,0.8516666666666666,0.12498888839501782,1.6998770479361216,0.021561056472821125

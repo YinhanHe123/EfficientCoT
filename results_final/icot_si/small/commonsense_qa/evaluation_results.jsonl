@@ -1,0 +1,16 @@
+{"numerical_accuracy": 0.15, "exp_num": 0, "dataset": "commonsense_qa", "eval_temp": 0.1, "eval_max_contemp_tokens": 1, "ave_sample_time": 2.234397096633911}
+{"numerical_accuracy": 0.14, "exp_num": 0, "dataset": "commonsense_qa", "eval_temp": 0.3, "eval_max_contemp_tokens": 1, "ave_sample_time": 2.2355985379219057}
+{"numerical_accuracy": 0.18, "exp_num": 0, "dataset": "commonsense_qa", "eval_temp": 0.5, "eval_max_contemp_tokens": 1, "ave_sample_time": 2.2333336019515992}
+{"numerical_accuracy": 0.14, "exp_num": 0, "dataset": "commonsense_qa", "eval_temp": 0.7, "eval_max_contemp_tokens": 1, "ave_sample_time": 2.2349636936187744}
+{"numerical_accuracy": 0.13, "exp_num": 0, "dataset": "commonsense_qa", "eval_temp": 0.9, "eval_max_contemp_tokens": 1, "ave_sample_time": 2.2342077183723448}
+{"numerical_accuracy": 0.2, "exp_num": 1, "dataset": "commonsense_qa", "eval_temp": 0.1, "eval_max_contemp_tokens": 1, "ave_sample_time": 2.2337413835525513}
+{"numerical_accuracy": 0.225, "exp_num": 1, "dataset": "commonsense_qa", "eval_temp": 0.3, "eval_max_contemp_tokens": 1, "ave_sample_time": 2.2344453954696655}
+{"numerical_accuracy": 0.21, "exp_num": 1, "dataset": "commonsense_qa", "eval_temp": 0.5, "eval_max_contemp_tokens": 1, "ave_sample_time": 2.2400521671772005}
+{"numerical_accuracy": 0.185, "exp_num": 1, "dataset": "commonsense_qa", "eval_temp": 0.7, "eval_max_contemp_tokens": 1, "ave_sample_time": 2.2305674958229065}
+{"numerical_accuracy": 0.185, "exp_num": 1, "dataset": "commonsense_qa", "eval_temp": 0.9, "eval_max_contemp_tokens": 1, "ave_sample_time": 2.2414210629463196}
+{"numerical_accuracy": 0.195, "exp_num": 2, "dataset": "commonsense_qa", "eval_temp": 0.1, "eval_max_contemp_tokens": 1, "ave_sample_time": 2.2414757025241854}
+{"numerical_accuracy": 0.205, "exp_num": 2, "dataset": "commonsense_qa", "eval_temp": 0.3, "eval_max_contemp_tokens": 1, "ave_sample_time": 2.2405806052684785}
+{"numerical_accuracy": 0.21, "exp_num": 2, "dataset": "commonsense_qa", "eval_temp": 0.5, "eval_max_contemp_tokens": 1, "ave_sample_time": 2.240869859457016}
+{"numerical_accuracy": 0.225, "exp_num": 2, "dataset": "commonsense_qa", "eval_temp": 0.7, "eval_max_contemp_tokens": 1, "ave_sample_time": 2.2473330092430115}
+{"numerical_accuracy": 0.175, "exp_num": 2, "dataset": "commonsense_qa", "eval_temp": 0.9, "eval_max_contemp_tokens": 1, "ave_sample_time": 2.235345845222473}
+

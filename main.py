@@ -43,7 +43,7 @@ def parse_args():
     parser.add_argument("--device", type=int, default=0)
     parser.add_argument("--seed", type=int, default=42,
                         help="Random seed for reproducibility")
-    parser.add_argument("--variation", type=str, default="vanilla", 
+    parser.add_argument("--variation", type=str, default="vanilla",
                         choices=["vanilla", "no_sentence_transformer", "no_l_reason", "no_warmup", "no_small_contemp_gen"],
                         help="Variation of the effi_cot model to use")
     parser.add_argument("--compression_ratio", type=float, default=0.05,
@@ -109,12 +109,14 @@ def parse_args():
                         help="Alpha scaling factor for LoRA")
     parser.add_argument("--lora_dropout", type=float, default=0.1,
                         help="Dropout probability for LoRA layers")
-    
+    parser.add_argument("--alpha", type=float, default=0.25,
+                        help="alpha hyperparameter")
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
+    args.device = f"cuda:{args.device}" if torch.cuda.is_available() else "cpu"
     # Set random seed
     utils.set_seed(args.seed)
     # Original logic for individual modes
@@ -140,6 +142,8 @@ def main():
     experiment_config.cg_llm_lr = args.cg_llm_lr
     experiment_config.cg_llm_wd = args.cg_llm_wd
     experiment_config.cg_llm_epochs = args.cg_llm_epochs
+
+    experiment_config.alpha = args.alpha
 
     if args.variation == "no_warmup":
         experiment_config.st_linear_epochs = 0
@@ -231,52 +235,52 @@ def main():
         if args.mode == "effi_cot":
             cur_train_dataset, cur_val_dataset = load_raw_dataset(model_config.data_path)
             # add to train dataset items with condensed reasoning of pairs_dataset
-            for idx in range(len(pairs_dataset)):
-                cur_train_dataset.update_item(idx, "condensed_reasoning", pairs_dataset[idx]["condensed_reasoning"])
-            sentence_transformer = None
-            if args.variation != "no_sentence_transformer":
-                # Train sentence transformer
-                sentence_transformer = train_sentence_transformer(
-                    model_config.teacher_model_name,
-                    experiment_config.start_layer_idx,
-                    experiment_config.end_layer_idx,
-                    cur_train_dataset,
-                    experiment_config
-                )
-                sentence_transformer = CustomizedSentenceTransformer.from_pretrained(
-                    experiment_config.model_save_path+"/sentence_transformer"
-                ).to(args.device)
+            # for idx in range(len(pairs_dataset)):
+            #     cur_train_dataset.update_item(idx, "condensed_reasoning", pairs_dataset[idx]["condensed_reasoning"])
+            # sentence_transformer = None
+            # if args.variation != "no_sentence_transformer":
+            #     # Train sentence transformer
+            #     sentence_transformer = train_sentence_transformer(
+            #         model_config.teacher_model_name,
+            #         experiment_config.start_layer_idx,
+            #         experiment_config.end_layer_idx,
+            #         cur_train_dataset,
+            #         experiment_config
+            #     )
+            #     sentence_transformer = CustomizedSentenceTransformer.from_pretrained(
+            #         experiment_config.model_save_path+"/sentence_transformer"
+            #     ).to(args.device)
 
-            # Initialize contemplation generator
-            if args.variation == "no_small_contemp_gen":
-                # For this variation, we use the teacher model with LoRA adapter
-                contemp_generator = ContemplationGenerator(
-                    model_config.student_model_name,
-                    model_config.teacher_model_name,
-                    model_config.teacher_hidden_dim,
-                    device=args.device,
-                    variation="no_small_contemp_gen"
-                )
-            else:
-                # Use the standard approach with student model
-                contemp_generator = ContemplationGenerator(
-                    model_config.student_model_name,
-                    model_config.teacher_model_name,
-                    model_config.teacher_hidden_dim,
-                    device=args.device,
-                    variation=args.variation
-                )
+            # # Initialize contemplation generator
+            # if args.variation == "no_small_contemp_gen":
+            #     # For this variation, we use the teacher model with LoRA adapter
+            #     contemp_generator = ContemplationGenerator(
+            #         model_config.student_model_name,
+            #         model_config.teacher_model_name,
+            #         model_config.teacher_hidden_dim,
+            #         device=args.device,
+            #         variation="no_small_contemp_gen"
+            #     )
+            # else:
+            #     # Use the standard approach with student model
+            #     contemp_generator = ContemplationGenerator(
+            #         model_config.student_model_name,
+            #         model_config.teacher_model_name,
+            #         model_config.teacher_hidden_dim,
+            #         device=args.device,
+            #         variation=args.variation
+            #     )
 
-            # Train the contemplation generator
-            train_contemplation_generator(
-                contemp_generator,
-                sentence_transformer,
-                cur_train_dataset,
-                cur_val_dataset,
-                model_config,
-                experiment_config,
-                args.variation
-            )
+            # # Train the contemplation generator
+            # train_contemplation_generator(
+            #     contemp_generator,
+            #     sentence_transformer,
+            #     cur_train_dataset,
+            #     cur_val_dataset,
+            #     model_config,
+            #     experiment_config,
+            #     args.variation
+            # )
             contemp_generator = ContemplationGenerator.from_pretrained(
                 experiment_config.model_save_path+"/contemp_generator/"
             ).to(args.device)

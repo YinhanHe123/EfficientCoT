@@ -1,0 +1,26 @@
+2025-05-17 10:38:56,190 [INFO] Logging to ./logs/effi_cot_no_sentence_transformer_42_commonsense_qa_mistral/0.25
+2025-05-17 10:38:56,190 [INFO] Hyperparameters: {'config_name': 'mistral', 'log_dir': './logs', 'model_save_path': '/scratch/nee7ne/effi_cot/saved_models/effi_cot/no_sentence_transformer/mistral/commonsense_qa/0.25', 'checkpoint_path': './checkpoints/effi_cot/no_sentence_transformer/mistral/commonsense_qa/0.25', 'result_path': './results/effi_cot/no_sentence_transformer/mistral/commonsense_qa/0.25', 'experiment_name': 'effi_cot_no_sentence_transformer_42_commonsense_qa_mistral/0.25', 'sent_trans_lr': 1e-05, 'sent_trans_weight_decay': 0.01, 'sent_trans_epochs': 15, 'contemp_gen_lr': 1e-07, 'contemp_gen_weight_decay': 1e-05, 'contemp_gen_epochs': 2, 'contemp_gen_lin_layer_lr': 0.001, 'contemp_gen_lin_layer_weight_decay': 0.001, 'contemp_gen_lin_layer_epochs': 10, 'batch_size': 4, 'alpha': 0.25, 'save_interval': 1, 'max_seq_length': 512, 'embedding_dim': 768, 'seed': 42, 'max_reasoning_pairs': 800, 'train_max_contemp_tokens': 5, 'eval_max_contemp_tokens': 1, 'start_layer_idx': 16, 'end_layer_idx': 20, 'reasoning_pairs_path': '/sfs/gpfs/tardis/home/nee7ne/EfficientCoT/gen_datasets', 'device': 0, 'ccot_stage': 'encode', 'ccot_lr': 1e-05, 'eval_temp': 0.7, 'codi_lr': 0.0008, 'coconut_stage': None, 'st_linear_lr': 0.01, 'st_linear_wd': 0.001, 'st_linear_epochs': 1, 'st_llm_lr': 1e-05, 'st_llm_wd': 0.001, 'st_llm_epochs': 1, 'cg_linear_lr': 0.01, 'cg_linear_wd': 0.01, 'cg_linear_epochs': 3, 'cg_llm_lr': 1e-05, 'cg_llm_wd': 0.001, 'cg_llm_epochs': 1, 'teacher_model_name': 'mistralai/Mistral-7B-Instruct-v0.2', 'student_model_name': 'optimum/mistral-1.1b-testing', 'student_model_path': './saved_models/contemp_generator', 'sentence_transformer_path': './saved_models/sentence_transformer', 'data_path': 'tau/commonsense_qa', 'teacher_hidden_dim': 4096, 'contemp_seq_length': 32, 'contemp_layer_index': 16}
+2025-05-17 10:38:59,775 [INFO] Logging to ./logs/effi_cot_no_sentence_transformer_42_commonsense_qa_mistral/0.25
+2025-05-17 10:38:59,775 [INFO] Training contemplation generator with variation: no_sentence_transformer
+2025-05-17 10:48:14,156 [INFO] Step 0 - total_loss: 0.9715, reason_loss: 0.9898, ans_loss: 0.9653, eval_loss: 0.7325
+2025-05-17 10:51:55,639 [INFO] Step 1 - total_loss: 0.7707, reason_loss: 0.8713, ans_loss: 0.7372, eval_loss: 0.7430
+2025-05-17 10:55:32,197 [INFO] Step 2 - total_loss: 0.7104, reason_loss: 0.7650, ans_loss: 0.6922, eval_loss: 0.6706
+2025-05-17 10:55:45,087 [INFO] Loading best validation loss = 0.6706021214276552
+2025-05-17 10:59:23,747 [INFO] Step 0 - total_loss: 0.6409, reason_loss: 0.7123, ans_loss: 0.6170, eval_loss: 0.6584
+2025-05-17 10:59:35,249 [INFO] Loading best validation loss = 0.6584069898724556
+2025-05-17 11:30:30,565 [INFO] Logging to ./logs/effi_cot_no_sentence_transformer_42_commonsense_qa_mistral/0.25
+2025-05-17 11:30:30,565 [INFO] Training contemplation generator with variation: no_sentence_transformer
+2025-05-17 11:39:48,966 [INFO] Step 0 - total_loss: 1.1117, reason_loss: 0.9895, ans_loss: 1.1525, eval_loss: 0.7830
+2025-05-17 11:43:30,487 [INFO] Step 1 - total_loss: 0.8047, reason_loss: 0.9397, ans_loss: 0.7598, eval_loss: 0.7239
+2025-05-17 11:47:12,276 [INFO] Step 2 - total_loss: 0.7512, reason_loss: 0.8779, ans_loss: 0.7090, eval_loss: 0.7085
+2025-05-17 11:47:24,230 [INFO] Loading best validation loss = 0.7085249599069356
+2025-05-17 11:51:03,238 [INFO] Step 0 - total_loss: 0.6465, reason_loss: 0.8449, ans_loss: 0.5804, eval_loss: 0.7060
+2025-05-17 11:51:15,163 [INFO] Loading best validation loss = 0.7060175155848265
+2025-05-17 12:21:38,650 [INFO] Logging to ./logs/effi_cot_no_sentence_transformer_42_commonsense_qa_mistral/0.25
+2025-05-17 12:21:38,650 [INFO] Training contemplation generator with variation: no_sentence_transformer
+2025-05-17 12:31:01,862 [INFO] Step 0 - total_loss: 0.8931, reason_loss: 0.9602, ans_loss: 0.8707, eval_loss: 0.7364
+2025-05-17 12:34:43,427 [INFO] Step 1 - total_loss: 0.7526, reason_loss: 0.8275, ans_loss: 0.7276, eval_loss: 0.7032
+2025-05-17 12:38:25,080 [INFO] Step 2 - total_loss: 0.6984, reason_loss: 0.7240, ans_loss: 0.6898, eval_loss: 0.6691
+2025-05-17 12:38:36,750 [INFO] Loading best validation loss = 0.669104031920433
+2025-05-17 12:42:15,089 [INFO] Step 0 - total_loss: 0.5958, reason_loss: 0.6851, ans_loss: 0.5661, eval_loss: 0.6668
+2025-05-17 12:42:26,771 [INFO] Loading best validation loss = 0.6668462319672108
