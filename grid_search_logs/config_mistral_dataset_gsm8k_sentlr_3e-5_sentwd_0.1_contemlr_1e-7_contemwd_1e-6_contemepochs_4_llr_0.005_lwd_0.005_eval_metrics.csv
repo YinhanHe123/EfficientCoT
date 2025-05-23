@@ -1,5 +1,0 @@
-config,dataset,sent_trans_lr,sent_trans_wd,contemp_gen_lr,contemp_gen_wd,contemp_gen_epochs,contemp_gen_ll_lr,contemp_gen_ll_wd,eval_max_contemp_tokens,eval_temp,numerical_accuracy,close_match_rate,mean_relative_error,median_relative_error
-mistral,gsm8k,3e-5,0.1,1e-7,1e-6,4,0.005,0.005,1,0.1,,,,
-mistral,gsm8k,3e-5,0.1,1e-7,1e-6,4,0.005,0.005,1,0.2,,,,
-mistral,gsm8k,3e-5,0.1,1e-7,1e-6,4,0.005,0.005,1,0.3,,,,
-mistral,gsm8k,3e-5,0.1,1e-7,1e-6,4,0.005,0.005,1,0.4,,,,

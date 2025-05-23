@@ -1,4 +1,0 @@
-  File "/home/nee7ne/EfficientCoT/main.py", line 265
-    'eval
-    ^
-SyntaxError: unterminated string literal (detected at line 265)
