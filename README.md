@@ -10,6 +10,7 @@ This is the official code project for the paper "_SemCoT: Accelerating Chain-of-
 
 ![syncot_overview_textout-1](https://hackmd.io/_uploads/B1BfkG0bxl.png)
 
+
 If figure not displayed, please click this [figure link](https://hackmd.io/_uploads/B1BfkG0bxl.png).
 
 ## Project Structure
