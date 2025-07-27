@@ -12,11 +12,20 @@ class ExperimentConfig:
         self.result_path = "./results"
         self.experiment_name = "default_experiment"
 
-        # Training parameters
+        # Training parameters for sentence transformer
         self.sent_trans_lr = 1e-5
         self.sent_trans_weight_decay = 0.01
         self.sent_trans_epochs = 15
 
+        # Add missing sentence transformer parameters
+        self.st_linear_lr = 0.001
+        self.st_linear_wd = 0.001
+        self.st_linear_epochs = 5
+        self.st_llm_lr = 1e-5
+        self.st_llm_wd = 0.01
+        self.st_llm_epochs = 10
+
+        # Training parameters for contemplation generator
         self.contemp_gen_lr = 1e-7
         self.contemp_gen_weight_decay = 1e-5
         self.contemp_gen_epochs = 2
@@ -25,12 +34,20 @@ class ExperimentConfig:
         self.contemp_gen_lin_layer_weight_decay = 0.001
         self.contemp_gen_lin_layer_epochs = 10
 
+        # Add missing contemplation generator parameters (cg prefix)
+        self.cg_linear_lr = 0.001
+        self.cg_linear_wd = 0.001
+        self.cg_linear_epochs = 10
+        self.cg_llm_lr = 1e-7
+        self.cg_llm_wd = 1e-5
+        self.cg_llm_epochs = 2
+
         self.batch_size = 4
         self.alpha = 0.25  # Weight for Lreason in total loss
         self.save_interval = 1  # Save model every N epochs
         self.max_seq_length = 512
         self.embedding_dim = 768  # Dimension for embeddings
-        self.seed=42
+        self.seed = 42
         # self.max_reasoning_pairs = 1000  # Maximum reasoning pairs to generate
         # self.max_reasoning_pairs = 7473
         self.max_reasoning_pairs = 800

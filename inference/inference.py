@@ -5,13 +5,21 @@ from tqdm import tqdm
 import os
 import time
 
-def get_formatted_prompt(query):
+def get_formatted_prompt(query, model_name=None):
     """
     Format the prompt based on the teacher model used
     """
-    combined_input_for_query = f"[INST] Question: {query}"
-    combined_input_for_answer = "Answer: "
-    return (combined_input_for_query, combined_input_for_answer)
+    if model_name and "qwen" in model_name.lower():
+        # Qwen uses a simple format with system prompt
+        combined_input_for_query = f"<|im_start|>system\nYou are an expert in math word problems.<|im_end|>\n<|im_start|>user\nQuestion: {query}<|im_end|>\n<|im_start|>assistant\n"
+        combined_input_for_answer = "Answer: "
+        return (combined_input_for_query, combined_input_for_answer)
+    else:
+        # Default format for other models
+        combined_input_for_query = f"[INST] Question: {query}"
+        combined_input_for_answer = "Answer: "
+        return (combined_input_for_query, combined_input_for_answer)
+
 
 
 def run_inference(contemp_generator, dataset, teacher_model_name, config):
@@ -21,7 +29,15 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
 
     # Load teacher LLM for generating answers
     teacher_tokenizer = AutoTokenizer.from_pretrained(teacher_model_name)
-    teacher_tokenizer.pad_token = teacher_tokenizer.eos_token
+
+    # Handle tokenizer padding for different models
+    if "qwen" in teacher_model_name.lower():
+        # Qwen models might need special handling
+        if teacher_tokenizer.pad_token is None:
+            teacher_tokenizer.pad_token = teacher_tokenizer.eos_token
+    else:
+        teacher_tokenizer.pad_token = teacher_tokenizer.eos_token
+
     teacher_model = AutoModelForCausalLM.from_pretrained(teacher_model_name)
     teacher_model = teacher_model.to(device)
     teacher_model.eval()
@@ -33,8 +49,9 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
     for temp in [0.1, 0.3, 0.5, 0.7, 0.9]:
         results, time_list, contemp_time_list = [], [], []
         with torch.no_grad():
-            for sample in tqdm(dataset, desc="Running inference"):            
-                query_prompt, answer_prompt = get_formatted_prompt(sample["query"])
+            for sample in tqdm(dataset, desc="Running inference"):
+                query_prompt, answer_prompt = get_formatted_prompt(sample["query"], teacher_model_name)
+
                 # Find the position where we inserted the contemplation tokens
                 query_inputs = contemp_generator.tokenizer(
                     query_prompt,
@@ -44,7 +61,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
                     max_length=config.max_seq_length
                 ).to(device)
                 prefix_length = query_inputs.input_ids.size(1) - 1
-                
+
                 answer_inputs = contemp_generator.tokenizer(
                     answer_prompt,
                     return_tensors="pt",
@@ -53,11 +70,11 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
                     max_length=config.max_seq_length,
                     add_special_tokens=False
                 ).to(device)
-                
+
                 # CHANGED: Extract contemplation states from the correct position (no longer the last tokens)
                 query_inputs = torch.cat([
-                    query_inputs['input_ids'], 
-                    torch.tensor([[contemp_generator.tokenizer.eos_token_id * config.eval_max_contemp_tokens]]).to(device), 
+                    query_inputs['input_ids'],
+                    torch.tensor([[contemp_generator.tokenizer.pad_token_id] * config.eval_max_contemp_tokens]).to(device),
                     answer_inputs['input_ids']
                 ], dim=1)
 
@@ -71,14 +88,14 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
                 contemp_end = time.time()
                 contemp_time = contemp_end - contemp_start
                 contemp_time_list.append(contemp_time)
-                
+
                 query_inputs = teacher_tokenizer(
                     query_prompt,
                     return_tensors="pt",
                     padding=False,
                     truncation=False,
                     max_length=config.max_seq_length
-                ).to(device)                
+                ).to(device)
                 answer_inputs = teacher_tokenizer(
                     answer_prompt,
                     return_tensors="pt",
@@ -87,7 +104,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
                     max_length=config.max_seq_length,
                     add_special_tokens=False
                 ).to(device)
-            
+
                 # Instead of modifying prepare_inputs_for_generation,
                 # directly create input embeddings and concatenate with contemplation states
                 prompt_embeds_query = teacher_model.get_input_embeddings()(query_inputs.input_ids)
@@ -116,7 +133,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
                     temperature=temp,
                     top_p=0.9,
                     do_sample=True,
-                    pad_token_id=teacher_tokenizer.eos_token_id,
+                    pad_token_id=teacher_tokenizer.pad_token_id if teacher_tokenizer.pad_token_id is not None else teacher_tokenizer.eos_token_id,
                 )
                 gen_end = time.time()
                 # print(f"Generation time: {gen_end - gen_start}")
@@ -138,7 +155,7 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
                 # Clean up memory
                 del query_inputs, answer_inputs, prompt_embeds_query, prompt_embeds_answer, combined_embeds, contemp_states, outputs
                 torch.cuda.empty_cache()
-            
+
             print(f"Average time taken for each sample: {sum(time_list)/len(time_list)}, Average time taken for contemplation: {sum(contemp_time_list)/len(contemp_time_list)}")
             all_res.append((temp, results))
             summary = {

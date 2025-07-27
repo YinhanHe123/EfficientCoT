@@ -12,25 +12,33 @@ class ContemplationGenerator(nn.Module):
         self.teacher_model_name = teacher_model_name
         self.device = device
         self.variation = variation
-        
+
         # Choose which model to use based on variation
         if variation == "no_small_contemp_gen":
             # Use teacher model with LoRA
             self.model = AutoModelForCausalLM.from_pretrained(teacher_model_name)
             self.model_hidden_dim = self.model.config.hidden_size
-            
-            # Apply LoRA
+
+            # Apply LoRA with model-specific target modules
+            if "qwen" in teacher_model_name.lower():
+                # Qwen models use different attention layer names
+                # target_modules = ["q_proj", "k_proj", "v_proj", "o_proj"]
+                target_modules = ["q_proj", "v_proj"]
+            else:
+                # Default for LLaMA/Mistral style models
+                target_modules = ["q_proj", "v_proj"]
+
             peft_config = LoraConfig(
                 task_type=TaskType.CAUSAL_LM,
                 inference_mode=False,
                 r=16,  # rank
                 lora_alpha=32,
                 lora_dropout=0.1,
-                target_modules=["q_proj", "v_proj"]  # Target attention layers
+                target_modules=target_modules
             )
             self.model = get_peft_model(self.model, peft_config)
             self.tokenizer = AutoTokenizer.from_pretrained(teacher_model_name)
-            
+
             # No projection needed as we're already using the teacher dimensions
             self.projection_layer = nn.Identity()
         else:
@@ -38,35 +46,41 @@ class ContemplationGenerator(nn.Module):
             self.model = AutoModel.from_pretrained(student_model_name)
             self.model_hidden_dim = self.model.config.hidden_size
             self.tokenizer = AutoTokenizer.from_pretrained(student_model_name)
-            
+
             # Create projection layer to match dimensions if needed
             self.projection_layer = nn.Linear(
                 self.model_hidden_dim,
                 teacher_hidden_dim
             )
-        
+
         self.teacher_hidden_dim = teacher_hidden_dim
-        self.tokenizer.pad_token = self.tokenizer.eos_token  # Set pad token to end of sequence token
+
+        # Handle tokenizer padding for different models
+        if "qwen" in student_model_name.lower() or "qwen" in teacher_model_name.lower():
+            if self.tokenizer.pad_token is None:
+                self.tokenizer.pad_token = self.tokenizer.eos_token
+        else:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
 
     def forward(self, input_ids, attention_mask=None):
         # Generate model hidden states
         stud_start = time.time()
-        
+
         outputs = self.model(
             input_ids=input_ids,
             attention_mask=attention_mask,
             output_hidden_states=True
         )
-        
+
         stud_end = time.time()
         stud_time = stud_end - stud_start
-        
+
         # Get the last hidden states
         hidden_states = outputs.hidden_states[-1]
-        
+
         # Project to teacher model hidden dimension
         projected_states = self.projection_layer(hidden_states)
-        
+
         return projected_states
 
     @classmethod
@@ -81,10 +95,10 @@ class ContemplationGenerator(nn.Module):
             config_dict["teacher_hidden_dim"],
             variation=config_dict.get("variation", "vanilla")  # Default to vanilla if not present
         )
-        
+
         # Load the state dict
         model.load_state_dict(torch.load(f"{path}/model.pt", map_location='cpu'))
-        
+
         return model
 
     def save_pretrained(self, path):
@@ -97,11 +111,11 @@ class ContemplationGenerator(nn.Module):
             "device": self.device,
             "variation": self.variation
         }
-        
+
         # Create path if not exist
         if not os.path.exists(path):
             os.makedirs(path)
-            
+
         torch.save(config_dict, f"{path}/config.pt")
 
         # Save model weights

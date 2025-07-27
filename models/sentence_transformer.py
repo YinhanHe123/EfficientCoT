@@ -12,7 +12,14 @@ class CustomizedSentenceTransformer(nn.Module):
         # Load the base model, tokenizer and config
         base_model = AutoModel.from_pretrained(base_model_name)
         self.tokenizer = AutoTokenizer.from_pretrained(base_model_name)
-        self.tokenizer.pad_token = self.tokenizer.eos_token  # Set pad token to end of sequence token
+
+        # Handle tokenizer padding for different models
+        if "qwen" in base_model_name.lower():
+            if self.tokenizer.pad_token is None:
+                self.tokenizer.pad_token = self.tokenizer.eos_token
+        else:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
+
         self.config = AutoConfig.from_pretrained(base_model_name)
 
         # Extract layer indices
@@ -26,11 +33,32 @@ class CustomizedSentenceTransformer(nn.Module):
         self.input_dim = base_model.config.hidden_size
 
         # Check which model architecture we're dealing with
-        if "mistral" in base_model_name.lower():
+        if "qwen" in base_model_name.lower():
+            # Qwen2 models use a similar architecture to LLaMA
+            # Extract components for Qwen
+            self.norm = copy.deepcopy(base_model.norm) if hasattr(base_model, 'norm') else None
+
+            # Qwen models may have rotary embeddings in different locations
+            if hasattr(base_model, 'rotary_emb'):
+                self.rotary_emb = copy.deepcopy(base_model.rotary_emb)
+            else:
+                # Qwen2 doesn't expose rotary_emb at the model level
+                self.rotary_emb = None
+
+            # Extract the required transformer layers
+            self.layers = nn.ModuleList()
+            if hasattr(base_model, 'layers'):
+                for i in range(start_layer_idx, end_layer_idx + 1):
+                    if i < len(base_model.layers):
+                        self.layers.append(copy.deepcopy(base_model.layers[i]))
+            else:
+                raise ValueError(f"Cannot find layers in Qwen model: {base_model_name}")
+
+        elif "mistral" in base_model_name.lower():
             # Extract components for Mistral
             self.norm = copy.deepcopy(base_model.norm)
             # Mistral uses rope_scaling instead of rotary_emb
-            self.rotary_emb = copy.deepcopy(base_model.rotary_emb)
+            self.rotary_emb = copy.deepcopy(base_model.rotary_emb) if hasattr(base_model, 'rotary_emb') else None
 
             # Extract the required transformer layers
             self.layers = nn.ModuleList()
@@ -40,7 +68,7 @@ class CustomizedSentenceTransformer(nn.Module):
         elif hasattr(base_model, 'layers'):  # LLaMA models have this structure
             # Extract the RMS normalization layer and rotary embeddings
             self.norm = copy.deepcopy(base_model.norm)
-            self.rotary_emb = copy.deepcopy(base_model.rotary_emb)
+            self.rotary_emb = copy.deepcopy(base_model.rotary_emb) if hasattr(base_model, 'rotary_emb') else None
 
             # Extract the required transformer layers
             self.layers = nn.ModuleList()
@@ -48,7 +76,7 @@ class CustomizedSentenceTransformer(nn.Module):
                 if i < len(base_model.layers):
                     self.layers.append(copy.deepcopy(base_model.layers[i]))
         else:
-            raise ValueError(f"Unsupported model architecture: {base_model_name}. Expected LLaMA-style or Mistral-style model.")
+            raise ValueError(f"Unsupported model architecture: {base_model_name}. Expected LLaMA-style, Mistral-style, or Qwen-style model.")
 
         # Add embedding projection layer for sentence embeddings
         self.embedding_projection = nn.Linear(self.input_dim, embedding_dim)
@@ -58,7 +86,7 @@ class CustomizedSentenceTransformer(nn.Module):
 
     def _prepare_decoder_attention_mask(self, attention_mask, input_shape, device):
         """
-        Prepare attention mask similar to LLaMA/Mistral implementation
+        Prepare attention mask similar to LLaMA/Mistral/Qwen implementation
         """
         # Create causal mask
         if attention_mask is not None:
@@ -93,31 +121,43 @@ class CustomizedSentenceTransformer(nn.Module):
         attention_mask = self._prepare_decoder_attention_mask(
             attention_mask, (batch_size, seq_length), device
         )
-        # attention_mask = None
 
         # Generate position embeddings - handled differently depending on model
         position_embeddings = None
-        if self.rotary_emb is not None:  # LLaMA
+        if self.rotary_emb is not None:  # LLaMA/some models
             position_embeddings = self.rotary_emb(hidden_states, position_ids)
 
         # Pass through the extracted layers
         for layer in self.layers:
-            # Process through LLaMA/Mistral layer
+            # Process through layer - handle different architectures
+            if "qwen" in self.base_model_name.lower():
+                # Qwen layers might not need position_embeddings parameter
+                try:
+                    layer_outputs = layer(
+                        hidden_states,
+                        position_ids=position_ids,
+                        position_embeddings=position_embeddings if position_embeddings is not None else None
+                    )
+                except:
+                    # If that fails, try without position_ids
+                    layer_outputs = layer(hidden_states)
+            else:
+                # LLaMA/Mistral style layers
+                layer_outputs = layer(
+                    hidden_states,
+                    position_ids=position_ids,
+                    position_embeddings=position_embeddings if position_embeddings is not None else None
+                )
 
-            layer_outputs = layer(
-                hidden_states,
-                # attention_mask=attention_mask,
-                position_ids=position_ids,
-                position_embeddings=position_embeddings
-            )
-                        # LLaMA/Mistral layers return a tuple; first element is the hidden states
+            # Extract hidden states from output
             if isinstance(layer_outputs, tuple):
                 hidden_states = layer_outputs[0]
             else:
                 hidden_states = layer_outputs
 
-        # Apply normalization
-        hidden_states = self.norm(hidden_states)
+        # Apply normalization if available
+        if self.norm is not None:
+            hidden_states = self.norm(hidden_states)
 
         # Pooling strategy
         if self.pooling_strategy == "cls":

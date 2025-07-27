@@ -40,5 +40,10 @@ class ModelConfig:
             self.student_model_name = "optimum/mistral-1.1b-testing"
             self.teacher_hidden_dim = 4096  # Mistral-7B hidden dimension
             self.contemp_seq_length = 32
-            self.contemp_layer_index = 16  # Check Mistral archit
-
+            self.contemp_layer_index = 16  # Check Mistral architecture
+        elif self.config_name == 'qwen':
+            self.teacher_model_name = "Qwen/Qwen2.5-7B-Instruct"
+            self.student_model_name = "Qwen/Qwen2.5-0.5B-Instruct"
+            self.teacher_hidden_dim = 3584  # Qwen2.5-7B hidden dimension
+            self.contemp_seq_length = 32
+            self.contemp_layer_index = 16  # Adjust based on Qwen architecture (28 layers total)

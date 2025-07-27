@@ -34,7 +34,7 @@ def compute_loss_ans(contemp_states, teacher_model, teacher_tokenizer, answer_lo
             inputs_embeds_for_answer,
             answer_underscore
         ], dim=1)
-       
+
         attention_mask = torch.ones(
             (combined_embeds.shape[0], combined_embeds.shape[1]),
             dtype=torch.long,
@@ -69,12 +69,18 @@ def compute_loss_ans(contemp_states, teacher_model, teacher_tokenizer, answer_lo
         l_ans = answer_loss_fn(answer_logits_flat, answer_labels_flat)
     return l_ans
 
-def format_combined_input(query):
+def format_combined_input(query, model_name=None):
     """
     Format combined input based on the model type
     """
-    combined_input_for_query = f"[INST] Question: {query}"
-    combined_input_for_answer = "Answer: "
+    if model_name and "qwen" in model_name.lower():
+        # Qwen format
+        combined_input_for_query = f"<|im_start|>system\nYou are an expert in math word problems.<|im_end|>\n<|im_start|>user\nQuestion: {query}<|im_end|>\n<|im_start|>assistant\n"
+        combined_input_for_answer = "Answer: "
+    else:
+        # Default format
+        combined_input_for_query = f"[INST] Question: {query}"
+        combined_input_for_answer = "Answer: "
     return (combined_input_for_query, combined_input_for_answer)
 
 def train_contemplation_generator(
@@ -92,10 +98,10 @@ def train_contemplation_generator(
         experiment_name=exp_config.experiment_name
     )
     logger.logger.info(f"Training contemplation generator with variation: {variation}")
-    
+
     device = exp_config.device
     contemp_generator = contemp_generator.to(device)
-    
+
     # Initialize teacher model - use AutoModelForCausalLM to handle different model types
     teacher_model = AutoModelForCausalLM.from_pretrained(model_config.teacher_model_name)
     teacher_model = teacher_model.to(device)
@@ -105,7 +111,13 @@ def train_contemplation_generator(
 
     # Initialize teacher tokenizer for answer generation
     teacher_tokenizer = AutoTokenizer.from_pretrained(model_config.teacher_model_name)
-    teacher_tokenizer.pad_token = teacher_tokenizer.eos_token
+
+    # Handle tokenizer padding for different models
+    if "qwen" in model_config.teacher_model_name.lower():
+        if teacher_tokenizer.pad_token is None:
+            teacher_tokenizer.pad_token = teacher_tokenizer.eos_token
+    else:
+        teacher_tokenizer.pad_token = teacher_tokenizer.eos_token
 
     # Ensure sentence transformer is in evaluation mode if needed
     if variation in ['vanilla', 'no_small_contemp_gen']:
@@ -114,7 +126,7 @@ def train_contemplation_generator(
             sentence_transformer.eval()
             for param in sentence_transformer.parameters():
                 param.requires_grad = False
-        
+
     for data in [train_dataset, eval_dataset]:
         for idx in tqdm(range(len(data))):
             if 'gt_reason_hidden' not in data[idx]:
@@ -138,16 +150,16 @@ def train_contemplation_generator(
             data.update_item(idx, "gt_reason_hidden", gt_reason_hidden.cpu())
             del gt_reason_hidden
             torch.cuda.empty_cache()
-        
+
     # Initialize answer loss function
     answer_loss_fn = nn.CrossEntropyLoss(ignore_index=teacher_tokenizer.pad_token_id)
 
     # Training loop
     print(f"Starting training contemplation generator with variation: {variation}...")
-    
+
     # Two-stage training loop (linear layer first, then LLM)
-    for (lr, wd, ne) in [(exp_config.cg_linear_lr, exp_config.cg_linear_wd, exp_config.cg_linear_epochs), 
-                         (exp_config.cg_llm_lr, exp_config.cg_llm_wd, exp_config.cg_llm_epochs)]:
+    for (lr, wd, ne) in [(exp_config.contemp_gen_lin_layer_lr, exp_config.contemp_gen_lin_layer_weight_decay, exp_config.contemp_gen_lin_layer_epochs),
+                         (exp_config.contemp_gen_lr, exp_config.contemp_gen_weight_decay, exp_config.contemp_gen_epochs)]:
         # For no_small_contemp_gen variation, we're using LoRA so handle parameters differently
         if variation == "no_small_contemp_gen":
             # Only train the LoRA parameters to keep training efficient
@@ -160,14 +172,14 @@ def train_contemplation_generator(
             optimizer_params = [p for p in contemp_generator.parameters()]
         best_val_loss = float('inf')
         optimizer = optim.AdamW(optimizer_params, lr=lr, weight_decay=wd)
-        
+
         for epoch in (range(ne)):
             contemp_generator.train()
             total_loss, reason_loss, ans_loss = 0, 0, 0
-            
-            for idx in tqdm(random.sample(range(len(train_dataset)), len(train_dataset)), desc=f"Epoch {epoch+1}/{ne}"): 
+
+            for idx in tqdm(random.sample(range(len(train_dataset)), len(train_dataset)), desc=f"Epoch {epoch+1}/{ne}"):
                 item = train_dataset[idx]
-                optimizer.zero_grad()                
+                optimizer.zero_grad()
                 loss, total_loss, reason_loss, ans_loss = process_item(
                     "train",
                     item,
@@ -181,7 +193,8 @@ def train_contemplation_generator(
                     variation,
                     total_loss,
                     reason_loss,
-                    ans_loss
+                    ans_loss,
+                    model_config.teacher_model_name
                 )
 
                 # Backpropagate
@@ -202,7 +215,8 @@ def train_contemplation_generator(
                 sentence_transformer,
                 eval_dataset,
                 exp_config,
-                variation
+                variation,
+                model_config.teacher_model_name
             )
 
             # Log metrics
@@ -221,28 +235,28 @@ def train_contemplation_generator(
                 utils.create_directory(model_path)
                 contemp_generator.save_pretrained(model_path)
                 print(f"Saved best model with validation loss: {best_val_loss:.4f}")
-                
+
         # Load best model from disk for next stage if this isn't the last loop iteration
         contemp_generator = ContemplationGenerator.from_pretrained(model_path).to(device)
         logger.logger.info(f"Loading best validation loss = {best_val_loss}")
         print(f"Loading best validation loss = {best_val_loss}")
-        
+
         # If this is no_small_contemp_gen, don't unfreeze for second stage training
         # Otherwise use the original approach
         if variation != "no_small_contemp_gen":
             for param in contemp_generator.model.parameters():
-                param.requires_grad = True       
+                param.requires_grad = True
     logger.close()
     del teacher_model
     torch.cuda.empty_cache()
     return contemp_generator
 
-def process_item(mode, item, contemp_generator, teacher_model, teacher_tokenizer, sentence_transformer, answer_loss_fn, exp_config, device, variation, total_loss=0, reason_loss=0, ans_loss=0):
+def process_item(mode, item, contemp_generator, teacher_model, teacher_tokenizer, sentence_transformer, answer_loss_fn, exp_config, device, variation, total_loss=0, reason_loss=0, ans_loss=0, teacher_model_name=None):
     # Process batch
     query = item["query"]
     ground_truth_answer = item["answer"]
     gt_reason = item['gt_reason_hidden'].to(device)
-    query_prompt, answer_prompt = format_combined_input(query)
+    query_prompt, answer_prompt = format_combined_input(query, teacher_model_name)
 
     # Find position of contemplation tokens
     query_inputs = contemp_generator.tokenizer(
@@ -253,7 +267,7 @@ def process_item(mode, item, contemp_generator, teacher_model, teacher_tokenizer
         max_length=exp_config.max_seq_length
     ).to(device)
     prefix_length = query_inputs.input_ids.size(1) - 1
-    
+
     answer_inputs = contemp_generator.tokenizer(
         answer_prompt,
         return_tensors="pt",
@@ -262,11 +276,14 @@ def process_item(mode, item, contemp_generator, teacher_model, teacher_tokenizer
         max_length=exp_config.max_seq_length,
         add_special_tokens=False
     ).to(device)
-    
+
     # Add contemplation tokens BEFORE the "Answer:" part
+    '''
+    WARNING: This following cat is edited during rebuttal when adding qwen. Double cehck if I fixed an error or it's just qwen specific.
+    '''
     contemp_inputs = torch.cat([
-        query_inputs['input_ids'], 
-        torch.tensor([[contemp_generator.tokenizer.eos_token_id * exp_config.train_max_contemp_tokens]]).to(device), 
+        query_inputs['input_ids'],
+        torch.LongTensor([[contemp_generator.tokenizer.pad_token_id] * exp_config.train_max_contemp_tokens]).to(device),
         answer_inputs['input_ids']
     ], dim=1)
 
@@ -306,7 +323,7 @@ def process_item(mode, item, contemp_generator, teacher_model, teacher_tokenizer
         truncation=False,
         max_length=exp_config.max_seq_length
     ).to(device)
-    
+
     answer_prompt_inputs = teacher_tokenizer(
         answer_prompt,
         return_tensors="pt",
@@ -314,7 +331,7 @@ def process_item(mode, item, contemp_generator, teacher_model, teacher_tokenizer
         truncation=True,
         max_length=exp_config.max_seq_length
     ).to(device)
-    
+
     # Get ground truth answer tokens
     answer_inputs = teacher_tokenizer(
         ground_truth_answer,
@@ -344,7 +361,7 @@ def process_item(mode, item, contemp_generator, teacher_model, teacher_tokenizer
 
     return loss, total_loss, reason_loss, ans_loss
 
-def evaluate(teacher_model, teacher_tokenizer, contemp_generator, sentence_transformer, eval_dataset, exp_config, variation='vanilla'):
+def evaluate(teacher_model, teacher_tokenizer, contemp_generator, sentence_transformer, eval_dataset, exp_config, variation='vanilla', teacher_model_name=None):
     device = exp_config.device
 
     # Ensure the contemp_generator is in evaluation mode during evaluation
@@ -358,7 +375,7 @@ def evaluate(teacher_model, teacher_tokenizer, contemp_generator, sentence_trans
 
     with torch.no_grad():  # No gradients for evaluation
         for item in tqdm(eval_dataset, desc="Evaluating"):
-            # Process batch  
+            # Process batch
             _, total_loss, reason_loss_sum, ans_loss_sum = process_item(
                 "eval",
                 item,
@@ -372,7 +389,8 @@ def evaluate(teacher_model, teacher_tokenizer, contemp_generator, sentence_trans
                 variation,
                 total_loss,
                 reason_loss_sum,
-                ans_loss_sum
+                ans_loss_sum,
+                teacher_model_name
             )
 
     # Calculate averages
