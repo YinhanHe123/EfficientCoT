@@ -98,43 +98,24 @@ def evaluate_model(results, dataset):
         num_correct = 0
 
         for i, result in enumerate(results):
-            prediction = result["prediction"].strip()
-            ground_truth = dataset[i]["answer"].strip()
+            prediction = result["prediction"].strip().lower()
+            ground_truth = dataset[i]["answer"].strip().lower()
 
             # For multi-hop QA, we need to check if the prediction contains the ground truth
             # or if they match with some normalization (remove punctuation, etc.)
             import string
-            import re
 
             # Normalize both prediction and ground truth
-            # Convert to lowercase and remove punctuation
-            pred_normalized = prediction.lower().translate(str.maketrans('', '', string.punctuation))
-            gt_normalized = ground_truth.lower().translate(str.maketrans('', '', string.punctuation))
-            
-            # Also remove extra whitespace
-            pred_normalized = re.sub(r'\s+', ' ', pred_normalized).strip()
-            gt_normalized = re.sub(r'\s+', ' ', gt_normalized).strip()
+            pred_normalized = prediction.translate(str.maketrans('', '', string.punctuation)).lower()
+            gt_normalized = ground_truth.translate(str.maketrans('', '', string.punctuation)).lower()
 
-            # Check for various matching criteria
-            prediction_lower = prediction.lower()
-            ground_truth_lower = ground_truth.lower()
-            
-            is_match = (
-                # Exact match (case insensitive)
-                ground_truth_lower == prediction_lower or
-                # Substring matching (both directions)
-                ground_truth_lower in prediction_lower or
-                prediction_lower in ground_truth_lower or
-                # Normalized exact match
+            # Check for exact match, containment, or normalized match
+            if (ground_truth == prediction or
+                ground_truth in prediction or
+                prediction in ground_truth or
                 gt_normalized == pred_normalized or
-                # Normalized substring matching
                 gt_normalized in pred_normalized or
-                pred_normalized in gt_normalized or
-                # Word-level matching (all words of GT appear in prediction)
-                all(word in pred_normalized for word in gt_normalized.split() if len(word) > 2)
-            )
-            
-            if is_match:
+                pred_normalized in gt_normalized):
                 num_correct += 1
                 correct_queries.append(result['query'])
 
