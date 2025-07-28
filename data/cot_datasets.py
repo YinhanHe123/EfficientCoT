@@ -8,6 +8,9 @@ def load_raw_dataset(data_path=None):
     """Load and prepare the raw dataset"""
     # Load from HuggingFace datasets or from local path
     data_name = data_path.split('/')[-1]
+    # Special case for 2wikimultihopqa - use shorter name
+    if data_name == '2wikimultihopqa':
+        data_name = 'multihopqa'
     if 'gsm8k' in data_path:
         raw = load_dataset(data_path, 'main')
     elif 'SVAMP' in data_path:
@@ -139,12 +142,179 @@ def load_raw_dataset(data_path=None):
             os.makedirs(processed_path, exist_ok=True)
             raw.save_to_disk(processed_path)
 
+    elif 'StrategyQA' in data_path:
+        processed_path = '/data/nee7ne/huggingface/datasets/processed_StrategyQA'
+        if os.path.exists(processed_path):
+            raw = load_from_disk(processed_path)
+        else:
+            raw = load_dataset("ChilleD/StrategyQA")
+            generator = ReasoningPairsGenerator()
+
+            def generate_strategyqa_reasoning(example):
+                # The question is in 'question' field
+                query = example['question']
+
+                # Generate reasoning
+                reasoning = generator.generate_reasoning(query)
+
+                # Answer is boolean (True/False)
+                target_answer = str(example['answer']).lower()  # Convert boolean to string
+
+                # Store formatted data
+                example['query'] = query
+                example['full_answer'] = f"{reasoning}\n#### {target_answer}"
+                example['answer'] = target_answer
+                return example
+
+            # Process the dataset
+            # Check if train/test splits exist
+            if 'train' in raw:
+                raw['train'] = raw['train'].select(range(800)).map(generate_strategyqa_reasoning)
+            if 'test' in raw:
+                raw['test'] = raw['test'].select(range(200)).map(generate_strategyqa_reasoning)
+            else:
+                # If no explicit splits, create them from available data
+                # StrategyQA typically has train/test splits, but handle gracefully
+                available_splits = list(raw.keys())
+                if len(available_splits) > 0:
+                    # Use the first available split and create train/test from it
+                    main_split = raw[available_splits[0]]
+                    processed = main_split.map(generate_strategyqa_reasoning)
+                    split = processed.train_test_split(test_size=0.2, seed=42)
+                    raw = {
+                        'train': split['train'],
+                        'test': split['test']
+                    }
+                else:
+                    raise ValueError("No data splits found in StrategyQA dataset")
+
+            # Save processed dataset
+            os.makedirs(processed_path, exist_ok=True)
+            raw.save_to_disk(processed_path)
+
+    elif 'logiqa' in data_path:
+        processed_path = '/data/nee7ne/huggingface/datasets/processed_logiqa'
+        if os.path.exists(processed_path):
+            raw = load_from_disk(processed_path)
+        else:
+            raw = load_dataset("lucasmccabe/logiqa")
+            generator = ReasoningPairsGenerator()
+
+            def generate_logiqa_reasoning(example):
+                # Build the full question with context, query, and numbered options
+                context = example['context']
+                query = example['query']
+                options = example['options']
+                correct_option_idx = example['correct_option']
+
+                # Format options as numbered list (0, 1, 2, 3, etc.)
+                options_formatted = ""
+                for i, option in enumerate(options):
+                    options_formatted += f"{i}. {option}\n"
+
+                # Create the full question
+                full_question = f"Context: {context}\n\nQuestion: {query}\n\nOptions:\n{options_formatted}"
+
+                # Generate reasoning
+                reasoning = generator.generate_reasoning(full_question + f"Answer with only the option number.")
+
+                # The correct answer is the index number
+                correct_answer = str(correct_option_idx)
+
+                # Store formatted data
+                example['query'] = full_question
+                example['full_answer'] = f"{reasoning}\n#### {correct_answer}"
+                example['answer'] = correct_answer
+                return example
+
+            # Process the dataset
+            # Check if train/test splits exist
+            if 'train' in raw:
+                raw['train'] = raw['train'].select(range(800)).map(generate_logiqa_reasoning)
+            if 'test' in raw:
+                raw['test'] = raw['test'].select(range(200)).map(generate_logiqa_reasoning)
+            else:
+                # If no explicit splits, create them from available data
+                available_splits = list(raw.keys())
+                if len(available_splits) > 0:
+                    # Use the first available split and create train/test from it
+                    main_split = raw[available_splits[0]]
+                    processed = main_split.map(generate_logiqa_reasoning)
+                    split = processed.train_test_split(test_size=0.2, seed=42)
+                    raw = {
+                        'train': split['train'],
+                        'test': split['test']
+                    }
+                else:
+                    raise ValueError("No data splits found in LogiQA dataset")
+
+            # Save processed dataset
+            os.makedirs(processed_path, exist_ok=True)
+            raw.save_to_disk(processed_path)
+
+    elif 'multihopqa' in data_path:
+        processed_path = '/data/nee7ne/huggingface/datasets/processed_multihopqa'
+        if os.path.exists(processed_path):
+            raw = load_from_disk(processed_path)
+        else:
+            raw = load_dataset("cmriat/2wikimultihopqa")
+            generator = ReasoningPairsGenerator()
+
+            def generate_multihopqa_reasoning(example):
+                # Extract the question
+                query = example['question']
+
+                # Generate reasoning
+                reasoning = generator.generate_reasoning(query)
+
+                # Extract the golden answers - it's a list, take the first one or join them
+                golden_answers = example['golden_answers']
+                if isinstance(golden_answers, list) and len(golden_answers) > 0:
+                    # Use the first golden answer as the primary answer
+                    target_answer = golden_answers[0]
+                    # If there are multiple answers, you could also join them
+                    # target_answer = " | ".join(golden_answers)
+                else:
+                    target_answer = str(golden_answers) if golden_answers else ""
+
+                # Store formatted data
+                example['query'] = query
+                example['full_answer'] = f"{reasoning}\n#### {target_answer}"
+                example['answer'] = target_answer
+                return example
+
+            # Process the dataset
+            # Check available splits
+            available_splits = list(raw.keys())
+
+            if 'train' in raw and 'test' in raw:
+                raw['train'] = raw['train'].select(range(min(800, len(raw['train'])))).map(generate_multihopqa_reasoning)
+                raw['test'] = raw['test'].select(range(min(200, len(raw['test'])))).map(generate_multihopqa_reasoning)
+            elif 'train' in raw and 'validation' in raw:
+                raw['train'] = raw['train'].select(range(min(800, len(raw['train'])))).map(generate_multihopqa_reasoning)
+                raw['test'] = raw['validation'].select(range(min(200, len(raw['validation'])))).map(generate_multihopqa_reasoning)
+            elif len(available_splits) > 0:
+                # Use the first available split and create train/test from it
+                main_split = raw[available_splits[0]]
+                processed = main_split.map(generate_multihopqa_reasoning)
+                split = processed.train_test_split(test_size=0.2, seed=42)
+                raw = {
+                    'train': split['train'].select(range(min(800, len(split['train'])))),
+                    'test': split['test'].select(range(min(200, len(split['test']))))
+                }
+            else:
+                raise ValueError("No data splits found in multihopqa dataset")
+
+            # Save processed dataset
+            os.makedirs(processed_path, exist_ok=True)
+            raw.save_to_disk(processed_path)
+
     # train_dataset = raw['train'].select(range(400))  # For debugging
     # eval_dataset  = raw['test'].select(range(100))  # For debugging
     max_train_len = min(800, len(raw['train']))
     max_eval_len = min(200, len(raw['test']))
     train_dataset = raw['train'].select(range(max_train_len))
-    eval_dataset  = raw['test'].select(range(max_eval_len)) 
+    eval_dataset  = raw['test'].select(range(max_eval_len))
     # Create custom PyTorch datasets
 
     train_data = RawDataset(train_dataset, data_name)
@@ -220,6 +390,55 @@ class RawDataset(Dataset):
 
             full_answer = item.get('full_answer', '')
             condensed_reasoning = item.get('condensed_reasoning', None)
+
+        elif self.name == 'StrategyQA':
+            # For StrategyQA, the query is already formatted in preprocessing
+            question = item.get('query', item.get('question', ''))
+
+            # Extract reasoning and final answer
+            if 'full_answer' in item and '####' in item['full_answer']:
+                reasoning_parts = item['full_answer'].split('####')
+                reasoning = reasoning_parts[0].strip()
+                final_answer = reasoning_parts[1].strip()
+            else:
+                reasoning = ""
+                final_answer = item.get('answer', '')
+
+            full_answer = item.get('full_answer', '')
+            condensed_reasoning = item.get('condensed_reasoning', None)
+
+        elif self.name == 'logiqa':
+            # For LogiQA, the query is already formatted in preprocessing
+            question = item.get('query', '')
+
+            # Extract reasoning and final answer
+            if 'full_answer' in item and '####' in item['full_answer']:
+                reasoning_parts = item['full_answer'].split('####')
+                reasoning = reasoning_parts[0].strip()
+                final_answer = reasoning_parts[1].strip()
+            else:
+                reasoning = ""
+                final_answer = item.get('answer', '')
+
+            full_answer = item.get('full_answer', '')
+            condensed_reasoning = item.get('condensed_reasoning', None)
+
+        elif self.name == 'multihopqa':
+            # For multihopqa, the query is already formatted in preprocessing
+            question = item.get('query', item.get('question', ''))
+
+            # Extract reasoning and final answer
+            if 'full_answer' in item and '####' in item['full_answer']:
+                reasoning_parts = item['full_answer'].split('####')
+                reasoning = reasoning_parts[0].strip()
+                final_answer = reasoning_parts[1].strip()
+            else:
+                reasoning = ""
+                final_answer = item.get('answer', '')
+
+            full_answer = item.get('full_answer', '')
+            condensed_reasoning = item.get('condensed_reasoning', None)
+
         sample = {
             "query": question,
             "reasoning": reasoning,

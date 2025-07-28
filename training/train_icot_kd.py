@@ -1,4 +1,4 @@
-from logging import Logger
+from utils.logging import Logger
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -6,21 +6,22 @@ from torch.nn.utils.rnn import pad_sequence
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoModel
 from tqdm import tqdm
 import os
-import gc 
+import gc
 from peft import get_peft_model, LoraConfig, TaskType
 
 
 class ModifiedDecoderLayer(nn.Module):
     def __init__(self, original_layer, layer_idx):
+        super().__init__()
         self.layer_idx = layer_idx
         self.orig_layer = original_layer
         self.z = None
         self.f_h_c = None
-    
+
     def reset(self):
         self.z = None
         self.f_h_c = None
-    
+
     def forward(self, hidden_states, attention_mask = None, position_ids = None, past_key_value = None, output_attentions = False, use_cache = False, cache_position = None, position_embeddings = None, **kwargs):
         if "mode" in kwargs and kwargs["mode"] == 'forward_emulator':
             z = hidden_states.gather(1, kwargs["positions_to_take"].view(-1, 1, 1).expand(-1, -1, hidden_states.shape[-1])).squeeze(1) # bsz, hidden_size
@@ -34,7 +35,7 @@ class ModifiedDecoderLayer(nn.Module):
                 mixture_embedding = probs @ kwargs['weight'] # bsz, H
             f_h_c = kwargs['mlp'][self.layer_idx](torch.cat((z, mixture_embedding), dim=-1)) # bsz, hidden_size
             self.f_h_c = f_h_c
-            
+
             if kwargs["rnn"] is not None:
                 if kwargs["key_proj"] is not None:
                     if len(kwargs["context"]) == 0:
@@ -86,7 +87,7 @@ class ImplicitCoTModelWithRNN(nn.Module):
         # Save model names
         self.teacher_model_name = teacher_model_name
         self.student_model_name = student_model_name
-        
+
         self.tokenizer = AutoTokenizer.from_pretrained(teacher_model_name)
         self.tokenizer.pad_token = self.tokenizer.eos_token
         self.teacher_model = AutoModelForCausalLM.from_pretrained(teacher_model_name).to(device)
@@ -113,12 +114,13 @@ class ImplicitCoTModelWithRNN(nn.Module):
         lora_model.config.use_cache = False  # Disable KV cache for training with gradient checkpointing
         for i in range(len(self.teacher_model.model.layers)):
             self.teacher_model.model.layers[i] = ModifiedDecoderLayer(self.teacher_model.model.layers[i], i)
-        
+
 
         # Define hidden size
         self.teacher_hidden_size = self.teacher_model.config.hidden_size
         self.teacher_num_layers = self.teacher_model.config.num_hidden_layers
 
+        self.create_student_model() # added when rebuttal
         # RNN component for implicit reasoning
         self.rnn = nn.LSTM(
             input_size=self.student_hidden_size,
@@ -128,6 +130,7 @@ class ImplicitCoTModelWithRNN(nn.Module):
             dropout=0,
             bidirectional=False
         )
+
 
         # Projection layers for attention mechanism
         self.key_proj = nn.Linear(self.student_hidden_size, self.student_hidden_size)
@@ -148,17 +151,17 @@ class ImplicitCoTModelWithRNN(nn.Module):
 
         # Temperature for softmax
         self.softmax_temperature = 0.05
-        
+
         self.layer_norm = nn.LayerNorm(self.teacher_hidden_size, elementwise_affine=False)
         self.max_length = max_length
-    
+
     def create_student_model(self):
         self.student_model = AutoModelForCausalLM.from_pretrained(self.student_model_name).to(self.device)
         for i in range(len(self.student_model.model.layers)):
             self.student_model.model.layers[i] = ModifiedDecoderLayer(self.student_model.model.layers[i], i)
         self.student_hidden_size = self.student_model.config.hidden_size
         self.student_num_layers = self.student_model.config.num_hidden_layers
-        
+
         self.student_mlps = nn.ModuleList([
             nn.Sequential(
                 nn.Linear(2*self.student_hidden_size, 4*self.student_hidden_size),
@@ -166,7 +169,7 @@ class ImplicitCoTModelWithRNN(nn.Module):
                 nn.Linear(4*self.student_hidden_size, self.student_hidden_size)
             ) for _ in range(self.teacher_num_layers)
         ])
-    
+
     def create_emulator(self):
         self.emulator = AutoModelForCausalLM.from_pretrained(self.teacher_model_name).to(self.device)
         self.tokenizer = AutoTokenizer.from_pretrained(self.teacher_model_name)
@@ -183,7 +186,7 @@ class ImplicitCoTModelWithRNN(nn.Module):
         self.key_proj = nn.Linear(self.teacher_hidden_size, self.teacher_hidden_size)
         self.query_proj = nn.Linear(self.teacher_hidden_size, self.teacher_hidden_size)
         self.out_proj = nn.Linear(self.teacher_hidden_size*2, self.teacher_hidden_size)
-        
+
     def extract_states(self, input_ids):
         # Find the boundaries between input and CoT, and CoT and output
         first_sep_position = get_sep_position(input_ids, self.tokenizer.eos_token_id, skip=0)[0]
@@ -204,7 +207,7 @@ class ImplicitCoTModelWithRNN(nn.Module):
             z = hidden_state.gather(1, positions_to_extract_per_layer[:,i].view(-1, 1, 1).expand(-1, -1, self.teacher_hidden_size)).squeeze(1)
             teacher_states_extracted.append(self.layer_norm(z))
         return teacher_states_extracted
-    
+
     def prepare_inputs_for_generation(self, input_ids, past_key_values=None, inputs_embeds=None, positions_to_substitute=None, states_to_substitute=None, mode=None, **kwargs):
         token_type_ids = kwargs.get("token_type_ids", None)
         # only last token for inputs_ids if past is defined in kwargs
@@ -245,7 +248,7 @@ class ImplicitCoTModelWithRNN(nn.Module):
             model_inputs['states_to_substitute'] = states_to_substitute
             model_inputs['mode'] = mode
         return model_inputs
-    
+
     def tokenize_sample(self, sample):
         bos_tok, eos_tok = self.tokenizer.bos_token, self.tokenizer.eos_token
         prompt = f"{sample['query']} {bos_tok} {sample['reasoning'] if 'reasoning' in sample else sample['full_answer']} {eos_tok}"
@@ -255,15 +258,15 @@ class ImplicitCoTModelWithRNN(nn.Module):
         prompt = f"{sample['query']} {bos_tok} {sample['answer']} {eos_tok}"
         inputs_nocot = self.tokenizer(prompt, return_tensors='pt', max_length=self.max_length)['input_ids']
         return inputs_all, inputs_cot, inputs_nocot
-    
+
     def teacher_forward(self, sample, with_answer=True):
         inputs_all, inputs_cot, _ = self.tokenize_sample(sample)
         if with_answer:
             inputs = inputs_all
         else:
             inputs = inputs_cot
-        labels = inputs.clone()
-        outputs = self.teacher_model.forward(input_ids=inputs)
+        labels = inputs.clone().to(self.device)
+        outputs = self.teacher_model.forward(input_ids=inputs.to(self.device))
 
         mask = labels[...,1:].ge(0)
         correct_tokens = ((outputs.logits.argmax(-1)[...,:-1] == labels[...,1:]) * mask).sum()
@@ -275,7 +278,7 @@ class ImplicitCoTModelWithRNN(nn.Module):
         del outputs, labels, mask, correct_tokens, shift_logits, shift_labels
         torch.cuda.empty_cache()
         return inputs, loss, token_accuracy
-    
+
     def student_forward(self, sample):
         bos_tok, eos_tok = self.tokenizer.bos_token, self.tokenizer.eos_token
         prompt = f"{sample['query']} {bos_tok} {sample['answer']} {eos_tok}"
@@ -283,15 +286,15 @@ class ImplicitCoTModelWithRNN(nn.Module):
         labels_nocot = inputs_nocot.clone()
         prompt = f"{sample['query']} {bos_tok} {sample['reasoning'] if 'reasoning' in sample else sample['full_answer']} {eos_tok}"
         inputs_cot = self.tokenizer(prompt, return_tensors='pt', max_length=self.max_length)['input_ids']
-        
+
         raw_teacher_states = self.extract_states(inputs_cot)
         sep_positions = get_sep_position(inputs_nocot, self.tokenizer.eos_token_id)
         teacher_states = [self.student_mlps[l](raw_teacher_states[l]) for l in range(len(raw_teacher_states))]
 
         # Forward while substituting teacher states
         outputs = self.student_model(
-            input_ids=inputs_nocot, 
-            positions_to_substitute=sep_positions, 
+            input_ids=inputs_nocot,
+            positions_to_substitute=sep_positions,
             states_to_substitute=teacher_states,
             requires_backward=False,
             mode='forward_student',
@@ -307,7 +310,7 @@ class ImplicitCoTModelWithRNN(nn.Module):
         shift_labels = labels_nocot[..., 1:].contiguous()
         loss = torch.nn.CrossEntropyLoss()(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
         return loss, token_accuracy, raw_teacher_states
-    
+
     def student_generate(self, sample, teacher_states=None, max_new_tokens=30, num_beams=1):
         bos_tok, eos_tok = self.tokenizer.bos_token, self.tokenizer.eos_token
         prompt = f"{sample['query']} {bos_tok} {sample['answer']} {eos_tok}"
@@ -332,10 +335,10 @@ class ImplicitCoTModelWithRNN(nn.Module):
             mode='forward_student',
             requires_backward=False
         )
-        self.student_model.prepare_inputs_for_generation = old_gen_func  
+        self.student_model.prepare_inputs_for_generation = old_gen_func
         pred_text = self.tokenizer.decode(beam_output[0][sep_position+1:], skip_special_tokens=True)
         return beam_output, pred_text
-    
+
     def emulator_forward():
         pass
 
@@ -521,19 +524,19 @@ def train_icot_kd_model(
         log_dir=f"{output_path}/logs",
         experiment_name="icot_kd_training"
     )
-    
+
     icot_kd = ImplicitCoTModelWithRNN(
         teacher_model_name=teacher_model_name,
         student_model_name=student_model_name,
         device=device
     ).to(device)
     icot_kd.teacher_model.train()
-    
+
     logger.info("Training teacher model on CoT")
     teacher_opt = torch.optim.AdamW(list(icot_kd.teacher_model.parameters()), lr=5e-5)
     for step, sample in enumerate(train_dataset):
         teacher_opt.zero_grad()
-        icot_kd.teacher_forward(sample)
+        # icot_kd.teacher_forward(sample)
         _, loss, tok_acc = icot_kd.teacher_forward(sample)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(list(icot_kd.teacher_model.parameters()), 1.0)
@@ -542,7 +545,7 @@ def train_icot_kd_model(
             logger.info(f"Step {step}: loss = {loss} | token_acc = {tok_acc}")
         del loss, tok_acc
         torch.cuda.empty_cache()
-    # evaluate 
+    # evaluate
     total_correct = 0
     with torch.no_grad():
         for step, sample in enumerate(eval_dataset):
@@ -559,7 +562,7 @@ def train_icot_kd_model(
     logger.info(f"Eval Accuracy = {total_correct / len(eval_dataset)}")
     del teacher_opt
     torch.cuda.empty_cache()
-    
+
     icot_kd.teacher_model.eval()
     icot_kd.create_student_model()
     icot_kd.student_model.eval()
@@ -591,12 +594,12 @@ def train_icot_kd_model(
     icot_kd.student_model.save_pretrained(f"{output_path}/student")
     del icot_kd.student_model
     torch.cuda.empty_cache()
-    
+
     icot_kd.create_emulator()
     icot_kd.emulator.eval()
-    
-    
-    
+
+
+
     # # Determine hidden size from the teacher model
     # hidden_size = teacher_model.config.hidden_size
 
@@ -802,7 +805,7 @@ def train_icot_kd_model(
     #                     truncation=True,
     #                     max_length=512
     #                 ).to(device)
-                    
+
     #                 input_ids, attention_mask = inputs.input_ids, inputs.attention_mask
     #                 # Forward pass through implicit CoT model
     #                 while input_ids.shape[-1] < target.input_ids.shape[-1] - 1:

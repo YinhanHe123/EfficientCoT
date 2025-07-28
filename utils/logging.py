@@ -74,6 +74,22 @@ class Logger:
         # Log to TensorBoard
         self.writer.add_hparams(config_dict, {})
 
+    def info(self, message):
+        """Log info message"""
+        self.logger.info(message)
+
+    def debug(self, message):
+        """Log debug message"""
+        self.logger.debug(message)
+
+    def warning(self, message):
+        """Log warning message"""
+        self.logger.warning(message)
+
+    def error(self, message):
+        """Log error message"""
+        self.logger.error(message)
+
     def close(self):
         """Close TensorBoard writer"""
         self.writer.close()

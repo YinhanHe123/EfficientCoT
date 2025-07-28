@@ -30,13 +30,9 @@ def run_inference(contemp_generator, dataset, teacher_model_name, config):
     # Load teacher LLM for generating answers
     teacher_tokenizer = AutoTokenizer.from_pretrained(teacher_model_name)
 
-    # Handle tokenizer padding for different models
-    if "qwen" in teacher_model_name.lower():
-        # Qwen models might need special handling
-        if teacher_tokenizer.pad_token is None:
-            teacher_tokenizer.pad_token = teacher_tokenizer.eos_token
-    else:
+    if teacher_tokenizer.pad_token is None:
         teacher_tokenizer.pad_token = teacher_tokenizer.eos_token
+
 
     teacher_model = AutoModelForCausalLM.from_pretrained(teacher_model_name)
     teacher_model = teacher_model.to(device)

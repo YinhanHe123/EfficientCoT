@@ -7,6 +7,9 @@ def evaluate_model(results, dataset):
     data_path = getattr(dataset, 'name', '').lower()
     is_commonsense_qa = 'commonsense_qa' in data_path
     is_coin_flip = 'coin_flip' in data_path
+    is_strategyqa = 'strategyqa' in data_path
+    is_logiqa = 'logiqa' in data_path
+    is_multihopqa = 'multihopqa' in data_path
     correct_queries = []
 
     if is_commonsense_qa:
@@ -42,6 +45,96 @@ def evaluate_model(results, dataset):
             if (ground_truth == prediction or
                 (ground_truth == 'yes' and ('yes' in prediction.lower() or 'still heads' in prediction.lower())) or
                 (ground_truth == 'no' and ('no' in prediction.lower() or 'not heads' in prediction.lower()))):
+                num_correct += 1
+                correct_queries.append(result['query'])
+
+        metrics["numerical_accuracy"] = round(num_correct / len(results), 3) if results else 0
+        metrics["correct_queries"] = correct_queries
+        return metrics
+
+    elif is_logiqa:
+        # For LogiQA, check if prediction matches the correct option number (0, 1, 2, 3, etc.)
+        num_correct = 0
+
+        for i, result in enumerate(results):
+            prediction = result["prediction"].strip().lower()
+            ground_truth = dataset[i]["answer"].strip().lower()
+
+            # Check if the prediction contains or exactly matches the answer option number
+            # Allow both '0' and '0.' as valid formats, also check for exact match or number in text
+            if (ground_truth == prediction or
+                ground_truth + '.' == prediction or
+                ground_truth in prediction.split() or
+                ground_truth + '.' in prediction.split()):
+                num_correct += 1
+                correct_queries.append(result['query'])
+
+        metrics["numerical_accuracy"] = round(num_correct / len(results), 3) if results else 0
+        metrics["correct_queries"] = correct_queries
+        return metrics
+
+    elif is_strategyqa:
+        # For StrategyQA, check if prediction matches true/false
+        num_correct = 0
+
+        for i, result in enumerate(results):
+            prediction = result["prediction"].strip().lower()
+            ground_truth = dataset[i]["answer"].strip().lower()
+
+            # Check for true/false match
+            # Allow various formats: "true", "false", "True", "False", sentences containing true/false
+            if (ground_truth == prediction or
+                (ground_truth == 'true' and ('true' in prediction.lower() or 'yes' in prediction.lower())) or
+                (ground_truth == 'false' and ('false' in prediction.lower() or 'no' in prediction.lower()))):
+                num_correct += 1
+                correct_queries.append(result['query'])
+
+        metrics["numerical_accuracy"] = round(num_correct / len(results), 3) if results else 0
+        metrics["correct_queries"] = correct_queries
+        return metrics
+
+    elif is_multihopqa:
+        # For multihopqa, check if prediction matches any of the golden answers
+        num_correct = 0
+
+        for i, result in enumerate(results):
+            prediction = result["prediction"].strip()
+            ground_truth = dataset[i]["answer"].strip()
+
+            # For multi-hop QA, we need to check if the prediction contains the ground truth
+            # or if they match with some normalization (remove punctuation, etc.)
+            import string
+            import re
+
+            # Normalize both prediction and ground truth
+            # Convert to lowercase and remove punctuation
+            pred_normalized = prediction.lower().translate(str.maketrans('', '', string.punctuation))
+            gt_normalized = ground_truth.lower().translate(str.maketrans('', '', string.punctuation))
+            
+            # Also remove extra whitespace
+            pred_normalized = re.sub(r'\s+', ' ', pred_normalized).strip()
+            gt_normalized = re.sub(r'\s+', ' ', gt_normalized).strip()
+
+            # Check for various matching criteria
+            prediction_lower = prediction.lower()
+            ground_truth_lower = ground_truth.lower()
+            
+            is_match = (
+                # Exact match (case insensitive)
+                ground_truth_lower == prediction_lower or
+                # Substring matching (both directions)
+                ground_truth_lower in prediction_lower or
+                prediction_lower in ground_truth_lower or
+                # Normalized exact match
+                gt_normalized == pred_normalized or
+                # Normalized substring matching
+                gt_normalized in pred_normalized or
+                pred_normalized in gt_normalized or
+                # Word-level matching (all words of GT appear in prediction)
+                all(word in pred_normalized for word in gt_normalized.split() if len(word) > 2)
+            )
+            
+            if is_match:
                 num_correct += 1
                 correct_queries.append(result['query'])
 

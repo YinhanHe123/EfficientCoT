@@ -8,6 +8,8 @@ class SoftCoTModel(nn.Module):
     Implementation of Soft Chain of Thought model from the paper
     "SoftCoT: Soft Chain-of-Thought for Efficient Reasoning with LLMs"
     by Yige Xu, Xu Guo, Zhiwei Zeng, Chunyan Miao.
+
+    Updated to support Qwen models.
     """
     def __init__(self, llm_model_name, assistant_model_name, device="cuda"):
         """
@@ -25,12 +27,19 @@ class SoftCoTModel(nn.Module):
 
         # Load the LLM model and tokenizer
         self.llm_tokenizer = AutoTokenizer.from_pretrained(llm_model_name)
-        self.llm_tokenizer.pad_token = self.llm_tokenizer.eos_token
+
+        # Handle tokenizer setup for different models
+        if self.llm_tokenizer.pad_token is None:
+            self.llm_tokenizer.pad_token = self.llm_tokenizer.eos_token
 
         # Load the assistant model and tokenizer
         self.assistant_model = AutoModelForCausalLM.from_pretrained(assistant_model_name)
         self.assistant_tokenizer = AutoTokenizer.from_pretrained(assistant_model_name)
-        self.assistant_tokenizer.pad_token = self.assistant_tokenizer.eos_token
+
+
+        if self.assistant_tokenizer.pad_token is None:
+            self.assistant_tokenizer.pad_token = self.assistant_tokenizer.eos_token
+
 
         # Move models to device
         self.assistant_model = self.assistant_model.to(device)
@@ -55,6 +64,16 @@ class SoftCoTModel(nn.Module):
             self.llm_hidden_dim
         ).to(self.device)
 
+    def _get_assistant_prompt_format(self, query):
+        """
+        Get the appropriate prompt format for the assistant model based on its type
+        """
+        if "qwen" in self.assistant_model_name.lower():
+            return f"<|im_start|>system\nYou are helping a large language model solve reasoning problems. Generate helpful thoughts.<|im_end|>\n<|im_start|>user\nQuestion: {query}<|im_end|>\n<|im_start|>assistant\n"
+        else:
+            # Default format for other models
+            return f"You are helping a large language model solve reasoning problems. Generate helpful thoughts.\nQuestion: {query}\n"
+
     def generate_soft_thoughts(self, query, num_tokens=5):
         """
         Generate soft thought tokens based on the query using the assistant model.
@@ -66,13 +85,19 @@ class SoftCoTModel(nn.Module):
         Returns:
             Soft thought tokens (hidden states from the assistant model)
         """
-        # Prepare input with [UNK] tokens as placeholders for soft thoughts
-        instruction = "You are helping a large language model solve reasoning problems. Generate helpful thoughts."
-        unk_token = self.assistant_tokenizer.unk_token if self.assistant_tokenizer.unk_token else "[UNK]"
+        # Get the appropriate prompt format for the assistant model
+        instruction_prompt = self._get_assistant_prompt_format(query)
 
-        # Construct the input with instruction, query, and UNK tokens
-        input_text = f"{instruction}\nQuestion: {query}\n"
-        input_text += f"{unk_token} " * num_tokens
+        # Choose appropriate token for soft thoughts based on model type
+        if "qwen" in self.assistant_model_name.lower():
+            # For Qwen models, use a special token or pad token
+            soft_token = self.assistant_tokenizer.pad_token if self.assistant_tokenizer.pad_token else "<|extra_0|>"
+        else:
+            # For other models, use UNK token as placeholder
+            soft_token = self.assistant_tokenizer.unk_token if self.assistant_tokenizer.unk_token else "[UNK]"
+
+        # Construct the input with instruction, query, and soft tokens
+        input_text = instruction_prompt + f"{soft_token} " * num_tokens
 
         # Tokenize the input
         inputs = self.assistant_tokenizer(
@@ -94,13 +119,32 @@ class SoftCoTModel(nn.Module):
             # Get the last layer hidden states
             hidden_states = outputs.hidden_states[-1]
 
-            # Extract the hidden states corresponding to the UNK tokens
-            # Find the positions of UNK tokens in the input
-            unk_token_id = self.assistant_tokenizer.convert_tokens_to_ids(unk_token)
-            unk_positions = (inputs.input_ids == unk_token_id).nonzero(as_tuple=True)[1]
+            # Extract the hidden states corresponding to the soft tokens
+            # Find the positions of soft tokens in the input
+            if "qwen" in self.assistant_model_name.lower():
+                # For Qwen, find pad token positions or use last N tokens
+                if self.assistant_tokenizer.pad_token_id is not None:
+                    soft_token_id = self.assistant_tokenizer.pad_token_id
+                    soft_positions = (inputs.input_ids == soft_token_id).nonzero(as_tuple=True)[1]
+                else:
+                    # Use the last N tokens as soft thought positions
+                    soft_positions = torch.arange(
+                        hidden_states.size(1) - num_tokens,
+                        hidden_states.size(1)
+                    ).to(self.device)
+            else:
+                # For other models, find UNK token positions
+                soft_token_id = self.assistant_tokenizer.convert_tokens_to_ids(soft_token)
+                soft_positions = (inputs.input_ids == soft_token_id).nonzero(as_tuple=True)[1]
 
             # Extract hidden states at those positions
-            soft_thought_tokens = hidden_states[:, unk_positions, :]
+            if len(soft_positions) > 0:
+                # Select the soft token positions, limit to num_tokens
+                selected_positions = soft_positions[:num_tokens]
+                soft_thought_tokens = hidden_states[:, selected_positions, :]
+            else:
+                # Fallback: use the last num_tokens positions
+                soft_thought_tokens = hidden_states[:, -num_tokens:, :]
 
         return soft_thought_tokens
 

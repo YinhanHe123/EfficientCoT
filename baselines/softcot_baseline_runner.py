@@ -7,6 +7,23 @@ from models.softcot_model import SoftCoTModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import utils.utils as utils
 
+def get_qwen_prompt_format(query):
+    """
+    Format the prompt for Qwen models
+    """
+    return f"<|im_start|>system\nYou are an expert in math word problems.<|im_end|>\n<|im_start|>user\nQuestion: {query}<|im_end|>\n<|im_start|>assistant\nAnswer: "
+
+def get_model_prompt_format(query, model_name):
+    """
+    Get the appropriate prompt format based on the model
+    """
+    if "qwen" in model_name.lower():
+        return get_qwen_prompt_format(query)
+    elif "mistral" in model_name.lower():
+        return f"<s>[INST] Question: {query}\n Answer: [/INST]"
+    else:
+        return f"Question: {query}\n Answer:"
+
 def run_softcot_baseline(train_dataset, eval_dataset, model_config, experiment_config):
     """
     Run the SoftCoT baseline method
@@ -62,28 +79,32 @@ def run_softcot_baseline(train_dataset, eval_dataset, model_config, experiment_c
     llm_model = llm_model.to(device)
     llm_model.eval()
 
+    # Setup tokenizer with proper handling for different models
+    llm_tokenizer = softcot_model.llm_tokenizer
+
+    if llm_tokenizer.pad_token is None:
+        llm_tokenizer.pad_token = llm_tokenizer.eos_token
+
     # Create output directory for results
     results_dir = os.path.join(experiment_config.result_path, "softcot")
     os.makedirs(results_dir, exist_ok=True)
     all_res, all_summ = [], []
+
     for temp in [0.1, 0.3, 0.5, 0.7, 0.9]:
         results = []
         softcot_time_list = []
         inference_time_list = []
 
-        print("Running inference...")
+        print(f"Running inference with temperature {temp}...")
         with torch.no_grad():
             for sample in tqdm(eval_dataset, desc="Running SoftCoT inference"):
                 query = sample["query"]
 
                 # Format the prompt based on the model type
-                if "mistral" in model_config.teacher_model_name.lower():
-                    prompt = f"<s>[INST] Question: {query}\n Answer: [/INST]"
-                else:
-                    prompt = f"Question: {query}\n Answer:"
+                prompt = get_model_prompt_format(query, model_config.teacher_model_name)
 
                 # Tokenize the prompt
-                prompt_tokens = softcot_model.llm_tokenizer(
+                prompt_tokens = llm_tokenizer(
                     prompt,
                     return_tensors="pt",
                     padding=False,
@@ -125,6 +146,9 @@ def run_softcot_baseline(train_dataset, eval_dataset, model_config, experiment_c
                     device=device
                 ).unsqueeze(0)
 
+                # Set pad_token_id appropriately
+                pad_token_id = llm_tokenizer.pad_token_id if llm_tokenizer.pad_token_id is not None else llm_tokenizer.eos_token_id
+
                 # Generate answer
                 start_time = time.time()
                 outputs = llm_model.generate(
@@ -135,15 +159,15 @@ def run_softcot_baseline(train_dataset, eval_dataset, model_config, experiment_c
                     temperature=temp,
                     top_p=0.9,
                     do_sample=True,
-                    pad_token_id=softcot_model.llm_tokenizer.eos_token_id
+                    pad_token_id=pad_token_id
                 )
                 inference_time = time.time() - start_time
                 inference_time_list.append(inference_time)
 
                 # Extract the answer (skip the initial prompt and projected soft thoughts)
-                prefix = prompt_tokens.input_ids.size(1) if outputs.shape[-1] > prompt_tokens.input_ids.size(1) else 0
-                answer_ids = outputs[0][prefix:]
-                answer = softcot_model.llm_tokenizer.decode(answer_ids, skip_special_tokens=True)
+                prefix_length = total_seq_length if outputs.shape[-1] > total_seq_length else prompt_tokens.input_ids.size(1)
+                answer_ids = outputs[0][prefix_length:]
+                answer = llm_tokenizer.decode(answer_ids, skip_special_tokens=True)
 
                 # Record the result
                 result = {
@@ -157,6 +181,10 @@ def run_softcot_baseline(train_dataset, eval_dataset, model_config, experiment_c
                 }
                 results.append(result)
 
+                # Clean up memory for each sample
+                del prompt_tokens, inputs_embeds, combined_embeds, attention_mask, position_ids, outputs
+                torch.cuda.empty_cache()
+
         # Calculate average times
         avg_softcot_time = sum(softcot_time_list) / len(softcot_time_list)
         avg_inference_time = sum(inference_time_list) / len(inference_time_list)
@@ -168,15 +196,20 @@ def run_softcot_baseline(train_dataset, eval_dataset, model_config, experiment_c
             "avg_inference_time": avg_inference_time,
             "avg_total_time": avg_total_time,
             "num_samples": len(eval_dataset),
-            "num_soft_tokens": experiment_config.eval_max_contemp_tokens
+            "num_soft_tokens": experiment_config.eval_max_contemp_tokens,
+            "temperature": temp
         }
         all_summ.append(summary)
         all_res.append((temp, results))
-        
-        print(f"SoftCoT baseline completed. Average generation time: {avg_total_time:.2f} seconds")
+
+        print(f"SoftCoT baseline completed for temp {temp}. Average generation time: {avg_total_time:.2f} seconds")
+
+    # Save summary results
     utils.save_json([{"summary": summary} for summary in all_summ], f"{results_dir}/inference_results.json")
+
     # Clean up
-    del llm_model
+    del llm_model, softcot_model
     gc.collect()
     torch.cuda.empty_cache()
+
     return all_res

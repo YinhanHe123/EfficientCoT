@@ -112,11 +112,7 @@ def train_contemplation_generator(
     # Initialize teacher tokenizer for answer generation
     teacher_tokenizer = AutoTokenizer.from_pretrained(model_config.teacher_model_name)
 
-    # Handle tokenizer padding for different models
-    if "qwen" in model_config.teacher_model_name.lower():
-        if teacher_tokenizer.pad_token is None:
-            teacher_tokenizer.pad_token = teacher_tokenizer.eos_token
-    else:
+    if teacher_tokenizer.pad_token is None:
         teacher_tokenizer.pad_token = teacher_tokenizer.eos_token
 
     # Ensure sentence transformer is in evaluation mode if needed

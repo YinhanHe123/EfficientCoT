@@ -27,7 +27,7 @@ def parse_args():
     parser.add_argument("--config", type=str, default="small",
                         choices=["small", "large", "mistral", "qwen"],
                         help="Configuration name. 'qwen' uses Qwen2.5-7B-Instruct as teacher and Qwen2.5-0.5B-Instruct as student")
-    parser.add_argument("--dataset", type=str, default="gsm8k", choices=["gsm8k", "svamp", "multiarith", "commonsense_qa", "coin_flip"],
+    parser.add_argument("--dataset", type=str, default="gsm8k", choices=["gsm8k", "svamp", "multiarith", "commonsense_qa", "coin_flip", "strategyqa", "logiqa", "multihopqa"],
                         help="Dataset to use")
     parser.add_argument("--baseline", type=str, default="effi_cot",
                         choices=["cot", "ccot", "pause", "icot_kd", "nocot", "effi_cot", "icot_si", "codi", "softcot", "coconut"],
@@ -122,14 +122,6 @@ def main():
     # Set random seed
     utils.set_seed(args.seed)
 
-    # Print message if using Qwen configuration
-    if args.config == "qwen":
-        print("=" * 80)
-        print("Using Qwen model configuration:")
-        print("Teacher model: Qwen/Qwen2.5-7B-Instruct")
-        print("Student model: Qwen/Qwen2.5-0.5B-Instruct")
-        print("=" * 80)
-
     # Original logic for individual modes
     model_config = ModelConfig(args.config)
     experiment_config = ExperimentConfig(args.config)
@@ -218,6 +210,13 @@ def main():
         model_config.data_path = 'tau/commonsense_qa'
     elif args.dataset == 'coin_flip':
         model_config.data_path = 'skrishna/coin_flip'
+    elif args.dataset == 'strategyqa':
+        model_config.data_path = 'ChilleD/StrategyQA'
+    elif args.dataset == 'logiqa':
+        model_config.data_path = 'lucasmccabe/logiqa'
+    elif args.dataset == 'multihopqa':
+        model_config.data_path = 'cmriat/2wikimultihopqa'
+
 
     train_dataset, eval_dataset = load_raw_dataset(model_config.data_path)
     if args.mode == "effi_cot":

@@ -20,13 +20,7 @@ class ContemplationGenerator(nn.Module):
             self.model_hidden_dim = self.model.config.hidden_size
 
             # Apply LoRA with model-specific target modules
-            if "qwen" in teacher_model_name.lower():
-                # Qwen models use different attention layer names
-                # target_modules = ["q_proj", "k_proj", "v_proj", "o_proj"]
-                target_modules = ["q_proj", "v_proj"]
-            else:
-                # Default for LLaMA/Mistral style models
-                target_modules = ["q_proj", "v_proj"]
+            target_modules = ["q_proj", "v_proj"]
 
             peft_config = LoraConfig(
                 task_type=TaskType.CAUSAL_LM,
@@ -56,11 +50,9 @@ class ContemplationGenerator(nn.Module):
         self.teacher_hidden_dim = teacher_hidden_dim
 
         # Handle tokenizer padding for different models
-        if "qwen" in student_model_name.lower() or "qwen" in teacher_model_name.lower():
-            if self.tokenizer.pad_token is None:
-                self.tokenizer.pad_token = self.tokenizer.eos_token
-        else:
+        if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
+
 
     def forward(self, input_ids, attention_mask=None):
         # Generate model hidden states

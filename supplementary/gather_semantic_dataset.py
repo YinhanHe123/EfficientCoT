@@ -31,7 +31,7 @@ def check_answer(dataset, prediction, ground_truth):
             return False
 
 parser = argparse.ArgumentParser(description="Contemplation Token Semantics Experiments")
-parser.add_argument("--dataset", type=str, default="gsm8k", choices=["gsm8k", "svamp", "multiarith", "commonsense_qa", "coin_flip"],
+parser.add_argument("--dataset", type=str, default="gsm8k", choices=["gsm8k", "svamp", "multiarith", "commonsense_qa", "coin_flip", "logiqa"],
                         help="Dataset to use")
 parser.add_argument("--device", type=int, default=0)
 parser.add_argument("--eval_num_contemp_tokens", type=int, default=1)
@@ -49,13 +49,13 @@ elif args.dataset == 'commonsense_qa':
     data_path = 'tau/commonsense_qa'
 elif args.dataset == 'coin_flip':
     data_path = 'skrishna/coin_flip'
-    
+
 if args.config_name == "small":
     teacher_model_name = "meta-llama/Llama-2-7b-chat-hf"
 elif args.config_name == 'mistral':
     teacher_model_name = "mistralai/Mistral-7B-Instruct-v0.2"
 
-model_save_path = f"/data/nee7ne/effi_cot/saved_models/effi_cot/vanilla/small/{args.dataset}" 
+model_save_path = f"/data/nee7ne/effi_cot/saved_models/effi_cot/vanilla/small/{args.dataset}"
 contemp_generator = ContemplationGenerator.from_pretrained(model_save_path+"/contemp_generator/").to(args.device)
 _, eval_dataset = load_raw_dataset(data_path)
 
@@ -66,7 +66,7 @@ teacher_model = teacher_model.to(args.device)
 teacher_model.eval()
 
 contemp_tokens = []
-for sample in tqdm(eval_dataset, desc="Running inference"):            
+for sample in tqdm(eval_dataset, desc="Running inference"):
     query_prompt, answer_prompt = get_formatted_prompt(sample["query"])
     # Find the position where we inserted the contemplation tokens
     query_inputs = contemp_generator.tokenizer(
@@ -77,7 +77,7 @@ for sample in tqdm(eval_dataset, desc="Running inference"):
         max_length=512
     ).to(args.device)
     prefix_length = query_inputs.input_ids.size(1) - 1
-    
+
     answer_inputs = contemp_generator.tokenizer(
         answer_prompt,
         return_tensors="pt",
@@ -86,11 +86,11 @@ for sample in tqdm(eval_dataset, desc="Running inference"):
         max_length=512,
         add_special_tokens=False
     ).to(args.device)
-    
+
     # CHANGED: Extract contemplation states from the correct position (no longer the last tokens)
     query_inputs = torch.cat([
-        query_inputs['input_ids'], 
-        torch.tensor([[contemp_generator.tokenizer.eos_token_id * args.eval_num_contemp_tokens]]).to(args.device), 
+        query_inputs['input_ids'],
+        torch.tensor([[contemp_generator.tokenizer.eos_token_id * args.eval_num_contemp_tokens]]).to(args.device),
         answer_inputs['input_ids']
     ], dim=1)
 
@@ -106,7 +106,7 @@ for sample in tqdm(eval_dataset, desc="Running inference"):
         padding=False,
         truncation=False,
         max_length=512
-    ).to(args.device)                
+    ).to(args.device)
     answer_inputs = teacher_tokenizer(
         answer_prompt,
         return_tensors="pt",

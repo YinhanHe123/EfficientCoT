@@ -25,8 +25,8 @@ def run_pause_baseline(train_dataset, eval_dataset, model_config, experiment_con
 
     # Load model and tokenizer
     tokenizer = AutoTokenizer.from_pretrained(model_config.teacher_model_name)
-    # model = AutoModelForCausalLM.from_pretrained(model_config.teacher_model_name).to(device)
-    model =  AutoModelForCausalLM.from_pretrained(result_dir).to(device)
+    model = AutoModelForCausalLM.from_pretrained(model_config.teacher_model_name).to(device)
+    # model =  AutoModelForCausalLM.from_pretrained(result_dir).to(device)
 
     # Create output directory for results
     result_dir = os.path.join(experiment_config.model_save_path, "pause")
@@ -46,7 +46,7 @@ def run_pause_baseline(train_dataset, eval_dataset, model_config, experiment_con
     # Set default pad token if not set
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
-        
+
     # model = train_pause_model(tokenizer, model, train_dataset, eval_dataset, experiment_config, result_dir)
     pause_token_id = tokenizer.convert_tokens_to_ids(pause_token)
     num_pause_tokens = experiment_config.eval_max_contemp_tokens
@@ -61,6 +61,8 @@ def run_pause_baseline(train_dataset, eval_dataset, model_config, experiment_con
                 # Format the prompt based on model type
                 if "mistral" in model_config.teacher_model_name.lower():
                     prompt = f"<s>[INST] Question: {query}\nAnswer: [/INST]"
+                elif "qwen" in model_config.teacher_model_name.lower():
+                    prompt = f"<|im_start|>system\nYou are an expert in math word problems.<|im_end|>\n<|im_start|>user\nQuestion: {query}<|im_end|>\n<|im_start|>assistant\nAnswer:"
                 else:
                     prompt = f"Question: {query}\nAnswer:"
 
@@ -70,7 +72,7 @@ def run_pause_baseline(train_dataset, eval_dataset, model_config, experiment_con
                 start = time.time()
                 # Append pause tokens to the input (the paper's core idea)
                 modified_input_ids = torch.cat([input_ids, pause_tokens], dim=1)
-                
+
                 # Generate the response, ignoring the pause tokens
                 outputs = model.generate(
                     modified_input_ids,
@@ -98,7 +100,7 @@ def run_pause_baseline(train_dataset, eval_dataset, model_config, experiment_con
         }
         all_summ.append(summary)
         all_res.append((temp, results))
-    
+
     results_dir = os.path.join(experiment_config.result_path, "pause")
     if not os.path.exists(results_dir):
         os.makedirs(results_dir)

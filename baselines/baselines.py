@@ -163,7 +163,7 @@ def run_nocot_baseline(dataset, model_config, experiment_config, num_shots):
     teacher_tokenizer.pad_token = teacher_tokenizer.eos_token
     teacher_model = AutoModelForCausalLM.from_pretrained(model_config.teacher_model_name).to(device)
     teacher_model.eval()
-    
+
     results_dir = experiment_config.result_path+"/nocot"
     if not os.path.exists(results_dir):
         os.makedirs(results_dir)
@@ -171,7 +171,7 @@ def run_nocot_baseline(dataset, model_config, experiment_config, num_shots):
     for temp in [0.1, 0.3, 0.5, 0.7, 0.9]:
         results, time_list, contemp_time_list = [], [], []
         with torch.no_grad():
-            for sample in tqdm(dataset, desc="Running inference"):            
+            for sample in tqdm(dataset, desc="Running inference"):
                 query_prompt, answer_prompt = get_formatted_prompt(sample["query"])
                 query_inputs = teacher_tokenizer(
                     query_prompt,
@@ -179,7 +179,7 @@ def run_nocot_baseline(dataset, model_config, experiment_config, num_shots):
                     padding=False,
                     truncation=False,
                     max_length=experiment_config.max_seq_length
-                ).to(device)                
+                ).to(device)
                 answer_inputs = teacher_tokenizer(
                     answer_prompt,
                     return_tensors="pt",
@@ -188,7 +188,7 @@ def run_nocot_baseline(dataset, model_config, experiment_config, num_shots):
                     max_length=experiment_config.max_seq_length,
                     add_special_tokens=False
                 ).to(device)
-                
+
                 prompt_embeds_query = teacher_model.get_input_embeddings()(query_inputs.input_ids)
                 prompt_embeds_answer = teacher_model.get_input_embeddings()(answer_inputs.input_ids)
 
@@ -204,7 +204,7 @@ def run_nocot_baseline(dataset, model_config, experiment_config, num_shots):
                     dtype=torch.long,
                     device=device
                 )
-                
+
                 gen_start = time.time()
                 outputs = teacher_model.generate(
                     inputs_embeds=combined_embeds,
@@ -231,7 +231,7 @@ def run_nocot_baseline(dataset, model_config, experiment_config, num_shots):
                 }
                 time_list.append(gen_time)
                 results.append(result)
-            
+
             print(f"Average time taken for each sample: {sum(time_list)/len(time_list)}")
             all_res.append((temp, results))
             summary = {

@@ -14,11 +14,9 @@ class CustomizedSentenceTransformer(nn.Module):
         self.tokenizer = AutoTokenizer.from_pretrained(base_model_name)
 
         # Handle tokenizer padding for different models
-        if "qwen" in base_model_name.lower():
-            if self.tokenizer.pad_token is None:
-                self.tokenizer.pad_token = self.tokenizer.eos_token
-        else:
+        if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
+
 
         self.config = AutoConfig.from_pretrained(base_model_name)
 

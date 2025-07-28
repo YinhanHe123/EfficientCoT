@@ -13,11 +13,11 @@ def get_max_acc(file):
     with open(file) as f:
         lines = f.readlines()
     if len(lines) == 0:
-        return 0  
+        return 0
     return max([json.loads(l)['numerical_accuracy'] for l in lines[-5:]])
 
 parser = argparse.ArgumentParser(description="Contemplation Tokens with Reasoning Ability")
-parser.add_argument("--dataset", type=str, default="gsm8k", choices=["gsm8k", "svamp", "multiarith", "commonsense_qa", "coin_flip"],
+parser.add_argument("--dataset", type=str, default="gsm8k", choices=["gsm8k", "svamp", "multiarith", "commonsense_qa", "coin_flip", "logiqa"],
                     help="Dataset to use")
 parser.add_argument("--config", type=str, default="small", choices=["small", "mistral"],
                     help="Model config to use")
@@ -77,7 +77,7 @@ for (st_llr, st_lwd, st_llmlr, st_llmwd, st_le, st_llme) in random.sample(combin
         st_le = 1
         st_llmlr = 1e-07
         st_llmwd = 0.001
-        st_llme = 2 
+        st_llme = 2
     max_tries = 0
     logging.info(f"Training sentence transformer - llr = {st_llr} | lwd = {st_lwd} | le = {st_le} | llmlr = {st_llmlr} | llmwd = {st_llmwd} | llme = {st_llme}")
     for (cg_llr, cg_lwd, cg_llmlr, cg_llmwd, cg_le, cg_llme) in random.sample(combinations, len(combinations)):
@@ -120,7 +120,7 @@ for (st_llr, st_lwd, st_llmlr, st_llmwd, st_le, st_llme) in random.sample(combin
 #                                                 acc = get_max_acc(res_path)
 #                                                 if acc > max_acc:
 #                                                     max_acc = acc
-#                                                 elif 
+#                                                 elif
 # for st_llr in linear:
 #     for st_lwd in linear:
 #         for st_llmlr in llmlr:

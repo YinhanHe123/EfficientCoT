@@ -53,6 +53,8 @@ def run_icot_kd_baseline(train_dataset, eval_dataset, model_config, experiment_c
     def format_prompt(query):
         if "mistral" in model_config.teacher_model_name.lower():
             return f"<s>[INST] Question: {query}\n Generate the answer directly. Answer: [/INST]"
+        elif "qwen" in model_config.teacher_model_name.lower():
+            return f"<|im_start|>system\nYou are an expert in math word problems.<|im_end|>\n<|im_start|>user\nQuestion: {query}<|im_end|>\n<|im_start|>assistant\nAnswer:"
         else:
             return f"Question: {query}\n Generate the answer directly. Answer:"
 
