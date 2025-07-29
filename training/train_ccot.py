@@ -10,7 +10,7 @@ from peft import get_peft_model, LoraConfig, TaskType
 from datasets import Dataset as HFDataset
 from datasets import load_from_disk
 import torch.nn.functional as F
-import openai
+from openai import OpenAI
 import gc
 from torch.utils.data import DataLoader
 from baselines.ccot_baseline_runner import prepare_ccot_decode_dataset
@@ -20,6 +20,10 @@ def prepare_ccot_layer_dataset(queries, reasonings, tokenizer, device, layer_idx
     """
     Prepare a dataset for training a specific layer of the CCOT model using HuggingFace Dataset
     """
+    client =  OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key="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",
+    )
     # Precompute teacher hidden states
     teacher_model = AutoModelForCausalLM.from_pretrained(tokenizer.name_or_path, torch_dtype=torch.bfloat16)
     teacher_model.to(device)
@@ -37,7 +41,6 @@ def prepare_ccot_layer_dataset(queries, reasonings, tokenizer, device, layer_idx
         # Tokenize the reasoning chain
         # seelct important tokens as target target tokens in reasoning.
         num_of_compressed_tokens = int(max_length * compression_ratio)
-        openai.api_key = "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" # Replace with your OpenAI API key
         selected_indices = []
         # Use a MLP to determine the tokenized indices.
 
@@ -47,12 +50,12 @@ def prepare_ccot_layer_dataset(queries, reasonings, tokenizer, device, layer_idx
                 print('openai api error! generated indices multiple times but still not enough indices, use even-spaced selections')
                 selected_indices = np.arange(0, len(reasoning.split()), step=max(1, len(reasoning.split()) // num_of_compressed_tokens))
                 break
-            selected_indices = openai.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "user",
-                "content": f"You should select {num_of_compressed_tokens} important words from the following text. I need you to only output the words' indices increasingly, DO NOT OUTPUT ANYTHING ELSE. For example, for text 'Where is my pencil?', the important words are 'Where' and 'pencil' at position 0 and 4, so the output is '0, 4'. Now, do it for the following text: "+reasoning}
-            ]
+            selected_indices = client.chat.completions.create(
+                model="qwen/qwen3-235b-a22b-2507:free",
+                messages=[
+                    {"role": "user",
+                    "content": f"You should select {num_of_compressed_tokens} important words from the following text. I need you to only output the words' indices increasingly, DO NOT OUTPUT ANYTHING ELSE. For example, for text 'Where is my pencil?', the important words are 'Where' and 'pencil' at position 0 and 4, so the output is '0, 4'. Now, do it for the following text: "+reasoning}
+                ]
             ).choices[0].message.content
             selected_indices = torch.tensor(list(map(int, selected_indices.split(','))))
             repeat += 1

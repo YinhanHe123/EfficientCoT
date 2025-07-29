@@ -4,16 +4,16 @@ import json
 import argparse
 import time
 from typing import List, Dict, Any
-import requests
 from tqdm import tqdm
 from datasets import load_dataset
+from openai import OpenAI
 
 class ReasoningPairsGenerator:
     """
     Generate detailed and condensed reasoning pairs for raw problems using ChatGPT-4o-mini.
     """
 
-    def __init__(self, model_name: str = "gpt-4o-mini", api_key: str = "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"):
+    def __init__(self, model_name: str = "qwen/qwen3-235b-a22b-2507:free", api_key: str = "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"):
         """
         Initialize the generator with API credentials.
 
@@ -21,13 +21,11 @@ class ReasoningPairsGenerator:
             api_key: OpenAI API key
             model: Model to use (default: gpt-4o-mini)
         """
-        self.api_key = api_key
+        self.client = OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=api_key,
+            )
         self.model = model_name
-        self.headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}"
-        }
-        self.api_url = "https://api.openai.com/v1/chat/completions"
 
     def generate_reasoning(self, query: str) -> str:
         """
@@ -42,6 +40,9 @@ class ReasoningPairsGenerator:
          # Determine the type of problem
         is_commonsense_qa = "choices:" in query.lower()
         is_coin_flip = "coin" in query.lower() and "flip" in query.lower()
+        is_strategyqa = query.lower().endswith(("true", "false", "yes", "no")) or any(indicator in query.lower() for indicator in ["would", "could", "should", "is it", "will", "does", "can"])
+        is_logiqa = "context:" in query.lower() and "options:" in query.lower() and any(f"{i}." in query for i in range(4))
+        is_multihopqa = len(query.split()) > 20 and any(indicator in query.lower() for indicator in ["what", "which", "where", "when", "who", "how"]) and not ("choices:" in query.lower() or "options:" in query.lower())
 
         if is_commonsense_qa:
             messages = [
@@ -53,31 +54,39 @@ class ReasoningPairsGenerator:
                 {"role": "system", "content": "You are an AI that explains coin flip logical problems."},
                 {"role": "user", "content": f"Problem: {query}\n\nPlease solve this problem by tracking the state of the coin at each step. You only need to consider whether the coin is heads up or tails up after each flip or non-flip. At the end, answer with 'yes' or 'no' to whether the coin is still heads up."}
             ]
+        elif is_strategyqa:
+            messages = [
+                {"role": "system", "content": "You are an AI that excels at strategic reasoning and answering yes/no questions that require multi-step logical thinking."},
+                {"role": "user", "content": f"Question: {query}\n\nPlease reason through this step by step. Consider all relevant facts, implications, and logical connections. Break down the problem into smaller parts if needed, and clearly explain your reasoning process. At the end, provide your answer as either 'true' or 'false'."}
+            ]
+        elif is_logiqa:
+            messages = [
+                {"role": "system", "content": "You are an AI expert in logical reasoning and critical thinking. You excel at analyzing complex logical relationships and drawing valid conclusions."},
+                {"role": "user", "content": f"Logical Reasoning Problem: {query}\n\nPlease analyze this logical reasoning problem step by step:\n1. First, identify the key premises and logical structure in the context\n2. Understand what the question is asking\n3. Evaluate each option systematically using logical principles\n4. Eliminate invalid options and identify the most logically sound answer\n5. Provide your final answer as the option number (0, 1, 2, or 3)."}
+            ]
+        elif is_multihopqa:
+            messages = [
+                {"role": "system", "content": "You are an AI that specializes in multi-hop reasoning and complex question answering. You excel at connecting multiple pieces of information to reach accurate conclusions."},
+                {"role": "user", "content": f"Multi-hop Question: {query}\n\nThis question requires multi-step reasoning. Please approach it systematically:\n1. Break down the question into sub-questions or information requirements\n2. Identify what information is needed at each step\n3. Connect the pieces of information logically\n4. Work through each hop in the reasoning chain\n5. Synthesize your findings to provide a comprehensive and accurate final answer."}
+            ]
         else:
             # Default math tutor prompt
             messages = [
                 {"role": "system", "content": "You are a math tutor who provides detailed step-by-step solutions to math problems."},
                 {"role": "user", "content": f"Problem: {query}\n\nPlease solve this step-by-step, showing all your work."}
             ]
-        
+
 
         try:
-            response = requests.post(
-                self.api_url,
-                headers=self.headers,
-                json={
-                    "model": self.model,
-                    "messages": messages,
-                    "temperature": 0.2,
-                }
+            completion = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                temperature=0.2
             )
-            response.raise_for_status()
-            reasoning = response.json()["choices"][0]["message"]["content"]
+            reasoning = completion.choices[0].message.content
             return reasoning
         except Exception as e:
             print(f"Error generating detailed reasoning: {e}")
-            if 'response' in locals() and hasattr(response, 'text'):
-                print(f"API response: {response.text}")
             return ""
 
     def generate_condensed_reasoning(self, query: str, original_reasoning: str) -> str:
@@ -96,24 +105,16 @@ class ReasoningPairsGenerator:
             {"role": "user", "content": f"Problem: {query}\n\nDetailed Solution: {original_reasoning}\n\nPlease condense the above solution into a brief but complete chain of reasoning. Be concise but maintain accuracy within 10 words."}
         ]
 
-
         try:
-            response = requests.post(
-                self.api_url,
-                headers=self.headers,
-                json={
-                    "model": self.model,
-                    "messages": messages,
-                    "temperature": 0.2,
-                }
+            completion = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                temperature=0.2
             )
-            response.raise_for_status()
-            condensed = response.json()["choices"][0]["message"]["content"]
+            condensed = completion.choices[0].message.content
             return condensed
         except Exception as e:
             print(f"Error generating condensed reasoning: {e}")
-            if 'response' in locals() and hasattr(response, 'text'):
-                print(f"API response: {response.text}")
             return ""
 
     def generate_answer(self, query: str, reasoning: str) -> str:
@@ -133,24 +134,16 @@ class ReasoningPairsGenerator:
         ]
 
         try:
-            response = requests.post(
-                self.api_url,
-                headers=self.headers,
-                json={
-                    "model": self.model,
-                    "messages": messages,
-                    "temperature": 0.1,
-                }
+            completion = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                temperature=0.1
             )
-            response.raise_for_status()
-            answer = response.json()["choices"][0]["message"]["content"]
-            # Remove any extra text, keeping only the answer
+            answer = completion.choices[0].message.content
             answer = answer.strip()
             return answer
         except Exception as e:
             print(f"Error generating answer: {e}")
-            if 'response' in locals() and hasattr(response, 'text'):
-                print(f"API response: {response.text}")
             return ""
 
     def create_reasoning_pair(self, query: str, given_reasoning:str, given_answer:str) -> Dict[str, Any]:
