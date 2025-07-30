@@ -13,7 +13,7 @@ class ReasoningPairsGenerator:
     Generate detailed and condensed reasoning pairs for raw problems using ChatGPT-4o-mini.
     """
 
-    def __init__(self, model_name: str = "qwen/qwen3-235b-a22b-2507:free", api_key: str = "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"):
+    def __init__(self, model_name: str = "gpt-4o-mini", api_key: str = "key"):
         """
         Initialize the generator with API credentials.
 
@@ -22,7 +22,7 @@ class ReasoningPairsGenerator:
             model: Model to use (default: gpt-4o-mini)
         """
         self.client = OpenAI(
-            base_url="https://openrouter.ai/api/v1",
+            # base_url="https://openrouter.ai/api/v1",
             api_key=api_key,
             )
         self.model = model_name

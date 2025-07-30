@@ -296,12 +296,10 @@ def load_raw_dataset(data_path=None):
             elif len(available_splits) > 0:
                 # Use the first available split and create train/test from it
                 main_split = raw[available_splits[0]]
-                processed = main_split.map(generate_multihopqa_reasoning)
+                processed = main_split.select(range(min(1000, len(main_split)))).map(generate_multihopqa_reasoning)
                 split = processed.train_test_split(test_size=0.2, seed=42)
-                raw = {
-                    'train': split['train'].select(range(min(800, len(split['train'])))),
-                    'test': split['test'].select(range(min(200, len(split['test']))))
-                }
+                raw['train'] = split['train'].select(range(min(800, len(split['train']))))
+                raw['test'] = split['test'].select(range(min(800, len(split['test']))))
             else:
                 raise ValueError("No data splits found in multihopqa dataset")
 
